@@ -1,6 +1,0 @@
-.idea/
-/vendor
-/build
-composer.lock
-*.cache
-*.bak
