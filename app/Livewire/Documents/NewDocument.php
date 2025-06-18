@@ -124,7 +124,9 @@ class NewDocument extends Component
 
         $responseMigoApi = null;
 
-        if(!$textoDoc == 'CE'){
+        Log::info("documento creado: " . $textoDoc);
+
+        if($textoDoc != 'CE'){
             $config = $this->docConfig[$textoDoc];
 
             $payload = [
