@@ -101,8 +101,6 @@ class NewDocument extends Component
 
         Log::info("inicio de emisión de comprobante");
 
-
-
         $this->validate();
 
         $items = collect($this->articlesSelected);
@@ -124,17 +122,22 @@ class NewDocument extends Component
         $textoDoc = $client->document_type;
         $tipoDoc  = $inverseTipos[$textoDoc] ?? null;
 
-        $config = $this->docConfig[$textoDoc];
+        $responseMigoApi = null;
 
-        $payload = [
-            $config['field'] => $client->document_number,
-            'token'          => $this->token,
-        ];
+        if(!$textoDoc == 'CE'){
+            $config = $this->docConfig[$textoDoc];
 
-        $responseMigoApi = $api->post(
-            strtolower($client->document_type),
-            $payload
-        );
+            $payload = [
+                $config['field'] => $client->document_number,
+                'token'          => $this->token,
+            ];
+
+            $responseMigoApi = $api->post(
+                strtolower($client->document_type),
+                $payload
+            );
+        }
+
 
         if ($this->documentType == '1'
             && $client->document_type != 'RUC') {
@@ -153,12 +156,14 @@ class NewDocument extends Component
             "client" => [
                 "tipoDoc" => $tipoDoc,
                 "numDoc" => $client->document_number,
-                "name" => $responseMigoApi[$config['responseKey']] ?? '',
+                "name" => ($responseMigoApi === null) ? $client->name : $responseMigoApi[$config['responseKey']] ?? '',
                 "address" => $client->address,
             ],
             "items"=> $items,
             "legend"=> $this->legends,
         ];
+
+        Log::info("data: " . json_encode($data));
 
         $sunat = new SunatService();
 
