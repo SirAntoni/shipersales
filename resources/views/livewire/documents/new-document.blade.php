@@ -40,7 +40,7 @@
                                 <div class="absolute left-0 -mt-2 ml-4 bg-white px-3 text-xs uppercase text-slate-500">
                                     <div class="-mt-px">datos del comprobante</div>
                                 </div>
-                                <div class="grid grid-cols-12 pt-4">
+                                <div class="grid grid-cols-12 pt-4 pb-4">
 
 
                                     <div class="col-span-12 sm:col-span-6 flex flex-col gap-3.5 px-5 py-2">
