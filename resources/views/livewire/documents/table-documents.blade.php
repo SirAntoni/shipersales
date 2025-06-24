@@ -147,15 +147,15 @@
                                                             <i class="text-white fa-solid fa-file-invoice"></i>
                                                         </x-base.tippy>
 
-                                                        <x-base.tippy
-                                                            as="x-base.button-sm"
-                                                            variant="dark"
-                                                            size="sm"
-                                                            class="mr-2"
-                                                            content="Enviar comprobante por email."
-                                                            wire:click="creditNote({{$document->id}})">
-                                                            <i class="text-white fa-solid fa-envelope"></i>
-                                                        </x-base.tippy>
+{{--                                                        <x-base.tippy--}}
+{{--                                                            as="x-base.button-sm"--}}
+{{--                                                            variant="dark"--}}
+{{--                                                            size="sm"--}}
+{{--                                                            class="mr-2"--}}
+{{--                                                            content="Enviar comprobante por email."--}}
+{{--                                                            wire:click="creditNote({{$document->id}})">--}}
+{{--                                                            <i class="text-white fa-solid fa-envelope"></i>--}}
+{{--                                                        </x-base.tippy>--}}
 
                                                         @can('delete')
                                                             <x-base.tippy
