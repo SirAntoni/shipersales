@@ -7,6 +7,7 @@ use App\Models\PurchaseDetail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use App\Models\Purchase;
 use Livewire\Attributes\On;
@@ -77,26 +78,42 @@ class TablePurchases extends Component
     {
         $limit = 15;
         $purchases = Purchase::query()
-            ->with(['purchaseDetails','provider:id,name'])
+            ->with([
+                'purchaseDetails.article',
+                'provider:id,name'
+            ])
             ->where('status', '!=', Purchase::PURCHASE_CANCELED)
+
+            // Búsqueda avanzada multi-término
             ->when($this->search, function ($query, $search) {
-                $search = trim($search);
-                $query->where(function ($q) use ($search) {
-                    $q->where('document', 'like', "%{$search}%")
-                        ->orWhere('passenger', 'like', "%{$search}%")
-                        ->orWhereHas('provider', fn ($c) => $c->where('name', 'like', "%{$search}%"))
-                        ->orWhereHas('purchaseDetails.article', fn($a) =>
-                            $a->where('title', 'like', "%{$search}%")
-                        );
-                });
+                // 1. Reemplazamos "+" por espacio y separamos por espacios
+                $terms = collect(preg_split('/[\s\+]+/', trim($search)))
+                    ->filter()    // eliminamos strings vacíos
+                    ->map(fn($t) => Str::lower($t));
+
+                // 2. Por cada término, forzamos que aparezca en algún campo/relación
+                foreach ($terms as $term) {
+                    $query->where(function ($q) use ($term) {
+                        $q->whereRaw('LOWER(document) LIKE ?', ["%{$term}%"])
+                            ->orWhereRaw('LOWER(passenger) LIKE ?', ["%{$term}%"])
+                            ->orWhereHas('provider', fn ($p) =>
+                            $p->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
+                            )
+                            ->orWhereHas('purchaseDetails.article', fn ($a) =>
+                            $a->whereRaw('LOWER(title) LIKE ?', ["%{$term}%"])
+                            );
+                    });
+                }
             })
+
+            // Filtro por rango de fechas
             ->when($this->startDate && $this->endDate, function ($query) {
                 $query->whereBetween('purchases.created_at', [
-                    // formatea según tu columna; si usas created_at, cámbialo
                     Carbon::parse($this->startDate)->startOfDay(),
                     Carbon::parse($this->endDate)->endOfDay(),
                 ]);
             })
+
             ->orderByDesc('id')
             ->paginate($limit);
 
