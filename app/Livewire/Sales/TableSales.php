@@ -99,6 +99,11 @@ class TableSales extends Component
         $this->dispatch('abrir-nueva-pestania', ['url' => $url]);
     }
 
+    public function clearSearch()
+    {
+        $this->reset('search');
+    }
+
     public function render()
     {
 

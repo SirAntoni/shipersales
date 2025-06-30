@@ -74,6 +74,11 @@ class TablePurchases extends Component
         $this->dispatch('delete',['label' => 'Esta seguro que desea eliminar la compra?.','btn' => 'Eliminar','route' => route('purchases.index'),'id' => $id]);
     }
 
+    public function clearSearch()
+    {
+        $this->reset('search');
+    }
+
     public function render()
     {
         $limit = 15;

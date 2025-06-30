@@ -41,6 +41,13 @@
                                     placeholder="Buscar..."
                                     wire:model.live="search"
                                 />
+                                @if($search)
+                                    <i
+                                        class="absolute inset-y-0 right-0 z-10 my-auto mr-3.5 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-600 fa-solid fa-xmark"
+                                        wire:click="clearSearch"
+                                        title="Borrar búsqueda"
+                                    ></i>
+                                @endif
                             </div>
                         </div>
 

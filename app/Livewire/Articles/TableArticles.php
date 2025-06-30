@@ -41,6 +41,11 @@ class TableArticles extends Component
         $this->dispatch('delete', ['label' => 'Esta seguro que desea eliminar el articulo?.', 'btn' => 'Eliminar', 'route' => route('articles.index'), 'id' => $id]);
     }
 
+    public function clearSearch()
+    {
+        $this->reset('search');
+    }
+
     public function render()
     {
         $limit = 15;
