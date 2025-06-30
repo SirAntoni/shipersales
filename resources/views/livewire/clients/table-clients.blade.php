@@ -99,7 +99,7 @@
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed py-4 dark:bg-darkmode-600">
                                                 <div class="flex items-center justify-center">
-                                                    @can('update')
+
                                                         <x-base.button
                                                             class="mr-2"
                                                             variant="success"
@@ -107,7 +107,7 @@
                                                         >
                                                             <i class="text-white fa-solid fa-pen-to-square"></i>
                                                         </x-base.button>
-                                                    @endcan
+
                                                     @can('delete')
                                                             <x-base.button
                                                                 variant="danger"
