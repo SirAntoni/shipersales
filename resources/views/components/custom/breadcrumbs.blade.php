@@ -72,6 +72,10 @@
             ['title' => 'Ventas','route' => 'sales.index'],
             ['title' => 'Anuladas', 'active' => true]
         ],
+        'commissions' => [
+            ['title' => 'Ventas','route' => 'sales.index'],
+            ['title' => 'Comisiones', 'active' => true]
+        ],
         'clients.index' => [
             ['title' => 'Clientes','route' => 'clients.index'],
             ['title' => 'Listar', 'active' => true]

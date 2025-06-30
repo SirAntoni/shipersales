@@ -33,5 +33,6 @@ class RoleSeeder extends Seeder
 
         Permission::create(['name' => 'update','description' => 'Editar']);
         Permission::create(['name' => 'delete','description' => 'Eliminar']);
+        Permission::create(['name' => 'commissions','description' => 'Comisiones']);
     }
 }

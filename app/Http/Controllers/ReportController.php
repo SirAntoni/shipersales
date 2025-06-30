@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ReportArticlesExport;
+use App\Exports\ReportCommissionExport;
 use App\Exports\ReportDayliExport;
 use App\Exports\ReportCustomExport;
 use App\Exports\ReportMonthExport;
@@ -57,8 +58,23 @@ class ReportController extends Controller
     }
 
     public function articles(){
-
-
         return Excel::download(new ReportArticlesExport(), 'reporte-articles.xlsx');
+    }
+
+    public function commissions(Request $request){
+
+        $request->validate([
+            'month' => 'required',
+            'year' => 'required'
+        ]);
+
+        $month = $request->query('month');
+        $monthName = Carbon::createFromFormat('!m', $month)
+            ->locale('es')
+            ->isoFormat('MMMM');
+        $year = $request->query('year');
+
+        return Excel::download(new ReportCommissionExport($month,$year), 'reporte-comisiones-'. $monthName . '-'.$year .'.xlsx');
+
     }
 }

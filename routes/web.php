@@ -41,6 +41,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('purchases', PurchaseController::class)->middleware('can:purchases.index');
     Route::get('canceled_purchases', [CanceledController::class,'purchases'])->name('canceled_purchases')->middleware('can:purchases','can:canceled_purchases');
     Route::resource('sales', SaleController::class)->middleware('can:sales');
+    Route::get('commissions',[SaleController::class,'commissions'])->name('commissions')->middleware('can:commissions');
     Route::resource('documents', DocumentController::class)->middleware('can:documents');
     Route::get('canceled', [CanceledController::class,'index'])->name('canceled')->middleware('can:canceled');;
     Route::get('reports', [ReportController::class,'index'])->name('reports')->middleware('can:reports');
@@ -48,6 +49,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/custom/export', [ReportController::class, 'custom'])->name('reports.custom.export')->middleware('can:reports');
     Route::get('reports/month/export', [ReportController::class, 'month'])->name('reports.month.export')->middleware('can:reports');
     Route::get('reports/articles/export', [ReportController::class, 'articles'])->name('reports.articles')->middleware('can:store');
+    Route::get('reports/commissions/export', [ReportController::class, 'commissions'])->name('reports.commissions.export')->middleware('can:commissions');
     Route::get('kardex', [KardexController::class,'index'])->name('kardex')->middleware('can:kardex');
     Route::get('pdf/{id}', [SaleController::class,'pdf'])->name('pdf.view');
     Route::post("/logout",[AuthController::class,'logout'])->name('logout');

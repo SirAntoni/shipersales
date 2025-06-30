@@ -106,6 +106,13 @@ class SideMenu
                         'title' => "Anulados",
                         'permission' => 'canceled',
                     ],
+                    [
+                        'icon' => "Percent",
+                        'route_name' => "commissions",
+                        'params' => [],
+                        'title' => "Comisiones",
+                        'permission' => 'commissions',
+                    ],
                 ],
             ],
             [

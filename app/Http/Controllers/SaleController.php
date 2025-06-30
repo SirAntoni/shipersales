@@ -35,4 +35,9 @@ class SaleController extends Controller implements hasMiddleware
         $pdf = Pdf::loadView('pdf.invoice',compact('sale'))->setPaper('A4', 'portrait')->setOption('defaultFont', 'DejaVu Sans');
         return $pdf->stream('invoice-' . sprintf('%06d', $id) .'.pdf');
     }
+
+    public function commissions()
+    {
+        return view('sales.commissions');
+    }
 }
