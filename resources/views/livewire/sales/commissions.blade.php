@@ -240,17 +240,6 @@
                                                     @endcan
                                                     <x-base.tippy
                                                         as="x-base.button-sm"
-                                                        variant="{{ is_null($sale->document?->id) ? 'soft-primary' : 'soft-pending' }}"
-                                                        size="sm"
-                                                        class="mr-2"
-                                                        content="Emitir comprobante"
-                                                        :disabled="! is_null($sale->document?->id)"
-                                                        wire:click="newDocument({{$sale->id}})">
-                                                        <i class="fa-solid fa-file-circle-plus"></i>
-
-                                                    </x-base.tippy>
-                                                    <x-base.tippy
-                                                        as="x-base.button-sm"
                                                         variant="dark"
                                                         size="sm"
                                                         class="mr-2"
@@ -259,19 +248,6 @@
                                                         <i class="text-white fa-solid fa-file-pdf"></i>
 
                                                     </x-base.tippy>
-
-                                                    @can('delete')
-                                                        <x-base.tippy
-                                                            as="x-base.button-sm"
-                                                            variant="danger"
-                                                            size="sm"
-                                                            class="mr-2"
-                                                            content="Anular venta"
-                                                            wire:click="delete({{$sale->id}})">
-                                                            <i class="text-white fa-solid fa-xmark"></i>
-
-                                                        </x-base.tippy>
-                                                    @endcan
 
                                                 </div>
                                             </x-base.table.td>
