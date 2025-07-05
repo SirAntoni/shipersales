@@ -36,6 +36,15 @@
     }
 }
 
+.plugin-clear_button .clear-button {
+    font-size: 35px;
+    transform: translateY(-80%) !important;
+}
+
+.tom-select.ts-wrapper .ts-control, .tom-select.plugin-dropdown_input.focus.dropdown-active .ts-control{
+    background-color: #fff !important;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

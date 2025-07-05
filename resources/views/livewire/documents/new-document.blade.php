@@ -342,6 +342,7 @@
             searchField: 'text',
             maxItems: 1,
             create: false,
+            plugins: ['clear_button'],
             load: function (query, callback) {
                 if (!query.length) return callback();
 

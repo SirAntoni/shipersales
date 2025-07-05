@@ -48,8 +48,6 @@ License: Uso comercial solo para ShiperSales
     <style>
         .mark-green { color: #28a745; font-weight: bold; }
         .mark-red   { color: #dc3545; font-weight: bold; }
-
-
     </style>
 
 </head>

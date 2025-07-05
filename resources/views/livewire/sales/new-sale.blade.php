@@ -406,6 +406,7 @@
             searchField: 'text',
             maxItems: 1,
             create: false,
+            plugins: ['clear_button'],
             load: function (query, callback) {
                 if (!query.length) return callback();
 
@@ -425,6 +426,7 @@
             labelField: 'text',
             searchField: 'text',
             maxItems: 1,
+            plugins: ['clear_button'],
             create: false,
             render: {
                 option: function(data, escape) {
