@@ -29,6 +29,20 @@
                     <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
                         <div>
                             <div class="relative mr-2">
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-user"></i>
+                                <x-base.form-select
+                                    wire:model.live="user"
+                                    class="rounded-[0.5rem] pl-9 sm:w-64"
+                                >
+                                    <option value="">Usuario</option>
+                                    @foreach($users as $user)
+                                        <option value="{{$user->id}}">{{$user->name}}</option>
+                                    @endforeach
+                                </x-base.form-select>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="relative mr-2">
                                 <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-calendar"></i>
                                 <x-base.form-select
                                     wire:model.live="month"
@@ -255,7 +269,7 @@
                                     @endforeach
                                 @else
                                     <x-base.table.tr>
-                                        <x-base.table.td colspan="10"
+                                        <x-base.table.td colspan="11"
                                                          class=" text-center border-dashed dark:bg-darkmode-600">
                                             No se encontrarón resultados.
                                         </x-base.table.td>

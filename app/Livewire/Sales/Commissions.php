@@ -11,6 +11,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Setting;
+use App\Models\User;
 
 class Commissions extends Component
 {
@@ -28,6 +29,8 @@ class Commissions extends Component
     public $commission;
     public $granTotalMonth;
     public $granTotalMonthCommission;
+    public $users;
+    public $user;
 
     public function mount()
     {
@@ -37,6 +40,7 @@ class Commissions extends Component
         $this->month = Carbon::now()->format('m');
         $this->year = Carbon::now()->format('Y');
         $this->commission = Setting::first()->commission;
+        $this->users = User::all();
     }
 
     public function updatingSearch()
@@ -135,30 +139,30 @@ class Commissions extends Component
             ])
             ->where('status', '!=', Sale::SALE_CANCELED)
             ->whereIn('sales.contact_id', [5, 1, 4, 12])
+            // —> AÑADE ESTO:
+            ->when($this->user, function ($query, $userId) {
+                $query->where('sales.user_id', $userId);
+            })
+            // —> CONTINÚA CON EL RESTO…
             ->when($this->search, function ($query, $search) {
-                // 1. Reemplazamos "+" por espacio y separamos por espacios
                 $terms = collect(preg_split('/[\s\+]+/', trim($search)))
-                    ->filter()    // eliminamos strings vacíos
+                    ->filter()
                     ->map(fn($t) => Str::lower($t));
 
-                // 2. Por cada término, forzamos que aparezca en algún campo/relación
                 foreach ($terms as $term) {
                     $query->where(function ($q) use ($term) {
                         $q->whereRaw('LOWER(number) LIKE ?', ["%{$term}%"])
-                            ->orWhereHas('client', fn($c) => $c->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            )
-                            ->orWhereHas('contact', fn($c) => $c->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            )
-                            ->orWhereHas('paymentMethod', fn($p) => $p->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            )
-                            ->orWhereHas('saleDetails.article', fn($a) => $a->whereRaw('LOWER(title) LIKE ?', ["%{$term}%"])
-                            );
+                            ->orWhereHas('client', fn($c) => $c->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"]))
+                            ->orWhereHas('contact', fn($c) => $c->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"]))
+                            ->orWhereHas('paymentMethod', fn($p) => $p->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"]))
+                            ->orWhereHas('saleDetails.article', fn($a) => $a->whereRaw('LOWER(title) LIKE ?', ["%{$term}%"]));
                     });
                 }
             })
             ->whereMonth('sales.created_at', '=', $this->month)
             ->whereYear('sales.created_at', '=', $this->year)
             ->orderByDesc('id');
+
 
         $this->granTotalMonth = (clone $query)->sum('total');
         $this->granTotalMonthCommission = ($this->granTotalMonth * $this->commission) / 100;
