@@ -15,6 +15,9 @@ class TableArticles extends Component
     public $search = "";
     public $filter = "";
 
+    public $sortTitle   = null;  // 'asc' | 'desc' | null
+    public $sortStock   = null;  // 'asc' | 'desc' | null
+
     public function reportArticle(){
         $url = route('reports.articles');
         $this->dispatch('abrir-nueva-pestania', ['url' => $url]);
@@ -55,7 +58,6 @@ class TableArticles extends Component
                 'brand:id,name'
             ])
             ->whereNot('id', 1)
-
             // Búsqueda avanzada multi-término
             ->when($this->search, function ($query, $search) {
                 // 1. Dividimos por espacios o '+' y limpiamos términos vacíos
@@ -79,8 +81,16 @@ class TableArticles extends Component
                     });
                 }
             })
-
-            ->orderByDesc('id')
+            // Orden dinámico por título (alfabético A-Z / Z-A)
+            ->when(in_array($this->sortTitle, ['asc','desc']), function ($q) {
+                $q->orderBy('title', $this->sortTitle);
+            })
+            // Orden dinámico por stock (numérico ascendente/descendente)
+            ->when(in_array($this->sortStock, ['asc','desc']), function ($q) {
+                $q->orderBy('stock', $this->sortStock);
+            })
+            // Si no se aplica ningún orden, por defecto ordenar por el último ID
+            ->when(!$this->sortTitle && !$this->sortStock, fn($q) => $q->orderByDesc('id'))
             ->paginate($limit);
 
         return view('livewire.articles.table-articles', compact('articles'));

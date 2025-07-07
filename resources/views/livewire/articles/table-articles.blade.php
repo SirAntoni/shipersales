@@ -33,7 +33,7 @@
                 <div class="box box--stacked flex flex-col">
                     <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
                         <div>
-                            <div class="relative">
+                            <div class="relative mr-2">
 
                                 <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
                                 <x-base.form-input
@@ -49,6 +49,41 @@
                                         title="Borrar búsqueda"
                                     ></i>
                                 @endif
+                            </div>
+                        </div>
+                        <div>
+                            <div class="relative mr-2">
+
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
+                                <x-base.form-select
+                                    class="rounded-[0.5rem] pl-9 sm:w-64"
+                                    type="text"
+                                    placeholder="Buscar..."
+                                    wire:model.live="sortTitle"
+                                >
+                                    <option value="">Ordenar por Nombre</option>
+                                    <option value="asc">A-Z Articulo</option>
+                                    <option value="desc">Z-A Articulo</option>
+
+                                </x-base.form-select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="relative">
+
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
+                                <x-base.form-select
+                                    class="rounded-[0.5rem] pl-9 sm:w-64"
+                                    type="text"
+                                    placeholder="Buscar..."
+                                    wire:model.live="sortStock"
+                                >
+                                    <option value="">Ordenar por Stock</option>
+                                    <option value="asc">Ascendente</option>
+                                    <option value="desc">Descendente</option>
+
+                                </x-base.form-select>
                             </div>
                         </div>
 
