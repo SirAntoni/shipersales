@@ -152,7 +152,7 @@
                                                     :variant="$sale->btnDetails"
                                                     size="sm"
                                                     :content="$sale->htmlDetails"
-                                                    wire:click="changeStatus({{$sale->id}})">
+                                                    wire:click="questionStatus({{$sale->id}})">
                                                     {{\Illuminate\Support\Str::words($sale->client->name,2,'')}}
 
                                                 </x-base.tippy>

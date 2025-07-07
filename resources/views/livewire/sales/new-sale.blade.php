@@ -27,7 +27,7 @@
                        <x-base.button
                            class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
                            variant="primary"
-                           wire:click="save"
+                           wire:click="validateNumber"
                        >
                             <i class="fa-solid fa-floppy-disk mr-2"></i>
                             Guardar venta

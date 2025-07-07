@@ -79,17 +79,31 @@ class TableSales extends Component
         $this->dispatch('delete', ['label' => 'Esta seguro que desea anular la venta?.', 'btn' => 'Eliminar', 'route' => route('sales.index'), 'id' => $id]);
     }
 
-    public function changeStatus($id)
+    public function questionStatus($id)
     {
         if(auth()->user()->can('update')){
             $sale = Sale::find($id);
-            if ($sale->status == Sale::SALE_APPROVED || $sale->status == Sale::SALE_PENDING) {
-                $sale->status = ($sale->status == Sale::SALE_APPROVED)
-                    ? Sale::SALE_PENDING
-                    : Sale::SALE_APPROVED;
-                $sale->save();
-                $this->dispatch('notification');
+            if($sale->status == Sale::SALE_APPROVED){
+                $this->dispatch('question', [
+                    'label' => 'Esta seguro que desea cambiar de estado a la venta?',
+                    'btn' => 'Editar',
+                    'id' => $id
+                ]);
+            }else{
+                $this->changeStatus($id);
             }
+        }
+    }
+
+    #[On('changeStatus')]
+    public function changeStatus($id){
+        $sale = Sale::find($id);
+        if ($sale->status == Sale::SALE_APPROVED || $sale->status == Sale::SALE_PENDING) {
+            $sale->status = ($sale->status == Sale::SALE_APPROVED)
+                ? Sale::SALE_PENDING
+                : Sale::SALE_APPROVED;
+            $sale->save();
+            $this->dispatch('notification');
         }
     }
 

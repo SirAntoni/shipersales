@@ -6,6 +6,7 @@ use App\Models\Article;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use App\Models\Sale;
 use App\Models\Client;
@@ -71,6 +72,19 @@ class NewSale extends Component
         ];
     }
 
+
+    public function validateNumber(){
+        if(empty($this->number)){
+            $this->dispatch('questionNumber', [
+                'label' => 'Esta seguro que desea agregar una venta sin agregar el número de orden?',
+                'btn' => 'Guardar Venta'
+            ]);
+        }else{
+            $this->save();
+        }
+    }
+
+    #[On('save')]
     public function save()
     {
 

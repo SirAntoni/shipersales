@@ -142,6 +142,41 @@ License: Uso comercial solo para ShiperSales
         });
     });
 
+    window.addEventListener('question', event => {
+        Swal.fire({
+            title: 'Alerta',
+            text: event.detail[0]['label'],
+            icon: 'warning',
+            confirmButtonText: event.detail[0]['btn'],
+            confirmButtonColor: "red",
+            showCancelButton: true,
+        }).then((result) => {
+            if(result.isConfirmed){
+                Swal.fire({
+                    title: "Editado",
+                    text: "El estado se ha editado con éxito!.",
+                    icon: "success"
+                });
+                Livewire.dispatch('changeStatus',{id:event.detail[0]['id']})
+            }
+        });
+    });
+
+    window.addEventListener('questionNumber', event => {
+        Swal.fire({
+            title: 'Alerta',
+            text: event.detail[0]['label'],
+            icon: 'warning',
+            confirmButtonText: event.detail[0]['btn'],
+            confirmButtonColor: "red",
+            showCancelButton: true,
+        }).then((result) => {
+            if(result.isConfirmed){
+                Livewire.dispatch('save')
+            }
+        });
+    });
+
     window.addEventListener('document_delete', event => {
         Swal.fire({
             title: 'Alerta',
