@@ -47,6 +47,11 @@ class NewSale extends Component
         return "{$yy}{$mm}{$dd}{$ss}{$randomNum}";
     }
 
+    public function updatedNumber($value)
+    {
+        $this->number = trim($value);
+    }
+
     public function rules()
     {
         return [
