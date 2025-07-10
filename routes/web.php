@@ -23,6 +23,9 @@ use App\Http\Controllers\DocumentController;
 
 Route::middleware(['guest'])->group(function () {
     Route::get("/login",[AuthController::class,'showLoginForm'])->name('login');
+    Route::get("/ml",function(){
+        return response()->json(['message' => 'view ml']);
+    })->name('ml');
 });
 
 Route::middleware(['auth'])->group(function () {
