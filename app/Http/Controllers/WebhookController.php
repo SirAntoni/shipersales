@@ -11,6 +11,7 @@ class WebhookController extends Controller
 
         Log::info("query" . json_encode($request->query()));
         Log::info("all " . json_encode($request->all()));
+        Log::info('resource: ' . json_encode($request->input('resource')));
         return response()->json($request->all());
 
     }
