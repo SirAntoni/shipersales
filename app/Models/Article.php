@@ -39,4 +39,9 @@ class Article extends Model
     {
         return $this->hasMany(SaleDetail::class, 'article_id');
     }
+
+    public function marketplaceCodes()
+    {
+        return $this->hasMany(ArticleMarketplace::class);
+    }
 }

@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('articles_marketplace', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('article_id')->constrained()->onDelete('cascade');
+            $table->string('code');
             $table->timestamps();
         });
     }

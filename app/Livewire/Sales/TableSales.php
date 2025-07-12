@@ -102,6 +102,7 @@ class TableSales extends Component
             $sale->status = ($sale->status == Sale::SALE_APPROVED)
                 ? Sale::SALE_PENDING
                 : Sale::SALE_APPROVED;
+            $sale->webhook_imported = null;
             $sale->save();
             $this->dispatch('notification');
         }

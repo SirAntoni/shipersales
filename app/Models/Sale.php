@@ -26,6 +26,7 @@ class Sale extends Model
         'contact_id',
         'payment_method_id',
         'status',
+        'webhook_imported',
         'delivery',
         'delivery_fee',
         'observations'

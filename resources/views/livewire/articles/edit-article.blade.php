@@ -319,6 +319,70 @@
 
                                 </div>
 
+
+                                <div
+                                    class="flex-col block pt-5 mt-5 first:mt-0 first:pt-0 sm:flex xl:flex-row xl:items-center">
+                                    <div class="inline-block mb-2 sm:mb-0 sm:mr-5 sm:text-right xl:mr-14 xl:w-60">
+                                        <div class="text-left">
+                                            <div class="flex items-center">
+                                                <div class="font-medium">Codigos Marketplace</div>
+
+                                            </div>
+                                            <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80 xl:mt-3">
+                                                Ingresa el precio de venta del articulo, si no lo ingresas por default será 0.00
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-4">
+                                        @foreach ($rows as $i => $row)
+                                            <div class="flex items-center space-x-2">
+                                                <x-base.form-select
+                                                class="w-30"
+                                                wire:model.defer="rows.{{ $i }}.contact_id"
+                                                >
+                                                    @foreach($contacts as $contact)
+                                                        <option value="{{$contact->id}}">{{$contact->name}}</option>
+                                                    @endforeach
+                                                </x-base.form-select>
+
+                                                <x-base.form-input
+                                                    wire:model.defer="rows.{{ $i }}.code"
+                                                    class="w-80"
+                                                    type="text"
+                                                    placeholder="Código"
+                                                />
+
+                                                {{-- Botón para eliminar esta fila, sólo si hay más de una --}}
+                                                @if(count($rows) > 1)
+                                                    <button
+                                                        wire:click.prevent="removeRow({{ $i }})"
+                                                        class="text-red-500 hover:text-red-700"
+                                                    >
+                                                        &times;
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+
+                                        <div class="flex space-x-2">
+                                            <x-base.button
+                                                wire:click.prevent="addRow"
+                                                class="border-slate-300/80 bg-white/80"
+                                                variant="outline-primary"
+                                            >
+                                                <i class="fa-solid fa-plus mr-1"></i> Agregar fila
+                                            </x-base.button>
+                                        </div>
+
+                                        @if (session()->has('success'))
+                                            <div class="text-green-600">
+                                                {{ session('success') }}
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                </div>
+
                             </div>
                         </div>
                     </div>

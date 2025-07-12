@@ -11,4 +11,8 @@ class Contact extends Model
     public function sales(){
         return $this->hasMany(Sale::class);
     }
+    public function marketplaceArticles()
+    {
+        return $this->hasMany(ArticleMarketplace::class, 'contact_id');
+    }
 }

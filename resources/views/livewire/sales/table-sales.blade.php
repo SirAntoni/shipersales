@@ -174,7 +174,7 @@
                                                 {{ $sale->saleDetails->sum('quantity') }}
 
                                             </x-base.table.td-sale>
-                                            <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600">
+                                            <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 {{(!is_null($sale->webhook_imported) ? 'text-warning':'')}}">
 
                                                 {{ $sale->contact->name }}
 

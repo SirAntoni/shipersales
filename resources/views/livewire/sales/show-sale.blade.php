@@ -39,16 +39,24 @@
                                             <label>Cliente</label>
 
                                             <div class="mt-2 " wire:ignore>
-                                                <x-base.tom-select
-                                                    id="tomClients"
-                                                    wire:ignore
-                                                    class="w-full"
-                                                    data-placeholder="Selecciona un cliente"
-                                                    wire:model="client"
-                                                    disabled="true"
-                                                >
-
-                                                </x-base.tom-select>
+                                                @if($webhook_imported != 1)
+                                                    {{-- versión deshabilitada --}}
+                                                    <x-base.tom-select
+                                                        id="tomClients"
+                                                        class="w-full"
+                                                        data-placeholder="Selecciona un cliente"
+                                                        wire:model="client"
+                                                        disabled
+                                                    />
+                                                @else
+                                                    {{-- versión habilitada --}}
+                                                    <x-base.tom-select
+                                                        id="tomClients"
+                                                        class="w-full"
+                                                        data-placeholder="Selecciona un cliente"
+                                                        wire:model="client"
+                                                    />
+                                                @endif
 
                                             </div>
                                             @error('client')

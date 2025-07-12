@@ -46,6 +46,8 @@ class ShowSale extends Component
 
     public $clientSelected;
 
+    public $webhook_imported;
+
     public function mount()
     {
 
@@ -73,6 +75,7 @@ class ShowSale extends Component
         $this->granSubtotal = $sale->granSubtotal;
         $this->tax = ($sale->tax > 0) ? 1:0;
         $this->observation = $sale->observations;
+        $this->webhook_imported = $sale->webhook_imported;
 
         foreach ($sale->saleDetails as $detail) {
             $this->addToArticleSale($detail->id);
@@ -153,6 +156,7 @@ class ShowSale extends Component
         });
 
         $sale->update([
+            'client_id' => $this->client,
             'subtotal' => $this->granSubtotal,
             'tax' => $this->granTax,
             'total' => $this->granTotal,
