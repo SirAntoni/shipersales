@@ -98,11 +98,8 @@ class MercadoLibreService
             return $response->json();
 
         } catch (RequestException $e) {
-            Log::error("Error POST a {$endpoint}", [
-                'url'     => $e->request->url(),
-                'payload' => $payload,
+            Log::error("Error GET a {$endpoint}", [
                 'status'  => $e->response?->status(),
-                'body'    => $e->response?->body(),
                 'error'   => $e->getMessage(),
             ]);
             throw $e;
