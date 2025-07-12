@@ -29,7 +29,6 @@ class MercadoLibreService
         $cacheKey = 'ml_access_token';
 
         if (Cache::has($cacheKey)) {
-            Log::info('Token en cache');
             return Cache::get($cacheKey);
         }
 
