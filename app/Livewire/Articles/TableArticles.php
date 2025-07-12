@@ -35,7 +35,8 @@ class TableArticles extends Component
     #[On('destroy')]
     public function destroy($id)
     {
-        Article::destroy($id);
+        $article = Article::findOrFail($id);
+        $article->update(['status' => 'inactive']);
         $this->render();
     }
 
@@ -53,6 +54,7 @@ class TableArticles extends Component
     {
         $limit = 15;
         $articles = Article::query()
+            ->active()
             ->with([
                 'category:id,name',
                 'brand:id,name'

@@ -20,8 +20,14 @@ class Article extends Model
         'sale_price',
         'provider_id',
         'category_id',
-        'brand_id'
+        'brand_id',
+        'status'
     ];
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
 
     public function category(){
         return $this->belongsTo(Category::class);
