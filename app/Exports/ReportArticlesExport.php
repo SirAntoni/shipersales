@@ -25,7 +25,7 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
     */
     public function query()
     {
-        return Article::query()->select('articles.id as id',
+        return Article::query()->active()->select('articles.id as id',
             'sku',
             'title',
             'categories.name as category_name',
