@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Purchase;
 use App\Models\SaleDetail;
+use App\Models\Setting;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -157,6 +158,29 @@ class ReportCustomExport implements
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
+
+                $rate = Setting::first()->exchange_rate;
+                $formatted = number_format($rate, 2, '.', '');
+                $sheet->setCellValue('A1', "Tipo de cambio: {$formatted}");
+
+                // Estilo: fondo gris y texto negro
+                $sheet->getStyle('A1')->applyFromArray([
+                    'font' => [
+                        'color' => ['rgb' => '000000'],
+                        'bold'  => false,
+                    ],
+                    'fill' => [
+                        'fillType'   => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'CCCCCC'],
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_LEFT,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                    ],
+                ]);
+
+                // Opcional: ajustar alto de fila 1 si hace falta
+                $sheet->getRowDimension(1)->setRowHeight(20);
 
                 // 1) Insertar título al lado del logo
                 $start = Carbon::parse($this->startDate)->format('d-m-Y');
