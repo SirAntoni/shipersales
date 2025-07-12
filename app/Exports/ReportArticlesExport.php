@@ -37,7 +37,9 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
             )
             ->join('categories', 'articles.category_id', '=', 'categories.id')
             ->join('brands', 'articles.brand_id', '=', 'brands.id')
-            ->whereNot('articles.id',1);
+            ->whereNot('articles.id',1)
+            ->orderBy('brands.name', 'asc')   // ordena marcas A→Z
+            ->orderBy('title',       'asc');  // dentro de cada marca, ordena títulos A→Z
     }
 
     public function headings(): array
