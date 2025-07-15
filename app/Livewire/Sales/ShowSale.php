@@ -160,7 +160,8 @@ class ShowSale extends Component
             'subtotal' => $this->granSubtotal,
             'tax' => $this->granTax,
             'total' => $this->granTotal,
-            'contact_id' => $this->contact
+            'contact_id' => $this->contact,
+            'webhook_imported' => null,
         ]);
 
         foreach ($this->articlesSelected as $article) {
