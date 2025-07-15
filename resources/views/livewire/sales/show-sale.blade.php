@@ -6,7 +6,15 @@
                     Editar Venta
                 </div>
                 <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                    <x-base.button
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        onclick="window.open('{{ route('clients.create') }}', '_blank', 'noopener')"
+                    >
+                        <i class="fa-solid fa-user-plus mr-2"></i>
 
+                        Nuevo cliente
+                    </x-base.button>
                     <x-base.button
                         class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
                         variant="primary"
