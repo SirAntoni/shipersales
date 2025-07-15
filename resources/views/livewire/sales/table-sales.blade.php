@@ -56,6 +56,23 @@
                         <div>
                             <div class="relative mr-2">
 
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-filter"></i>
+                                <x-base.form-select
+                                    class="rounded-[0.5rem] pl-9 sm:w-64"
+                                    wire:model.live="status"
+                                >
+                                    <option value="">Todos</option>
+                                    <option value="1">Pendiente</option>
+                                    <option value="2">Completado</option>
+                                    <option value="3">Observados</option>
+
+                                </x-base.form-select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="relative mr-2">
+
                                 <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
                                 <x-base.form-select
                                     class="rounded-[0.5rem] pl-9 sm:w-35"

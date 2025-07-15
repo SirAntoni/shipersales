@@ -24,11 +24,13 @@ class TableSales extends Component
     public $startDate;
     public $endDate;
     public $limit;
+    public $status;
 
     public function mount(){
         $this->limit = 40;
         $this->startDate = null;
         $this->endDate = null;
+        $this->status = null;
     }
     public function updatingSearch(){
         $this->resetPage();
@@ -164,7 +166,9 @@ class TableSales extends Component
                     Carbon::parse($this->endDate)->endOfDay(),
                 ]);
             })
-
+            ->when($this->status, function ($query) {
+                $query->where('sales.status', $this->status);
+            })
             ->orderByDesc('id')
             ->paginate($limit);
 
