@@ -40,7 +40,8 @@ class TableSales extends Component
 
     public function edit($id)
     {
-        return redirect()->route('sales.show', $id);
+        $url = route('sales.show', $id);
+        $this->dispatch('abrir-nueva-pestania', ['url' => $url]);
     }
 
     public function newDocument($id)
