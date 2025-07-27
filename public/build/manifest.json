@@ -34,7 +34,7 @@
     "src": "node_modules/leaflet/dist/images/marker-icon.png"
   },
   "resources/css/app.css": {
-    "file": "assets/app-4b10f014.css",
+    "file": "assets/app-f074c04d.css",
     "isEntry": true,
     "src": "resources/css/app.css"
   },
@@ -1109,11 +1109,11 @@
   },
   "resources/images/flags/um.svg": {
     "file": "assets/um-f1225c7c.svg",
-    "src": "resources/images/flags/us.svg"
+    "src": "resources/images/flags/um.svg"
   },
   "resources/images/flags/us.svg": {
     "file": "assets/um-f1225c7c.svg",
-    "src": "resources/images/flags/us.svg"
+    "src": "resources/images/flags/um.svg"
   },
   "resources/images/flags/uy.svg": {
     "file": "assets/uy-1cea0344.svg",
