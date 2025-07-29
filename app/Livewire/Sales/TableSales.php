@@ -26,6 +26,13 @@ class TableSales extends Component
     public $limit;
     public $status;
 
+    public $sectionDelete = false;
+    public $sectionMoreDetails = false;
+
+    public $motive;
+    public $motiveDetail;
+    public $saleDeleteSelect = null;
+
     public function mount(){
         $this->limit = 40;
         $this->startDate = null;
@@ -34,6 +41,33 @@ class TableSales extends Component
     }
     public function updatingSearch(){
         $this->resetPage();
+    }
+
+    public function updatedMotive(){
+        if($this->motive == 'Otros'){
+            $this->sectionMoreDetails = true;
+        }else{
+            $this->sectionMoreDetails = false;
+            $this->reset('motiveDetail');
+        }
+    }
+
+    public function deleteSale(){
+
+        $this->validate([
+            'motive' => 'required',
+            'motiveDetail' => 'required_if:motive,Otros'
+        ],[],[
+            'motive' => 'motivo',
+            'motiveDetail' => 'detalle'
+        ]);
+
+        $this->destroy($this->saleDeleteSelect);
+        $this->sectionDelete = false;
+        $this->saleDeleteSelect = null;
+
+        $this->dispatch('successNotRoute', ['label' => 'Venta eliminada con éxito.']);
+
     }
 
     public function rendered(){
@@ -73,13 +107,20 @@ class TableSales extends Component
             }
         });
 
-        $sale->update(['status' => Sale::SALE_CANCELED,'updated_at' => now()]);
+        $sale->update([
+            'status' => Sale::SALE_CANCELED,
+            'updated_at' => now(),
+            'deletion_reason' => ($this->motive == 'Otros') ? $this->motive . ' - ' . $this->motiveDetail : $this->motive
+        ]);
         $this->render();
     }
 
     public function delete($id)
     {
-        $this->dispatch('delete', ['label' => 'Esta seguro que desea anular la venta?.', 'btn' => 'Eliminar', 'route' => route('sales.index'), 'id' => $id]);
+        $this->saleDeleteSelect = $id;
+        $this->sectionDelete = true;
+        $this->dispatch('topPage');
+        //$this->dispatch('delete', ['label' => 'Esta seguro que desea anular la venta?.', 'btn' => 'Eliminar', 'route' => route('sales.index'), 'id' => $id]);
     }
 
     public function questionStatus($id)

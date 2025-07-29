@@ -29,7 +29,8 @@ class Sale extends Model
         'webhook_imported',
         'delivery',
         'delivery_fee',
-        'observations'
+        'observations',
+        'deletion_reason'
     ];
 
 

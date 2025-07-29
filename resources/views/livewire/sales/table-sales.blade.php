@@ -20,6 +20,103 @@
             </div>
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
+                    <div class="grid grid-cols-12">
+
+                        @if($sectionDelete)
+                            <div
+                                class="col-span-12 relative mb-4 mt-7 mx-4 rounded-[0.6rem] border border-slate-200/80 dark:border-darkmode-400">
+                                <div
+                                    class="absolute left-0 -mt-2 ml-4 bg-white px-3 text-xs uppercase text-slate-500">
+                                    <div class="-mt-px">Eliminar venta - {{$saleDeleteSelect}}</div>
+                                </div>
+                                <div class="grid grid-cols-12 pt-4">
+                                    <div class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2">
+                                        <x-base.alert
+                                            class="flex items-center"
+                                            variant="danger"
+                                        >
+                                            <i class="fa-solid fa-circle-exclamation mr-2"></i>
+                                            ¿Esta seguro que desea eliminar la venta?. Si es así, indicar un motivo.
+                                        </x-base.alert>
+
+                                    </div>
+
+                                    <div class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2">
+
+                                        <div>
+                                            <x-base.form-label for="name">
+                                                Motivo
+                                            </x-base.form-label>
+                                            <x-base.form-select
+                                                class="mb-2"
+                                                wire:model.live="motive"
+                                            >
+                                                <option value="">Selecciona una opción</option>
+                                                <option value="Venta mal realizada">Venta mal realizada</option>
+                                                <option value="Duplicado">Duplicado</option>
+                                                <option value="Devolución">Devolución</option>
+                                                <option value="Cancelado por cliente">Cancelado por cliente</option>
+                                                <option value="Otros">Otros</option>
+                                            </x-base.form-select>
+                                            @error('motive')
+                                            <div class="p-1 text-red-600">
+                                                {{ $message }}
+                                            </div>
+                                            @enderror
+                                        </div>
+
+
+                                    </div>
+                                    @if($sectionMoreDetails)
+                                        <div class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2">
+
+                                            <div>
+                                                <x-base.form-label for="name">
+                                                    Mas detalles
+                                                </x-base.form-label>
+                                                <x-base.form-textarea
+                                                    class="mb-2"
+                                                    wire:model.live="motiveDetail"
+                                                >
+                                                </x-base.form-textarea>
+                                                @error('motiveDetail')
+                                                <div class="p-1 text-red-600">
+                                                    {{ $message }}
+                                                </div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <div
+                                        class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2 text-right">
+                                        <div>
+
+
+                                            <x-base.button
+                                                class="mb-2 mr-2"
+                                                variant="info"
+                                                wire:click="$set('sectionDelete', false)"
+                                            >
+                                                Cancelar
+                                            </x-base.button>
+                                            <x-base.button
+                                                class="mb-2"
+                                                variant="primary"
+                                                wire:click="deleteSale"
+                                            >
+                                                Guardar
+                                            </x-base.button>
+
+                                        </div>
+
+
+                                    </div>
+
+                                </div>
+                            </div>
+                        @endif
+                    </div>
                     <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
                         <div>
                             <div class="relative mr-2">

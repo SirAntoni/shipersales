@@ -106,6 +106,13 @@ License: Uso comercial solo para ShiperSales
         });
     });
 
+    window.addEventListener('topPage', event => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'  // 'auto' para ir sin animación
+        });
+    });
+
     window.addEventListener('error', event => {
         Swal.fire({
             title: 'Error',
