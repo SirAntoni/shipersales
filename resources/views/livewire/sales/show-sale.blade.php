@@ -6,15 +6,17 @@
                     Editar Venta
                 </div>
                 <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
-                    <x-base.button
-                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
-                        variant="primary"
-                        onclick="window.open('{{ route('clients.create') }}', '_blank', 'noopener')"
-                    >
-                        <i class="fa-solid fa-user-plus mr-2"></i>
+                    @if($webhook_imported == 1)
+                        <x-base.button
+                            class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                            variant="primary"
+                            wire:click="$set('sectionClient', true)"
+                        >
+                            <i class="fa-solid fa-user-plus mr-2"></i>
 
-                        Nuevo cliente
-                    </x-base.button>
+                            Nuevo cliente
+                        </x-base.button>
+                    @endif
                     <x-base.button
                         class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
                         variant="primary"
@@ -32,7 +34,282 @@
                 <div class="col-span-12 xl:col-span-12">
                     <div class="box box--stacked flex flex-col p-5 sm:p-14">
                         <div class="grid grid-cols-12">
+                            @if($sectionClient)
+                                <div
+                                    class="col-span-12 relative mb-4 mt-7 rounded-[0.6rem] border border-slate-200/80 dark:border-darkmode-400">
+                                    <div
+                                        class="absolute left-0 -mt-2 ml-4 bg-white px-3 text-xs uppercase text-slate-500">
+                                        <div class="-mt-px">Crear cliente</div>
+                                    </div>
+                                    <div class="grid grid-cols-12 pt-4">
+                                        <div class="col-span-12 sm:col-span-4 flex flex-col gap-3.5 px-5 py-2">
+                                            <div>
+                                                <x-base.form-label for="document_type">
+                                                    Tipo de documento
+                                                </x-base.form-label>
+                                                <x-base.form-select
 
+                                                    class="mb-2"
+                                                    aria-label=".form-select-lg"
+                                                    id="document_type"
+                                                    wire:model.live="document_type"
+
+                                                >
+                                                    <option value="">Selecciona una opción</option>
+                                                    <option value="DNI">DNI</option>
+                                                    <option value="RUC">RUC</option>
+                                                    <option value="CE">CE</option>
+
+                                                </x-base.form-select>
+                                                @error('document_type')
+                                                <div class="p-1 text-red-600">
+                                                    {{ $message }}
+                                                </div>
+                                                @enderror
+                                            </div>
+
+
+                                        </div>
+
+
+                                        <div class="col-span-12 sm:col-span-4 flex flex-col gap-3.5 px-5 py-2">
+                                            <div>
+                                                <x-base.form-label for="document_number">
+                                                    Número de documento
+                                                </x-base.form-label>
+                                                <div class="flex items-center gap-2"> <!-- Contenedor flex -->
+                                                    <x-base.form-input
+                                                        id="document_number"
+                                                        class="mb-2 flex-1"
+                                                        type="text"
+                                                        placeholder="Número de documento del cliente"
+                                                        wire:model="document_number"
+                                                    />
+
+                                                    <span wire:loading>
+                                                    <x-base.button class="w-16" variant="primary">
+
+                                                        <x-base.loading-icon
+                                                            class="ml-2 h-4 w-4"
+                                                            icon="three-dots"
+                                                            color="white"
+                                                        />
+                                                    </x-base.button>
+                                                    </span>
+                                                    <span wire:loading.remove>
+                                                        <x-base.button
+                                                            class="w-16 h-[40px] mb-2"
+                                                            variant="primary"
+                                                            wire:click="searchDocument"
+                                                        >
+                                                            <i class="fa-solid fa-magnifying-glass mr-2"></i>
+                                                        </x-base.button>
+                                                    </span>
+                                                </div>
+
+                                                @error('document_number')
+                                                <div class="p-1 text-red-600">
+                                                    {{ $message }}
+                                                </div>
+                                                @enderror
+                                            </div>
+                                        </div>
+
+                                        <div class="col-span-12 sm:col-span-4 flex flex-col gap-3.5 px-5 py-2">
+
+                                            <div>
+                                                <x-base.form-label for="name">
+                                                    Nombre o razón social
+                                                </x-base.form-label>
+                                                <x-base.form-input
+                                                    id="name"
+                                                    class="mb-2"
+                                                    type="text"
+                                                    placeholder="Nombre o Razón social del cliente."
+                                                    wire:model="name"
+                                                />
+                                                @error('name')
+                                                <div class="p-1 text-red-600">
+                                                    {{ $message }}
+                                                </div>
+                                                @enderror
+                                            </div>
+
+
+                                        </div>
+                                        <div class="col-span-12 sm:col-span-4 flex flex-col gap-3.5 px-5 py-2">
+
+                                            <div>
+                                                <x-base.form-label for="address">
+                                                    Dirección
+                                                </x-base.form-label>
+                                                <x-base.form-input
+                                                    id="address"
+                                                    class="mb-2"
+                                                    type="text"
+                                                    placeholder="Dirección del cliente"
+                                                    wire:model="address"
+                                                />
+                                                @error('address')
+                                                <div class="p-1 text-red-600">
+                                                    {{$message}}
+                                                </div>
+                                                @enderror
+                                            </div>
+
+
+                                        </div>
+                                        <div class="col-span-12 sm:col-span-4 flex flex-col gap-3.5 px-5 py-2">
+
+                                            <div>
+                                                <x-base.form-label for="phone">
+                                                    Telêfono
+                                                </x-base.form-label>
+                                                <x-base.form-input
+                                                    id="phone"
+                                                    class="mb-2"
+                                                    type="text"
+                                                    placeholder="Teléfono del cliente"
+                                                    wire:model="phone"
+                                                />
+                                                @error('phone')
+                                                <div class="p-1 text-red-600">
+                                                    {{$message}}
+                                                </div>
+                                                @enderror
+                                            </div>
+
+
+                                        </div>
+
+                                        <div class="col-span-12 sm:col-span-4 flex flex-col gap-3.5 px-5 py-2">
+
+                                            <div>
+                                                <x-base.form-label for="email">
+                                                    Email
+                                                </x-base.form-label>
+                                                <x-base.form-input
+                                                    id="email"
+                                                    class="mb-2"
+                                                    type="text"
+                                                    placeholder="Email del cliente"
+                                                    wire:model="email"
+                                                />
+                                                @error('email')
+                                                <div class="p-1 text-red-600">
+                                                    {{$message}}
+                                                </div>
+                                                @enderror
+                                            </div>
+
+
+                                        </div>
+
+
+                                        <div class="col-span-12 sm:col-span-4 flex flex-col gap-3.5 px-5 py-2">
+                                            <div>
+                                                <x-base.form-label for="department">
+                                                    Departamento
+                                                </x-base.form-label>
+                                                <x-base.form-select
+                                                    class="mb-2"
+                                                    wire:model.live="departmentSelect"
+                                                >
+                                                    <option value="">Selecciona una opción</option>
+                                                    @foreach($departments as $department)
+                                                        <option
+                                                            value="{{$department->id}}">{{$department->name}}</option>
+
+                                                    @endforeach
+
+                                                </x-base.form-select>
+                                                @error('departmentSelect')
+                                                <div class="p-1 text-red-600">
+                                                    {{ $message }}
+                                                </div>
+                                                @enderror
+                                            </div>
+
+
+                                        </div>
+                                        <div class="col-span-12 sm:col-span-4 flex flex-col gap-3.5 px-5 py-2">
+                                            <div>
+                                                <x-base.form-label for="province">
+                                                    Provincias
+                                                </x-base.form-label>
+                                                <x-base.form-select
+                                                    class="mb-2"
+                                                    wire:model.live="provinceSelect"
+                                                >
+                                                    <option value="">Selecciona una opción</option>
+                                                    @foreach($provinces as $province)
+                                                        <option
+                                                            value="{{$province->id}}">{{html_entity_decode($province->name)}}</option>
+                                                    @endforeach
+
+                                                </x-base.form-select>
+                                                @error('provinceSelect')
+                                                <div class="p-1 text-red-600">
+                                                    {{ $message }}
+                                                </div>
+                                                @enderror
+                                            </div>
+
+
+                                        </div>
+                                        <div class="col-span-12 sm:col-span-4 flex flex-col gap-3.5 px-5 py-2">
+                                            <div>
+                                                <x-base.form-label for="district">
+                                                    Distrito
+                                                </x-base.form-label>
+                                                <x-base.form-select
+                                                    class="mb-2"
+                                                    wire:model.live="districtSelect"
+                                                >
+                                                    <option value="">Selecciona una opción</option>
+                                                    @foreach($districts as $district)
+                                                        <option value="{{$district->id}}">{{$district->name}}</option>
+
+                                                    @endforeach
+
+                                                </x-base.form-select>
+                                                @error('districtSelect')
+                                                <div class="p-1 text-red-600">
+                                                    {{ $message }}
+                                                </div>
+                                                @enderror
+                                            </div>
+
+
+                                        </div>
+                                        <div
+                                            class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2 text-right">
+                                            <div>
+
+
+                                                <x-base.button
+                                                    class="mb-2 mr-2"
+                                                    variant="info"
+                                                    wire:click="$set('sectionClient', false)"
+                                                >
+                                                    Cancelar
+                                                </x-base.button>
+                                                <x-base.button
+                                                    class="mb-2"
+                                                    variant="primary"
+                                                    wire:click="saveClient"
+                                                >
+                                                    Guardar
+                                                </x-base.button>
+
+                                            </div>
+
+
+                                        </div>
+
+                                    </div>
+                                </div>
+                            @endif
                             <div
                                 class="col-span-12 relative mb-4 mt-7 rounded-[0.6rem] border border-slate-200/80 dark:border-darkmode-400">
                                 <div class="absolute left-0 -mt-2 ml-4 bg-white px-3 text-xs uppercase text-slate-500">
@@ -463,7 +740,8 @@
             onChange: function (value) {
                 console.log('onChange', value);
                 try {
-                    @this.set('client', value);
+                    @this.
+                    set('client', value);
                 } catch (err) {
                     // aquí ignoras el error
                 }

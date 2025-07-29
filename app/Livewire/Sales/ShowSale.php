@@ -6,6 +6,7 @@ use App\Models\Article;
 use App\Models\Client;
 use App\Models\Contact;
 use App\Models\PaymentMethod;
+use App\Services\MigoApiService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -48,11 +49,47 @@ class ShowSale extends Component
 
     public $webhook_imported;
 
+    public $sectionClient = false;
+
+    public $name;
+    public $document_number;
+    public $document_type;
+    public $address;
+    public $phone;
+    public $email;
+    public $token;
+
+    public $departments;
+    public $provinces = [];
+    public $districts = [];
+    public $departmentSelect;
+    public $districtSelect;
+    public $provinceSelect;
+
+    protected array $docConfig = [
+        'DNI' => [
+            'size'        => 8,
+            'field'       => 'dni',
+            'responseKey' => 'nombre',
+        ],
+        'RUC' => [
+            'size'        => 11,
+            'field'       => 'ruc',
+            'responseKey' => 'nombre_o_razon_social',
+        ],
+    ];
+
+    private function throwError(string $message)
+    {
+        $this->dispatch('error', ['label' => $message]);
+    }
+
     public function mount()
     {
 
+        $this->token = env('MIGO_API_TOKEN');
         $sale = Sale::find($this->id);
-
+        $this->departments = DB::table('departments')->get();
 
         $contacts = Contact::select('id','name')->get();
         $paymentMethods = PaymentMethod::select('id','name')->get();
@@ -83,6 +120,105 @@ class ShowSale extends Component
 
     }
 
+    public function updatedDepartmentSelect($value)
+    {
+        // Reiniciamos los selects dependientes
+        $this->districtSelect = null;
+        $this->provinceSelect = null;
+        $this->districts = [];
+        $this->provinces = DB::table('provinces')->where('department_id', $value)->get();
+
+    }
+
+    public function updatedProvinceSelect($value)
+    {
+        $this->districts = DB::table('districts')->where('province_id', $value)->get();
+    }
+
+    public function saveClient(){
+        $this->validate([
+            'name' => 'required|string|min:3',
+            'document_number' => 'required|numeric|min:3|unique:clients,document_number',
+            'document_type' => 'required|string|min:2',
+            'address' => 'nullable|string|min:3',
+            'phone' => 'nullable|numeric|min:3',
+            'email' => 'nullable|email',
+            'departmentSelect' => 'required|numeric|min:1',
+            'provinceSelect' => 'required|numeric|min:1',
+            'districtSelect' => 'required|numeric|min:1'
+        ],[],[
+            'name' => 'nombre',
+            'document_number' => 'documento',
+            'document_type' => 'tipo de documento',
+            'address' => 'dirección',
+            'phone' => 'teléfono',
+            'email' => 'correo',
+            'departmentSelect' => 'departamento',
+            'provinceSelect' => 'provincia',
+            'districtSelect' => 'distrito'
+        ]);
+
+        Client::create([
+            'name' => $this->name,
+            'document_number' => $this->document_number,
+            'document_type' => $this->document_type,
+            'address' => $this->address,
+            'phone' => $this->phone,
+            'email' => $this->email,
+            'department_id' => $this->departmentSelect,
+            'province_id' => $this->provinceSelect,
+            'district_id' => $this->districtSelect
+        ]);
+
+        $this->reset(['name','document_number','document_type','address','phone','email','departmentSelect','provinceSelect','districtSelect']);
+        $this->render();
+        $this->sectionClient = false;
+        $this->dispatch('successNotRoute', ['label' => 'Se agrego el cliente con éxito.']);
+
+    }
+
+    public function searchDocument(MigoApiService $api)
+    {
+
+        $this->validate([
+            'document_number' => 'required|numeric|min:3|unique:clients,document_number',
+        ]);
+
+        if (!isset($this->docConfig[$this->document_type])) {
+            return $this->throwError('Selecciona un tipo de documento válido.');
+        }
+
+        if ($this->document_type === 'CE') {
+            return $this->throwError('Servicio no disponible para este tipo de documento.');
+        }
+
+        $config = $this->docConfig[$this->document_type];
+
+        if (strlen($this->document_number) !== $config['size']) {
+            return $this->throwError(
+                "El {$this->document_type} debe tener exactamente {$config['size']} dígitos."
+            );
+        }
+
+        // 5) Preparar payload y llamar al servicio
+        $payload = [
+            $config['field'] => $this->document_number,
+            'token'          => $this->token,
+        ];
+
+        $response = $api->post(
+            strtolower($this->document_type),
+            $payload
+        );
+
+        if(!isset($response['success']) || $response['success'] === false ){
+            return $this->throwError("Recurso no encontrado");
+        }
+
+        $this->name = $response[$config['responseKey']] ?? '';
+
+    }
+
     public function rules()
     {
         return [
@@ -99,11 +235,12 @@ class ShowSale extends Component
     {
         return Client::query()
             ->where('name', 'like', '%'.$query.'%')
+            ->orWhere('document_number', 'like', '%'.$query.'%')
             ->limit(10)
-            ->get(['id', 'name'])
+            ->get(['id', 'name','document_number'])
             ->map(fn($c) => [
                 'value' => $c->id,
-                'text'  => $c->name,
+                'text'  => $c->name . " - ".  $c->document_number,
             ])
             ->toArray();
     }
