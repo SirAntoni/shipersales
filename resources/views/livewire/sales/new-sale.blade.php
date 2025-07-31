@@ -350,7 +350,7 @@
                                         <div>
 
                                             <x-base.form-label for="datepicker">
-                                                Fecha del documento - {{$date}}
+                                                Fecha del documento
                                             </x-base.form-label>
                                             <x-base.litepicker
                                                 id="datepicker"
@@ -676,7 +676,7 @@
             singleMode: true
         });
 
-        new TomSelect('#tomClients', {
+        const tomClients = new TomSelect('#tomClients', {
             valueField: 'value',
             labelField: 'text',
             searchField: 'text',
@@ -755,6 +755,12 @@
         picker.on('selected', (startDate, endDate) => {
             @this.
             set('date', startDate.format('YYYY-MM-DD'));
+        });
+
+        window.addEventListener('reinitTomSelectClients', event => {
+            tomClients.clear();
+            tomClients.clear(true);
+            @this.set('client', null);
         });
 
     });

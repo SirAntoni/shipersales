@@ -155,7 +155,9 @@ class NewSale extends Component
 
         }
 
-        $this->reset(['client','date','contact','paymentMethod','articlesSelected','granTotal','granTax','granSubtotal','number','delivery_fee']);;
+        $this->reset(['client','date','contact','paymentMethod','articlesSelected','granTotal','granTax','granSubtotal','number','delivery_fee']);
+        $this->date = Carbon::now()->format('Y-m-d');
+        $this->dispatch('reinitTomSelectClients');
         $this->dispatch('success_sale', ['label' => 'La venta fue registrada con éxito.']);
 
     }
