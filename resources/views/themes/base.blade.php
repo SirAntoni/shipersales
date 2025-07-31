@@ -82,7 +82,9 @@ License: Uso comercial solo para ShiperSales
             title: 'Realizado',
             text: event.detail[0]['label'],
             icon: 'success',
-            confirmButtonText: event.detail[0]['btn']
+            confirmButtonText: event.detail[0]['btn'],
+            allowOutsideClick: false,    // Deshabilita el cierre al clicar fuera
+            allowEscapeKey: false      // (Opcional) Deshabilita cerrar con la tecla ES
         }).then((result) => {
             if(result.isConfirmed){
                 window.location.href = event.detail[0]['route'];
@@ -94,7 +96,9 @@ License: Uso comercial solo para ShiperSales
         Swal.fire({
             title: 'Realizado',
             text: event.detail[0]['label'],
-            icon: 'success'
+            icon: 'success',
+            allowOutsideClick: false,    // Deshabilita el cierre al clicar fuera
+            allowEscapeKey: false       // (Opcional) Deshabilita cerrar con la tecla ESC
         });
     });
 
@@ -102,7 +106,9 @@ License: Uso comercial solo para ShiperSales
         Swal.fire({
             title: 'Realizado',
             text: event.detail[0]['label'],
-            icon: 'success'
+            icon: 'success',
+            allowOutsideClick: false,
+            allowEscapeKey: false
         });
     });
 
@@ -119,6 +125,8 @@ License: Uso comercial solo para ShiperSales
             text: event.detail[0]['label'],
             icon: 'error',
             confirmButtonText: "Cancelar",
+            allowOutsideClick: false,    // Deshabilita el cierre al clicar fuera
+            allowEscapeKey: false       // (Opcional) Deshabilita cerrar con la tecla ESC
         })
     });
 
@@ -144,6 +152,8 @@ License: Uso comercial solo para ShiperSales
             confirmButtonText: event.detail[0]['btn'],
             confirmButtonColor: "red",
             showCancelButton: true,
+            allowOutsideClick: false,    // Deshabilita el cierre al clicar fuera
+            allowEscapeKey: false       // (Opcional) Deshabilita cerrar con la tecla ESC
         }).then((result) => {
             if(result.isConfirmed){
                 Swal.fire({
@@ -165,6 +175,8 @@ License: Uso comercial solo para ShiperSales
             confirmButtonText: event.detail[0]['btn'],
             confirmButtonColor: "red",
             showCancelButton: true,
+            allowOutsideClick: false,    // Deshabilita el cierre al clicar fuera
+            allowEscapeKey: false       // (Opcional) Deshabilita cerrar con la tecla ES
         }).then((result) => {
             if(result.isConfirmed){
                 Swal.fire({
@@ -185,6 +197,8 @@ License: Uso comercial solo para ShiperSales
             confirmButtonText: event.detail[0]['btn'],
             confirmButtonColor: "red",
             showCancelButton: true,
+            allowOutsideClick: false,    // Deshabilita el cierre al clicar fuera
+            allowEscapeKey: false       // (Opcional) Deshabilita cerrar con la tecla ESC
         }).then((result) => {
             if(result.isConfirmed){
                 Livewire.dispatch('save')
@@ -200,6 +214,8 @@ License: Uso comercial solo para ShiperSales
             confirmButtonText: "Anular comprobante",
             confirmButtonColor: "red",
             showCancelButton: true,
+            allowOutsideClick: false,    // Deshabilita el cierre al clicar fuera
+            allowEscapeKey: false       // (Opcional) Deshabilita cerrar con la tecla ESC
         }).then((result) => {
             if(result.isConfirmed){
                 Swal.fire({
