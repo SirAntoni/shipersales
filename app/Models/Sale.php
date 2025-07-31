@@ -30,7 +30,8 @@ class Sale extends Model
         'delivery',
         'delivery_fee',
         'observations',
-        'deletion_reason'
+        'deletion_reason',
+        'deletion_date'
     ];
 
 

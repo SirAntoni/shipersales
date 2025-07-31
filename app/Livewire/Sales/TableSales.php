@@ -110,6 +110,7 @@ class TableSales extends Component
         $sale->update([
             'status' => Sale::SALE_CANCELED,
             'updated_at' => now(),
+            'deletion_date' => now(),
             'deletion_reason' => ($this->motive == 'Otros') ? $this->motive . ' - ' . $this->motiveDetail : $this->motive
         ]);
         $this->render();

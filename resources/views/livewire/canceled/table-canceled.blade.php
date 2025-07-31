@@ -83,6 +83,11 @@
                                     >
                                         N.Orden
                                     </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Motivo
+                                    </x-base.table.td>
 
                                     <x-base.table.td
                                         class="w-36 border-t border-slate-200/60 bg-slate-50 text-center font-medium text-slate-500"
@@ -97,7 +102,7 @@
                                         <x-base.table.tr class="[&_td]:last:border-b-0">
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600 text" >
 
-                                                {{ $sale->updated_at->format("d-m-Y H:i:s")}}
+                                                {{ $sale->deletion_date }}
 
                                             </x-base.table.td>
                                             <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600" >
@@ -145,6 +150,10 @@
                                             </x-base.table.td-sale>
                                             <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600" >
                                                 {{ $sale->number }}
+                                            </x-base.table.td-sale>
+
+                                            <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600" >
+                                                {{ $sale->deletion_reason }}
                                             </x-base.table.td-sale>
 
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">

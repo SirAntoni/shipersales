@@ -31,6 +31,7 @@ class TableCanceled extends Component
                         );
                 });
             })
+            ->orderBy('deletion_date', 'desc')
             ->orderByDesc('id')
             ->paginate($limit);
 
