@@ -163,6 +163,10 @@ class TableSales extends Component
         $this->reset('search');
     }
 
+    public function refresh(){
+        $this->render();
+    }
+
     public function render()
     {
 
