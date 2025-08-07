@@ -123,12 +123,15 @@ class EditArticle extends Component
                     ]);
             } else {
                 // crear nuevo
-                $article
-                    ->marketplaceCodes()
-                    ->create([
-                        'contact_id' => $row['contact_id'],
-                        'code'       => $row['code'],
-                    ]);
+                if(!is_null($row['contact_id'])){
+                    $article
+                        ->marketplaceCodes()
+                        ->create([
+                            'contact_id' => $row['contact_id'],
+                            'code'       => $row['code'],
+                        ]);
+                }
+
             }
         }
 
