@@ -70,14 +70,14 @@
                         />
                         <x-base.form-select
                             wire:model.live="year"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-black/[0.12] group-[.mode--light]:bg-chevron-white text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
                         >
-                            <option value="">Año</option>
-                            <option value="2025">2025</option>
-                            <option value="2024">2024</option>
-                            <option value="2023">2023</option>
-                            <option value="2022">2022</option>
-                            <option value="2021">2021</option>
+                            <option class="text-black" value="">Año</option>
+                            <option class="text-black" value="2025">2025</option>
+                            <option class="text-black" value="2024">2024</option>
+                            <option class="text-black" alue="2023">2023</option>
+                            <option class="text-black" value="2022">2022</option>
+                            <option class="text-black" value="2021">2021</option>
                         </x-base.form-select>
                     </div>
                     <div class="relative">
