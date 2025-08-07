@@ -70,7 +70,7 @@
                         />
                         <x-base.form-select
                             wire:model.live="year"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white text-slate-200 sm:w-44"
                         >
                             <option value="">Año</option>
                             <option value="2025">2025</option>
