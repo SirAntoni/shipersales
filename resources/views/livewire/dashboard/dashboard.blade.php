@@ -18,7 +18,7 @@
                         >
                             <option value="">Proveedor</option>
                             @foreach($providers as $provider)
-                                <option value="{{$provider->id}}">{{$provider->name}}</option>
+                                <option class="text-black" value="{{$provider->id}}">{{$provider->name}}</option>
                             @endforeach
                         </x-base.form-select>
                     </div>
@@ -33,7 +33,7 @@
                         >
                             <option value="custom-date">Categoría</option>
                             @foreach($categories as $category)
-                                <option value="{{$category->id}}">{{$category->name}}</option>
+                                <option class="text-black" value="{{$category->id}}">{{$category->name}}</option>
                             @endforeach
                         </x-base.form-select>
                     </div>
@@ -47,19 +47,19 @@
                             wire:model.live="month"
                             class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
                         >
-                            <option value="">Mes</option>
-                            <option value="01">Enero</option>
-                            <option value="02">Febrero</option>
-                            <option value="03">Marzo</option>
-                            <option value="04">Abril</option>
-                            <option value="05">Mayo</option>
-                            <option value="06">Junio</option>
-                            <option value="07">Julio</option>
-                            <option value="08">Agosto</option>
-                            <option value="09">Setiembre</option>
-                            <option value="10">Octubre</option>
-                            <option value="11">Noviembre</option>
-                            <option value="12">Diciembre</option>
+                            <option class="text-black" value="">Mes</option>
+                            <option class="text-black" value="01">Enero</option>
+                            <option class="text-black" value="02">Febrero</option>
+                            <option class="text-black" value="03">Marzo</option>
+                            <option class="text-black" value="04">Abril</option>
+                            <option class="text-black" value="05">Mayo</option>
+                            <option class="text-black" value="06">Junio</option>
+                            <option class="text-black" value="07">Julio</option>
+                            <option class="text-black" value="08">Agosto</option>
+                            <option class="text-black" value="09">Setiembre</option>
+                            <option class="text-black" value="10">Octubre</option>
+                            <option class="text-black" value="11">Noviembre</option>
+                            <option class="text-black" value="12">Diciembre</option>
                         </x-base.form-select>
                     </div>
                     <div class="relative">
@@ -91,7 +91,7 @@
                         >
                             <option value="custom-date">Departamento</option>
                             @foreach($departments as $department)
-                                <option value="{{$department->id}}">{{$department->name}}</option>
+                                <option class="text-black" value="{{$department->id}}">{{$department->name}}</option>
                             @endforeach
                         </x-base.form-select>
                     </div>
@@ -107,7 +107,7 @@
                             <option value="custom-date">Distrito</option>
                             @if($districts != null)
                                 @foreach($districts as $district)
-                                    <option value="{{$district->id}}">{{html_entity_decode($district->name)}}</option>
+                                    <option class="text-black" value="{{$district->id}}">{{html_entity_decode($district->name)}}</option>
                                 @endforeach
                             @endif
                         </x-base.form-select>
