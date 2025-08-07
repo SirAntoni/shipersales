@@ -23,6 +23,8 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
     /**
     * @return \Illuminate\Support\Collection
     */
+
+    private int $counter = 0;
     public function query()
     {
         return Article::query()->active()->select('articles.id as id',
@@ -46,7 +48,7 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
     {
 
         return [
-            'ID',
+            '#',
             'SKU',
             'TITLE',
             'CATEGORÍA',
@@ -60,9 +62,8 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
 
     public function map($row): array
     {
-
         return [
-            $row->id,
+            ++$this->counter,
             $row->sku,
             $row->title,
             $row->category_name,
