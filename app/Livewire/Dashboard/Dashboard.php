@@ -29,6 +29,7 @@ class Dashboard extends Component
     public $margenGananciasCategory = [];
 
     public $exchange;
+    public $filterChart = "Ganancia";
 
     public function mount()
     {
@@ -470,6 +471,110 @@ class Dashboard extends Component
         return $total;
     }
 
+    public function margenGananciasAnualesMensuales()
+    {
+        $provider   = $this->provider;
+        $category   = $this->category;
+        $department = $this->department;
+        $district   = $this->district;
+        $exchange   = $this->exchange;
+
+        // 1) Obtenemos año, mes_nombre y suma de ganancias
+        $raw       = DB::table('sale_details')
+            ->join('articles', 'sale_details.article_id', '=', 'articles.id')
+            ->join('sales',   'sale_details.sale_id',   '=', 'sales.id')
+            ->join('clients',  'sales.client_id',        '=', 'clients.id')
+            ->where('sales.status', '!=', 0)
+            // filtros opcionales
+            ->when($provider,   fn($q) => $q->where('articles.provider_id',    $provider))
+            ->when($category,   fn($q) => $q->where('sale_details.category_id', $category))
+            ->when($department, fn($q) => $q->where('clients.department_id',    $department))
+            ->when($district,   fn($q) => $q->where('clients.district_id',      $district))
+            // seleccionamos año, mes en español y la ganancia total
+            ->select([
+                DB::raw('YEAR(sale_details.created_at) AS year'),
+                DB::raw("
+                ELT(
+                    MONTH(sale_details.created_at),
+                    'enero','febrero','marzo','abril','mayo','junio',
+                    'julio','agosto','septiembre','octubre','noviembre','diciembre'
+                ) AS month
+            "),
+                DB::raw(
+                    'SUM(sale_details.price - (articles.purchase_price * ' . $exchange . '))'
+                    . ' AS total'
+                ),
+            ])
+            // agrupamos por año y mes numérico para mantener orden
+            ->groupBy(DB::raw('YEAR(sale_details.created_at)'))
+            ->groupBy(DB::raw('MONTH(sale_details.created_at)'))
+            ->orderBy(DB::raw('YEAR(sale_details.created_at)'), 'desc')
+            ->orderBy(DB::raw('MONTH(sale_details.created_at)'), 'asc')
+            ->whereYear('sale_details.created_at', '>=', 2024)
+            ->get();
+
+        // 2) Reagrupamos la colección en PHP: [ 2025 => [ 'enero'=>123, … ], 2024 => […], … ]
+        $resultado = $raw
+            ->groupBy('year')
+            ->map(function ($items) {
+                // convertimos cada grupo en [ 'enero' => total, ... ]
+                return $items->pluck('total', 'month');
+            });
+
+        return $resultado;
+    }
+
+    public function cantidadAnualMensual()
+    {
+        $provider   = $this->provider;
+        $category   = $this->category;
+        $department = $this->department;
+        $district   = $this->district;
+
+        // 1) Ejecutamos la consulta SQL
+        $raw = DB::table('sale_details')
+            ->join('articles', 'sale_details.article_id', '=', 'articles.id')
+            ->join('sales',   'sale_details.sale_id',   '=', 'sales.id')
+            ->join('clients',  'sales.client_id',        '=', 'clients.id')
+            ->where('sales.status', '!=', 0)
+            // filtros opcionales
+            ->when($provider,   fn($q) => $q->where('articles.provider_id',    $provider))
+            ->when($category,   fn($q) => $q->where('sale_details.category_id', $category))
+            ->when($department, fn($q) => $q->where('clients.department_id',    $department))
+            ->when($district,   fn($q) => $q->where('clients.district_id',      $district))
+            ->whereYear('sale_details.created_at', '>=', 2024)
+            // seleccionamos año, mes en español y la suma de quantity
+            ->select([
+                DB::raw('YEAR(sale_details.created_at) AS year'),
+                DB::raw("
+                ELT(
+                    MONTH(sale_details.created_at),
+                    'enero','febrero','marzo','abril','mayo','junio',
+                    'julio','agosto','septiembre','octubre','noviembre','diciembre'
+                ) AS month
+            "),
+                DB::raw('SUM(sale_details.quantity) AS total_qty'),
+            ])
+            // agrupamos y ordenamos para mantener years desc y months asc
+            ->groupBy(DB::raw('YEAR(sale_details.created_at)'))
+            ->groupBy(DB::raw('MONTH(sale_details.created_at)'))
+            ->orderBy(DB::raw('YEAR(sale_details.created_at)'), 'desc')
+            ->orderBy(DB::raw('MONTH(sale_details.created_at)'), 'asc')
+            ->get();
+
+        // 2) Reagrupamos en PHP para devolver { year: { month: total, … }, … }
+        $data = $raw
+            ->groupBy('year')
+            ->map(function ($items) {
+                // cada subcolección a [ 'enero'=>25, 'febrero'=>30, … ]
+                return $items->pluck('total_qty', 'month');
+            });
+
+        // Si lo deseas como array puro:
+        // return $data->toArray();
+        return $data;
+    }
+
     public function render()
     {
 
@@ -481,9 +586,9 @@ class Dashboard extends Component
         $gananciasDistrict = $this->margenGananciasDistrict();
         $gananciasVentasTotal = $this->gananciaVentasTotal();
         $getSalesChartData = $this->getSalesChartData();
-        $this->dispatch('dashboard-report', [$gananciasProveedores,$gananciasContacto,$gananciasCategory,$gananciasDepartment,$gananciasDistrict,$gananciasVentasTotal,$getSalesChartData]);
-
-
+        $charRevenueAndAmount = ($this->filterChart == "Ganancia") ? $this->margenGananciasAnualesMensuales():$this->cantidadAnualMensual();
+        //dd($charRevenueAndAmount);
+        $this->dispatch('dashboard-report', [$gananciasProveedores,$gananciasContacto,$gananciasCategory,$gananciasDepartment,$gananciasDistrict,$gananciasVentasTotal,$getSalesChartData,$charRevenueAndAmount]);
 
         return view('livewire.dashboard.dashboard');
     }

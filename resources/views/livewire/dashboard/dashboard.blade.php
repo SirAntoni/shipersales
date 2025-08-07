@@ -138,6 +138,34 @@
             </div>
         </div>
 
+        <div class="col-span-12 sm:colspan-12">
+            <div>
+                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                    <div class="text-base font-medium ">Ganancias por año
+                    </div>
+
+                </div>
+                <div class="box box--stacked mt-3.5 p-5">
+
+                    <div class="flex justify-end" >
+                        <x-base.form-select
+                        class="w-32"
+                        wire:ignore
+                        wire:model.live="filterChart"
+                        >
+                            <option value="Ganancia">Ganancia</option>
+                            <option value="Cantidad">Cantidad</option>
+                        </x-base.form-select>
+                    </div>
+
+                    <div class="mb-1 mt-10">
+                        <x-report-bar-chart-5 classReport="getChartRevenueAndAmount" height="h-[400px]"/>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
         <div class="col-span-12 lg:col-span-6 2xl:col-span-6">
             <div>
                 <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
@@ -955,6 +983,115 @@
 
                     });
                 }
+
+                const $charRevenueAndAmount = $(".getChartRevenueAndAmount");
+
+
+                if ($charRevenueAndAmount.length) {
+
+                    $charRevenueAndAmount.each(function () {
+                        const ctx = this.getContext("2d");
+
+                        // Verifica si ya hay un gráfico asociado al canvas
+                        const existingChart = Chart.getChart(ctx);
+                        if (existingChart) {
+                            console.log("Destruyendo gráfico existente...");
+                            existingChart.destroy();
+                        }
+
+                        const rawData = event.detail[0][7];
+
+                        const meses = [
+                            "enero","febrero","marzo","abril",
+                            "mayo","junio","julio","agosto",
+                            "septiembre","octubre","noviembre","diciembre"
+                        ];
+
+                        const anios = Object.keys(rawData)
+                            .map(Number)           // pasar a números por si vienen como strings
+                            .sort((a, b) => b - a) // 2025, 2024, 2023…
+                            .map(String);          // volver a string para usar como label
+
+                        const palette = [
+                            "primary","success","warning","danger","info","rose","cyan","orange"
+                        ];
+
+                        const datasets = anios.map((year, idx) => {
+                            const colorName = palette[idx % palette.length];
+                            return {
+                                label: year,
+                                data: meses.map(m => rawData[year][m] ?? 0),
+                                categoryPercentage: 0.4,
+                                barPercentage:      0.8,
+                                borderRadius:       2,
+                                borderWidth:        1,
+                                borderColor:        getColor(colorName, 0.7),
+                                backgroundColor:    getColor(colorName, 0.35),
+                            };
+                        });
+
+
+                        // Ahora creamos el nuevo gráfico
+                        const newChart = new Chart(ctx, {
+                            type: "line",
+                            data: {
+                                labels: meses,
+                                datasets: datasets,
+                            },
+                            options: {
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                    },
+                                },
+                                scales: {
+                                    x: {
+                                        ticks: {
+                                            color: getColor("slate.500", 0.7),
+                                        },
+                                        grid: {
+                                            display: false,
+                                        },
+                                        border: {
+                                            display: false,
+                                        },
+                                    },
+                                    y: {
+                                        ticks: {
+                                            stepSize: 10,
+                                            autoSkipPadding: 15,
+                                            color: getColor("slate.500", 0.9),
+                                            beginAtZero: true,
+                                        },
+                                        grid: {
+                                            color: getColor("slate.200", 0.7),
+                                        },
+                                        border: {
+                                            display: false,
+                                        },
+                                    },
+                                },
+                            },
+                        });
+
+                        // Opcional: Vigilar cambios en las variables CSS para actualizar los colores del gráfico
+                        helper.watchCssVariables(
+                            "html",
+                            ["color-primary", "color-success"],
+                            (newValues) => {
+                                newChart.data.datasets[0].borderColor = getColor("primary", 0.7);
+                                newChart.data.datasets[0].backgroundColor = getColor("primary", 0.35);
+                                newChart.data.datasets[1].borderColor = getColor("success", 0.7);
+                                newChart.data.datasets[1].backgroundColor = getColor("success", 0.35);
+                                newChart.update();
+                            }
+                        );
+                    });
+                }
+
+
+
 
             }, 100);
         });
