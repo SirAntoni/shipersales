@@ -249,6 +249,7 @@ class ShowSale extends Component
     public function searchArticles($query)
     {
         return Article::where('title', 'like', '%'.$query.'%')
+            ->where('status','active')
             ->orWhereHas('brand', fn($q) =>
             $q->where('name', 'like', '%'.$query.'%')
             )

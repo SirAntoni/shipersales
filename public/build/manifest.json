@@ -1109,11 +1109,11 @@
   },
   "resources/images/flags/um.svg": {
     "file": "assets/um-f1225c7c.svg",
-    "src": "resources/images/flags/us.svg"
+    "src": "resources/images/flags/um.svg"
   },
   "resources/images/flags/us.svg": {
     "file": "assets/um-f1225c7c.svg",
-    "src": "resources/images/flags/us.svg"
+    "src": "resources/images/flags/um.svg"
   },
   "resources/images/flags/uy.svg": {
     "file": "assets/uy-1cea0344.svg",

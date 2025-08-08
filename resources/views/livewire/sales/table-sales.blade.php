@@ -297,7 +297,8 @@
                                                 {{ $sale->saleDetails->sum('quantity') }}
 
                                             </x-base.table.td-sale>
-                                            <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 {{(!is_null($sale->webhook_imported) ? 'text-warning':'')}}">
+                                            <x-base.table.td-sale
+                                                class="border-dashed dark:bg-darkmode-600 {{(!is_null($sale->webhook_imported) ? 'text-warning':'')}}">
 
                                                 {{ $sale->contact->name }}
 
@@ -344,6 +345,17 @@
                                                         content="Ver PDF"
                                                         wire:click="verPDF({{$sale->id}})">
                                                         <i class="text-white fa-solid fa-file-pdf"></i>
+
+                                                    </x-base.tippy>
+
+                                                    <x-base.tippy
+                                                        as="x-base.button-sm"
+                                                        variant="pending"
+                                                        size="sm"
+                                                        class="mr-2 "
+                                                        content="Editar Total"
+                                                    >
+                                                        <i class="text-white fa-solid fa-edit"></i>
 
                                                     </x-base.tippy>
 
