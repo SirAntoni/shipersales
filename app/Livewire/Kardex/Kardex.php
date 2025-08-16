@@ -53,7 +53,7 @@ class Kardex extends Component
         )->join('purchases', 'purchases.id', '=', 'purchase_details.purchase_id')
             ->join('articles', 'articles.id', '=', 'purchase_details.article_id')
             ->join('users', 'users.id', '=', 'purchases.user_id')
-            ->where('purchases.status', [1,2,3])
+            ->whereIn('purchases.status', [1,2,3])
             ->where('purchase_details.article_id', $this->article);
 
         // Movimientos de ventas (salidas) con nombre del artículo
