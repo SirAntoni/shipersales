@@ -40,6 +40,10 @@ class TableArticles extends Component
         $this->render();
     }
 
+    public function refresh(){
+        $this->render();
+    }
+
     public function delete($id)
     {
         $this->dispatch('delete', ['label' => 'Esta seguro que desea eliminar el articulo?.', 'btn' => 'Eliminar', 'route' => route('articles.index'), 'id' => $id]);
