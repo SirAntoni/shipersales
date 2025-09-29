@@ -272,53 +272,95 @@ class ShowSale extends Component
     {
         $this->validate();
 
-        $sale = Sale::find($this->id);
+        try {
+            DB::transaction(function () {
+                // Bloquea la cabecera de la venta
+                /** @var \App\Models\Sale $sale */
+                $sale = \App\Models\Sale::lockForUpdate()->findOrFail($this->id);
 
-        DB::transaction(function () use ($sale) {
-            $articleIds = $sale->saleDetails->pluck('article_id')->unique();
+                // Si la venta está cancelada (status = 0) NO debe afectar stock ni kardex
+                $affectsStock = ($sale->status !== \App\Models\Sale::SALE_CANCELED);
 
-            $articles = Article::whereIn('id', $articleIds)->get()->keyBy('id');
+                // Detalles actuales, bloqueados
+                $currentDetails = $sale->saleDetails()->lockForUpdate()->get();
 
-            foreach ($sale->saleDetails as $item) {
-                if (isset($articles[$item->article_id])) {
-                    $article = $articles[$item->article_id];
-                    $article->stock += $item->quantity;
-                    $article->save();
-                } else {
-                    throw new \Exception("Artículo no encontrado: {$item->article_id}");
+                // Conjunto de artículos a bloquear (anteriores + nuevos) si afecta stock
+                $articles = collect();
+                if ($affectsStock) {
+                    $articleIds = $currentDetails->pluck('article_id')
+                        ->merge(collect($this->articlesSelected)->pluck('id'))
+                        ->unique()
+                        ->values();
+
+                    $articles = \App\Models\Article::whereIn('id', $articleIds)
+                        ->lockForUpdate()
+                        ->get()
+                        ->keyBy('id');
                 }
-            }
 
-            SaleDetail::where('sale_id', $sale->id)->delete();
+                // 1) Revertir stock de los detalles actuales (solo si afecta stock)
+                if ($affectsStock) {
+                    foreach ($currentDetails as $d) {
+                        $articles[$d->article_id]->increment('stock', (int)$d->quantity);
+                    }
+                }
 
-        });
+                // 2) Eliminar detalles actuales
+                //    (si usas SoftDeletes en sale_details y NO quieres que salgan en el Kardex,
+                //     recuerda filtrar deleted_at IS NULL en el componente del Kardex)
+                $sale->saleDetails()->delete();
 
-        $sale->update([
-            'client_id' => $this->client,
-            'subtotal' => $this->granSubtotal,
-            'tax' => $this->granTax,
-            'total' => $this->granTotal,
-            'contact_id' => $this->contact,
-            'webhook_imported' => null,
-        ]);
+                // 3) Validar stock para los nuevos (solo si afecta stock)
+                if ($affectsStock) {
+                    foreach ($this->articlesSelected as $row) {
+                        $art = $articles[$row['id']] ?? null;
+                        if (!$art) {
+                            throw new \RuntimeException("Artículo no encontrado: {$row['id']}.");
+                        }
+                        if ($art->stock < (int)$row['quantity']) {
+                            throw new \RuntimeException("Stock insuficiente para {$art->title} (disp. {$art->stock}, sol. {$row['quantity']}).");
+                        }
+                    }
+                }
 
-        foreach ($this->articlesSelected as $article) {
+                // 4) Crear nuevos detalles + descontar stock si corresponde
+                foreach ($this->articlesSelected as $row) {
+                    $detail = $sale->saleDetails()->create([
+                        'price'       => $row['price'],
+                        'quantity'    => (int)$row['quantity'],
+                        'tax'         => ($this->tax == 1) ? $row['total'] * 0.18 : 0,
+                        'total'       => ($this->tax == 1) ? $row['total'] * 1.18 : $row['total'],
+                        'article_id'  => $row['id'],
+                        'category_id' => $row['category'],
+                        'brand_id'    => $row['brand'],
+                        'subtotal'    => $row['total'],
+                    ]);
 
-            $sale->saleDetails()->create([
-                'price' => $article['price'],
-                'quantity' => $article['quantity'],
-                'tax' => ($this->tax == 1) ? $article['total'] * 0.18 : 0,
-                'total' => ($this->tax == 1) ? $article['total'] + ($article['total'] * 0.18) : $article['total'],
-                'article_id' => $article['id'],
-                'category_id' => $article['category'],
-                'brand_id' => $article['brand'],
-                'subtotal' => $article['total'],
+                    if ($affectsStock) {
+                        $articles[$row['id']]->decrement('stock', (int)$row['quantity']);
+                    }
+                }
+
+                // 5) Actualizar cabecera
+                $sale->update([
+                    'client_id'        => $this->client,
+                    'subtotal'         => $this->granSubtotal,
+                    'tax'              => $this->granTax,
+                    'total'            => $this->granTotal,
+                    'contact_id'       => $this->contact,
+                    'webhook_imported' => null,
+                ]);
+            });
+
+            $this->dispatch('success', [
+                'label' => 'La venta fue editada con éxito.',
+                'btn'   => 'Ir a ventas',
+                'route' => route('sales.index'),
             ]);
-
-            //Article::find($article['id'])->decrement('stock', $article['quantity']);
-
+        } catch (\Throwable $e) {
+            $this->dispatch('error', ['label' => 'No se pudo editar la venta: ' . $e->getMessage()]);
+            report($e);
         }
-        $this->dispatch('success', ['label' => 'La venta fue editada con éxito.', 'btn' => 'Ir a ventas', 'route' => route('sales.index')]);
     }
 
     public function saveObservation(){

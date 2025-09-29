@@ -38,70 +38,82 @@ class Kardex extends Component
 
     public function getKardex()
     {
+        if (!$this->article) {
+            $this->kardex = [];
+            return;
+        }
 
-        // Movimientos de compras (entradas) con nombre del artículo
-        $purchaseMovements = PurchaseDetail::select(
-            'purchase_details.article_id',
-            'articles.title as article_name',
-            DB::raw("'contact' as contact_name"),
-            DB::raw("'client' as client_name"),
-            'users.name as user_name',
-            'purchases.number as number',
-            DB::raw("purchases.created_at as fecha"),
-            DB::raw("'entrada' as tipo"),
-            'purchase_details.quantity as cantidad'
-        )->join('purchases', 'purchases.id', '=', 'purchase_details.purchase_id')
-            ->join('articles', 'articles.id', '=', 'purchase_details.article_id')
-            ->join('users', 'users.id', '=', 'purchases.user_id')
-            ->whereIn('purchases.status', [1,2,3])
+        // COMPRAS (entradas) -> excluir solo canceladas (status = 0)
+        $purchaseMovements = \App\Models\PurchaseDetail::query()
+            ->selectRaw("
+            purchase_details.id AS detail_id,
+            'purchase'          AS src,
+            purchase_details.article_id,
+            articles.title      AS article_name,
+            providers.name      AS provider_name,
+            NULL                AS contact_name,
+            NULL                AS client_name,
+            users.name          AS user_name,
+            purchases.`number`  AS `number`,
+            purchases.created_at AS fecha,
+            'entrada'           AS tipo,
+            purchase_details.quantity AS cantidad
+        ")
+            ->join('purchases', 'purchases.id', '=', 'purchase_details.purchase_id')
+            ->join('articles',  'articles.id',  '=', 'purchase_details.article_id')
+            ->join('users',     'users.id',     '=', 'purchases.user_id')
+            ->leftJoin('providers', 'providers.id', '=', 'purchases.provider_id')
+            ->where('purchases.status', '<>', 0)             // 👈 solo filtra estado 0
             ->where('purchase_details.article_id', $this->article);
 
-        // Movimientos de ventas (salidas) con nombre del artículo
-        $saleMovements = SaleDetail::select(
-            'sale_details.article_id',
-            'articles.title as article_name',
-            'contacts.name as contact_name',
-            'clients.name as client_name',
-            'users.name as user_name',
-            'sales.number as number',
-            DB::raw("sales.created_at as fecha"),
-            DB::raw("'salida' as tipo"),
-            DB::raw("sale_details.quantity as cantidad")
-        )
-            ->join('sales', 'sales.id', '=', 'sale_details.sale_id')
-            ->join('users', 'users.id', '=', 'sales.user_id')
-            ->join('contacts', 'contacts.id', '=', 'sales.contact_id')
-            ->join('clients', 'clients.id', '=', 'sales.client_id')
+        // VENTAS (salidas) -> excluir solo canceladas (status = 0)
+        $saleMovements = \App\Models\SaleDetail::query()
+            ->selectRaw("
+            sale_details.id     AS detail_id,
+            'sale'              AS src,
+            sale_details.article_id,
+            articles.title      AS article_name,
+            NULL                AS provider_name,
+            contacts.name       AS contact_name,
+            clients.name        AS client_name,
+            users.name          AS user_name,
+            sales.`number`      AS `number`,
+            COALESCE(sales.date, sales.created_at) AS fecha,
+            'salida'            AS tipo,
+            sale_details.quantity AS cantidad
+        ")
+            ->join('sales',   'sales.id',   '=', 'sale_details.sale_id')
+            ->join('users',   'users.id',   '=', 'sales.user_id')
+            ->leftJoin('contacts', 'contacts.id', '=', 'sales.contact_id')
+            ->leftJoin('clients',  'clients.id',  '=', 'sales.client_id')
             ->join('articles', 'articles.id', '=', 'sale_details.article_id')
-            ->whereIn('sales.status',[1,2,3])
+            ->where('sales.status', '<>', 0)                 // 👈 solo filtra estado 0
             ->where('sale_details.article_id', $this->article);
 
-        // Unificar ambas consultas
-        $movements = $purchaseMovements->union($saleMovements);
+        // UNION ALL (no perder movimientos válidos)
+        $movements = $purchaseMovements->unionAll($saleMovements);
 
-        // Obtener los movimientos ordenados por fecha
-        $kardex = DB::table(DB::raw("({$movements->toSql()}) as movimientos"))
-            ->mergeBindings($movements->getQuery()) // Transfiere los parámetros correctamente
-            ->orderBy('fecha')
+        // Saldo acumulado en SQL (orden estable por fecha, fuente y detail_id)
+        $rows = \DB::query()
+            ->fromSub($movements, 'm')
+            ->selectRaw("
+            m.*,
+            CASE WHEN m.tipo='entrada' THEN m.cantidad ELSE -m.cantidad END AS signed_qty,
+            SUM(CASE WHEN m.tipo='entrada' THEN m.cantidad ELSE -m.cantidad END)
+              OVER (ORDER BY m.fecha, m.src, m.detail_id) AS saldo
+        ")
+            // Mostrar lo más reciente primero
+            ->orderByDesc('m.fecha')
+            ->orderByDesc('m.src')
+            ->orderByDesc('m.detail_id')
             ->get();
 
-        // Calcular el saldo acumulado
-        $saldo = 0;
-        $kardexConSaldo = $kardex->map(function($movimiento) use (&$saldo) {
-            if ($movimiento->tipo === 'entrada') {
-                $saldo += $movimiento->cantidad;
-            } else {
-                // Para salidas, restamos la cantidad
-                $saldo -= $movimiento->cantidad;
-            }
-            $movimiento->saldo = $saldo;
-            return $movimiento;
-        });
-
-
-        $this->kardex =  $kardexConSaldo->reverse()->values();
-
+        $this->kardex = $rows;
     }
+
+
+
+
 
     public function render()
     {
