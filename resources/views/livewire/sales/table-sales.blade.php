@@ -287,11 +287,25 @@
                                                 {{ $sale->date }}
 
                                             </x-base.table.td-sale>
-                                            <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600">
+                                            <td>
+                                                @if($editingSaleId === $sale->id)
 
-                                                S/. {{ number_format($sale->total,2) }}
-
-                                            </x-base.table.td-sale>
+                                                    <x-base.form-input
+                                                        class="rounded-[0.5rem] pl-9 sm:w-32"
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder="Buscar..."
+                                                        wire:model.defer="newTotal"
+                                                    />
+                                                    @error('newTotal')
+                                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                @else
+                                                    {{ number_format((float)($sale->total ?? 0), 2) }}
+                                                    {{-- Si tu campo es total_amount, usa $sale->total_amount --}}
+                                                @endif
+                                            </td>
                                             <x-base.table.td-sale class="text-center border-dashed dark:bg-darkmode-600"
                                             >
                                                 {{ $sale->saleDetails->sum('quantity') }}
@@ -348,16 +362,44 @@
 
                                                     </x-base.tippy>
 
-                                                    <x-base.tippy
-                                                        as="x-base.button-sm"
-                                                        variant="pending"
-                                                        size="sm"
-                                                        class="mr-2 "
-                                                        content="Editar Total"
-                                                    >
-                                                        <i class="text-white fa-solid fa-edit"></i>
+                                                        @php
+                                                            $canInlineEdit = $sale->status !== \App\Models\Sale::SALE_CANCELED
+                                                                && $sale->saleDetails->count() === 1
+                                                                && (int)$sale->saleDetails->first()->quantity === 1;
+                                                        @endphp
 
-                                                    </x-base.tippy>
+                                                        @if($canInlineEdit)
+                                                            @if($editingSaleId === $sale->id)
+                                                                <x-base.tippy
+                                                                    as="x-base.button-sm"
+                                                                    variant="success"
+                                                                    size="sm"
+                                                                    class="mr-2"
+                                                                    content="Guardar"
+                                                                    wire:click="saveEditTotal({{ $sale->id }})">
+                                                                    <i class="text-white fa-solid fa-floppy-disk"></i>
+                                                                </x-base.tippy>
+                                                                <x-base.tippy
+                                                                    as="x-base.button-sm"
+                                                                    variant="danger"
+                                                                    size="sm"
+                                                                    class="mr-2"
+                                                                    content="Cancelar"
+                                                                    wire:click="cancelEditTotal">
+                                                                    <i class="text-white fa-solid fa-x"></i>
+                                                                </x-base.tippy>
+                                                            @else
+                                                                <x-base.tippy
+                                                                    as="x-base.button-sm"
+                                                                    variant="success"
+                                                                    size="sm"
+                                                                    class="mr-2"
+                                                                    content="Editar total"
+                                                                    wire:click="startEditTotal({{ $sale->id }})">
+                                                                    <i class="text-white fa-solid fa-edit"></i>
+                                                                </x-base.tippy>
+                                                            @endif
+                                                        @endif
 
                                                     @can('delete')
                                                         <x-base.tippy

@@ -11,6 +11,7 @@ use Livewire\Attributes\On;
 use Illuminate\Support\Facades\DB;
 use Livewire\WithPagination;
 use Log;
+use Illuminate\Validation\ValidationException;
 
 class TableSales extends Component
 {
@@ -33,12 +34,93 @@ class TableSales extends Component
     public $motiveDetail;
     public $saleDeleteSelect = null;
 
+    public ?int $editingSaleId = null;
+    public $newTotal = null;
+
     public function mount(){
         $this->limit = 40;
         $this->startDate = null;
         $this->endDate = null;
         $this->status = null;
     }
+    public function startEditTotal(int $saleId): void
+    {
+        $sale = Sale::with('saleDetails')->findOrFail($saleId);
+
+        // Reglas de negocio: no editar canceladas
+        if ($sale->status == Sale::SALE_CANCELED) {
+            $this->dispatch('errorNotRoute', ['label' => 'No puedes editar una venta anulada.']);
+            return;
+        }
+
+        // Debe tener exactamente 1 detalle y cantidad 1
+        if ($sale->saleDetails->count() !== 1 || (int)$sale->saleDetails->first()->quantity !== 1) {
+            $this->dispatch('errorNotRoute', ['label' => 'Solo se puede editar el total cuando hay 1 ítem con cantidad 1.']);
+            return;
+        }
+
+        $this->editingSaleId = $saleId;
+
+        // Si tu campo es total_amount, cámbialo aquí:
+        $this->newTotal = number_format((float) ($sale->total ?? 0), 2, '.', '');
+    }
+
+    public function cancelEditTotal(): void
+    {
+        $this->editingSaleId = null;
+        $this->newTotal = null;
+    }
+
+    // --- Guardar edición ---
+    public function saveEditTotal(int $saleId): void
+    {
+        $this->validate([
+            'newTotal' => 'required|numeric|min:0.01',
+        ], [], [
+            'newTotal' => 'nuevo total',
+        ]);
+
+        DB::transaction(function () use ($saleId) {
+            /** @var \App\Models\Sale $sale */
+            $sale = Sale::lockForUpdate()->with('saleDetails')->findOrFail($saleId);
+
+            if ($sale->status == Sale::SALE_CANCELED) {
+                throw ValidationException::withMessages(['newTotal' => 'No puedes editar una venta anulada.']);
+            }
+
+            if ($sale->saleDetails()->count() !== 1) {
+                throw ValidationException::withMessages(['newTotal' => 'La venta debe tener exactamente un ítem.']);
+            }
+
+            $detail = $sale->saleDetails()->first();
+            if ((int)$detail->quantity !== 1) {
+                throw ValidationException::withMessages(['newTotal' => 'La cantidad del ítem debe ser 1.']);
+            }
+
+            $nuevo = (float) $this->newTotal;
+
+            // Actualizar precio del detalle (y subtotal si aplica)
+            $detail->price = $nuevo;
+            if ($detail->isFillable('subtotal') || isset($detail->subtotal)) {
+                $detail->subtotal = $nuevo;
+            }
+            $detail->save();
+
+            // Actualizar total de la venta
+            // Si tu columna es total_amount, cámbialo aquí:
+            $sale->total = $nuevo;
+            $sale->updated_at = now();
+            $sale->save();
+        });
+
+        // Reset UI
+        $this->editingSaleId = null;
+        $this->newTotal = null;
+
+        // Notificación UI
+        $this->dispatch('successNotRoute', ['label' => 'Total actualizado correctamente.']);
+    }
+
     public function updatingSearch(){
         $this->resetPage();
     }
@@ -219,6 +301,7 @@ class TableSales extends Component
 
         foreach ($sales as $sale) {
             $htmlDetails = "<p><strong>Cliente: </strong> {$sale->client->name} </p><br><table style='border: 1px solid;'><thead style='border:1px solid;'><tr><th style='border:1px solid'>Titulo</th><th style='border:1px solid;padding:10px'>Cantidad</th><th style='padding:10px'>Precio</thstyle></tr></thead><tbody style='border:1px solid;'>";
+
             $btnDetails = '';
             switch($sale->status) {
                 case Sale::SALE_APPROVED:
