@@ -46,6 +46,13 @@ class SideMenu
                         'title' => "Marcas",
                         'permission' => 'brands',
                     ],
+                    [
+                        'icon' => "Tag",
+                        'route_name' => "inventory.index",
+                        'params' => [],
+                        'title' => "Inventario",
+                        'permission' => 'store',
+                    ],
                 ],
             ],
             [

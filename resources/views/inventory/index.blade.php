@@ -5,5 +5,5 @@
 @endsection
 
 @section('subcontent')
-    <livewire:inventory.index />
+    <livewire:inventory.index/>
 @endsection

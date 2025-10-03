@@ -3,6 +3,7 @@
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\KardexController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\PurchaseController;
@@ -30,6 +31,7 @@ Route::middleware(['guest'])->group(function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/', [DashboardController::class,'index'])->middleware(['auth', RedirectIfNoDashboardPermission::class])->name('dashboard');
+    Route::get('/inventory', [InventoryController::class,'index'])->name('inventory');
 
     Route::resource('categories', CategoryController::class)->middleware('can:store','can:categories');
     Route::resource('brands', BrandController::class)->middleware('can:store','can:brands');

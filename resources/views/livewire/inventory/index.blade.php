@@ -1,145 +1,255 @@
 <div>
-    <div class="grid grid-cols-12 gap-x-6 gap-y-1">
+    <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
             <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
-                    Inventario
+                    Inventario — Ventas del día
+                </div>
+                <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                    <x-base.button
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        wire:click="loadRows"
+                    >
+                        <div class="px-2"><i class="fa-solid fa-arrows-rotate"></i></div>
+                        Refrescar
+                    </x-base.button>
+
+                    <x-base.button
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        wire:click="saveCounts"
+                    >
+                        <div class="px-2"><i class="fa-solid fa-plus"></i></div>
+                        Guardar Stock
+                    </x-base.button>
+
                 </div>
             </div>
-        </div>
+            <div class="mt-3.5">
+                <div class="box box--stacked flex flex-col">
 
-        <div class="col-span-12 mb-8">
-            <div class="box box--stacked mt-3.5 flex flex-col p-5 sm:p-6">
-                <div class="col-span-12 relative mb-4 mt-7 rounded-[0.6rem] border border-slate-200/80 dark:border-darkmode-400">
-                    <div class="absolute left-0 -mt-2 ml-4 bg-white px-3 text-xs uppercase text-slate-500">
-                        <div class="-mt-px">Buscar Producto</div>
-                    </div>
-
-                    <div class="grid grid-cols-12 pt-4">
-                        <div class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2">
-
-                            {{-- Valor controlado por Livewire (fuera del modal) --}}
-                            <div class="text-xs text-slate-500">
-                                Valor Livewire: <span class="font-medium">{{$search}}</span>
+                    <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
+                        <div>
+                            <div class="relative mr-2">
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
+                                <x-base.litepicker
+                                    id="datepicker"
+                                    class="rounded-[0.5rem] pl-9 sm:w-60"
+                                    data-single-mode="true"
+                                    wire:model.live="date"
+                                    placeholder="Ingresa un rango de fechas"
+                                />
                             </div>
+                        </div>
 
-                            <x-base.button
-                                class="w-20"
-                                data-tw-toggle="modal"
-                                data-tw-target="#header-footer-modal-preview"
-                                href="#"
-                                as="a"
-                                variant="primary"
-                            >
-                                Show Modal
-                            </x-base.button>
 
-                            {{-- Evitamos que Livewire re-renderice el modal (y así no se duplica) --}}
-                            <x-base.dialog id="header-footer-modal-preview" wire:ignore wire:key="header-footer-modal">
-                                <x-base.dialog.panel>
-                                    <x-base.dialog.title>
-                                        <h2 class="mr-auto text-base font-medium">
-                                            Broadcast Message
-                                        </h2>
 
-                                        {{-- Botón cerrar (header) --}}
-                                        <button
-                                            type="button"
-                                            class="ml-2 flex items-center justify-center rounded-md p-2 hover:bg-slate-100 dark:hover:bg-darkmode-300"
-                                            data-tw-dismiss="modal"
-                                            aria-label="Close"
-                                            title="Cerrar"
-                                        >
-                                            <x-base.lucide class="h-5 w-5" icon="X" />
-                                        </button>
-                                    </x-base.dialog.title>
+                        <div>
 
-                                    <x-base.dialog.description class="grid grid-cols-12 gap-4 gap-y-3">
-                                        <div class="col-span-12 sm:col-span-6">
-                                            <x-base.form-label for="modal-form-1">From</x-base.form-label>
 
-                                            {{-- Vista previa local (opcional) dentro del modal --}}
-                                            <div class="text-xs text-slate-500 mb-1">
-                                                Valor en modal:
-                                                <span class="font-medium" id="modal-search-preview"></span>
-                                            </div>
-
-                                            <x-base.form-input
-                                                id="modal-form-1"
-                                                type="text"
-                                                placeholder="example@gmail.com"
-                                                oninput="(function(el){
-                        // Actualiza propiedad Livewire desde fuera del árbol (teleportado)
-                        if (window.Livewire && Livewire.dispatch) {
-                            Livewire.dispatch('modal-search-input', { value: el.value });
-                        }
-                        // Previsualización local
-                        var p = document.getElementById('modal-search-preview');
-                        if (p) p.textContent = el.value;
-                    })(this)"
-                                            />
-                                        </div>
-
-                                        <div class="col-span-12 sm:col-span-6">
-                                            <x-base.form-label for="modal-form-2">To</x-base.form-label>
-                                            <x-base.form-input id="modal-form-2" type="text" placeholder="example@gmail.com" />
-                                        </div>
-
-                                        <div class="col-span-12 sm:col-span-6">
-                                            <x-base.form-label for="modal-form-3">Subject</x-base.form-label>
-                                            <x-base.form-input id="modal-form-3" type="text" placeholder="Important Meeting" />
-                                        </div>
-
-                                        <div class="col-span-12 sm:col-span-6">
-                                            <x-base.form-label for="modal-form-4">Has the Words</x-base.form-label>
-                                            <x-base.form-input id="modal-form-4" type="text" placeholder="Job, Work, Documentation" />
-                                        </div>
-
-                                        <div class="col-span-12 sm:col-span-6">
-                                            <x-base.form-label for="modal-form-5">Doesn't Have</x-base.form-label>
-                                            <x-base.form-input id="modal-form-5" type="text" placeholder="Job, Work, Documentation" />
-                                        </div>
-
-                                        <div class="col-span-12 sm:col-span-6">
-                                            <x-base.form-label for="modal-form-6">Size</x-base.form-label>
-                                            <x-base.form-select id="modal-form-6">
-                                                <option>10</option>
-                                                <option>25</option>
-                                                <option>35</option>
-                                                <option>50</option>
-                                            </x-base.form-select>
-                                        </div>
-                                    </x-base.dialog.description>
-
-                                    <x-base.dialog.footer>
-                                        <x-base.button
-                                            class="mr-1 w-20"
-                                            data-tw-dismiss="modal"
-                                            type="button"
-                                            variant="outline-secondary"
-                                        >
-                                            Cancel
-                                        </x-base.button>
-
-                                        {{-- "Send" dispara acción Livewire (equivalente a wire:click) y cierra el modal --}}
-                                        <x-base.button
-                                            class="w-20"
-                                            type="button"
-                                            variant="primary"
-                                            onclick="Livewire.dispatch('modal-send')"
-                                            data-tw-dismiss="modal"
-                                        >
-                                            Send
-                                        </x-base.button>
-                                    </x-base.dialog.footer>
-                                </x-base.dialog.panel>
-                            </x-base.dialog>
-
+                                <x-base.form-input
+                                    class="rounded-[0.5rem] sm:w-64"
+                                    type="text"
+                                    wire:model.defer="note"
+                                    placeholder="Nota opcional para conteos…"
+                                />
 
                         </div>
+
+
+                    </div>
+                    <div class="overflow-auto xl:overflow-visible text-sm">
+                        <x-base.table class="border-b border-slate-200/60 ">
+                            <x-base.table.thead>
+                                <x-base.table.tr>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        SKU
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Nombre
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Stock Almacen
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Stock Kardex
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Dif, K
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Vendidos ({{ \Carbon\Carbon::parse($date)->format('d-m-Y') }})
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Físico Guardado
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Stock Físico
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Acción
+                                    </x-base.table.td>
+
+                                </x-base.table.tr>
+                            </x-base.table.thead>
+                            <x-base.table.tbody>
+
+                                @forelse ($rows as $r)
+                                    <x-base.table.tr class="[&_td]:last:border-b-0" wire:key="row-{{ $r->article_id }}">
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600 text">
+
+                                            {{ $r->sku }}
+
+                                        </x-base.table.td>
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600">
+
+                                            {{ $r->title }}
+
+                                        </x-base.table.td>
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">
+
+                                            {{ (int)$r->warehouse_stock }}
+
+
+                                        </x-base.table.td>
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">
+
+                                            {{ (int)$r->kardex_stock }}
+
+                                        </x-base.table.td>
+                                        @php $dk = (int)$r->diff_kardex_vs_warehouse; @endphp
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">
+
+                                            <span  class="{{ $dk === 0 ? 'text-slate-600' : ($dk > 0 ? 'text-emerald-700' : 'text-red-600') }}">
+                                                {{ $dk > 0 ? '+' : '' }}{{ $dk }}
+                                            </span>
+
+                                        </x-base.table.td>
+                                        <x-base.table.td class="text-center border-dashed dark:bg-darkmode-600 text-center"
+                                        >
+                                            {{ (int)$r->sold_today }}
+
+                                        </x-base.table.td>
+                                        <x-base.table.td
+                                            class="border-dashed dark:bg-darkmode-600 text-center">
+
+                                            {{ $r->physical_saved !== null ? (int)$r->physical_saved : '—' }}
+
+                                        </x-base.table.td>
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600">
+
+                                            <x-base.form-input
+                                                class="rounded-[0.5rem] w-28 text-right"
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                wire:key="phys-{{ $r->article_id }}"
+                                                wire:model.defer="physicalStocks.{{ $r->article_id }}"
+                                                placeholder="—"
+                                            />
+                                            @error('physicalStocks.'.$r->article_id)
+                                            <div class="text-red-600 text-xs mt-1">{{ $message }}</div>
+                                            @enderror
+
+                                        </x-base.table.td>
+
+
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600">
+                                            <div class="flex items-center justify-center">
+                                                @can('update')
+                                                    <x-base.tippy
+                                                        as="x-base.button-sm"
+                                                        variant="success"
+                                                        size="sm"
+                                                        class="mr-2"
+                                                        content="Limpiar"
+                                                        wire:key="clr-{{ $r->article_id }}"
+                                                        wire:click="clearPhysical({{ $r->article_id }})"
+                                                       >
+                                                        <i class="text-white fa-solid fa-eraser"></i>
+
+                                                    </x-base.tippy>
+                                                @endcan
+                                                <x-base.tippy
+                                                    as="x-base.button-sm"
+                                                    variant="primary"
+                                                    size="sm"
+                                                    class="mr-2"
+                                                    content="Emitir comprobante"
+                                                    wire:key="upd-{{ $r->article_id }}"
+                                                    wire:click="updateWarehouseStock({{ $r->article_id }})"
+                                                    :disabled="!isset($physicalStocks[$r->article_id]) || $physicalStocks[$r->article_id] === null || $physicalStocks[$r->article_id] === ''"
+                                                    >
+                                                    <i class="fa-solid fa-arrow-rotate-right"></i>
+
+                                                </x-base.tippy>
+
+                                            </div>
+                                        </x-base.table.td>
+                                    </x-base.table.tr>
+                                @empty
+                                    <x-base.table.tr>
+                                        <x-base.table.td colspan="10"
+                                                         class=" text-center border-dashed dark:bg-darkmode-600">
+                                            No se encontrarón resultados.
+                                        </x-base.table.td>
+                                    </x-base.table.tr>
+                                @endforelse
+
+                            </x-base.table.tbody>
+                        </x-base.table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const pickerFilter = new Litepicker({
+            element: document.getElementById('datepicker'),
+            autoApply: false,
+            singleMode: true,
+            numberOfColumns: 1,
+            numberOfMonths: 1,
+            dropdowns: {
+                minYear: 2020,
+                maxYear: null,
+                months: true,
+                years: true,
+            },
+        });
+
+        pickerFilter.on('selected', (startDate, endDate) => {
+            @this.
+            set('date', startDate.format('YYYY-MM-DD'));
+        });
+
+    });
+</script>
+
+
+
+
