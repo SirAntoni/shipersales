@@ -48,7 +48,7 @@ class SideMenu
                     ],
                     [
                         'icon' => "Tag",
-                        'route_name' => "inventory.index",
+                        'route_name' => "inventory",
                         'params' => [],
                         'title' => "Inventario",
                         'permission' => 'store',
