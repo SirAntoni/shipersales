@@ -50,29 +50,31 @@ class Index extends Component
      */
     public function loadRows(): void
     {
-        // Subconsulta: vendidos hoy
-        $soldToday = DB::table('sale_details as sd')
+        $day = $this->date; // 'Y-m-d'
+
+        // Subselect correlacionado: SUM de vendidos en el día por artículo
+        $soldTodaySum = DB::table('sale_details as sd')
             ->join('sales as s', 's.id', '=', 'sd.sale_id')
-            ->select('sd.article_id', DB::raw('SUM(sd.quantity) AS sold_today'))
-            ->whereDate('s.date', $this->date)   // usa created_at si prefieres
-            ->whereIn('s.status', [1, 2, 3])
+            ->whereColumn('sd.article_id', 'a.id')
+            ->whereDate(DB::raw('COALESCE(s.date, s.created_at)'), $day)
+            ->where('s.status', '<>', 0)         // excluye canceladas
             ->whereNull('sd.deleted_at')
             ->whereNull('s.deleted_at')
-            ->groupBy('sd.article_id');
-
-        // Subselect correlacionado: último conteo del día para cada artículo
-        $physicalSavedSub = DB::table('inventory_counts as ic')
-            ->select('ic.counted_stock')
-            ->whereColumn('ic.article_id', 'a.id')
-            ->whereDate('ic.counted_date', $this->date)
-            ->orderByDesc('ic.id')
-            ->limit(1);
+            ->selectRaw('COALESCE(SUM(sd.quantity), 0)'); // devuelve 0 si no hay ventas
 
         $rows = DB::table('articles as a')
             ->leftJoin('v_kardex_stock as k', 'k.article_id', '=', 'a.id')
-            ->leftJoinSub($soldToday, 'st', fn($j) => $j->on('st.article_id', '=', 'a.id'))
             ->whereNull('a.deleted_at')
-            ->whereNotNull('st.sold_today') // solo los que vendieron ese día
+            // Incluir SOLO artículos que sí tuvieron ventas ese día (EXISTS)
+            ->whereExists(function ($q) use ($day) {
+                $q->from('sale_details as sd')
+                    ->join('sales as s', 's.id', '=', 'sd.sale_id')
+                    ->whereColumn('sd.article_id', 'a.id')
+                    ->whereDate(DB::raw('COALESCE(s.date, s.created_at)'), $day)
+                    ->where('s.status', '<>', 0)   // excluye canceladas
+                    ->whereNull('sd.deleted_at')
+                    ->whereNull('s.deleted_at');
+            })
             ->select([
                 'a.id as article_id',
                 'a.sku',
@@ -80,9 +82,18 @@ class Index extends Component
                 'a.stock as warehouse_stock',
                 DB::raw('COALESCE(k.kardex_stock, 0) AS kardex_stock'),
                 DB::raw('(COALESCE(k.kardex_stock, 0) - a.stock) AS diff_kardex_vs_warehouse'),
-                DB::raw('COALESCE(st.sold_today, 0) AS sold_today'),
             ])
-            ->selectSub($physicalSavedSub, 'physical_saved')
+            ->selectSub($soldTodaySum, 'sold_today')
+            // último conteo físico del día
+            ->selectSub(
+                DB::table('inventory_counts as ic')
+                    ->select('ic.counted_stock')
+                    ->whereColumn('ic.article_id', 'a.id')
+                    ->whereDate('ic.counted_date', $day)
+                    ->orderByDesc('ic.id')
+                    ->limit(1),
+                'physical_saved'
+            )
             ->orderBy('a.title')
             ->get();
 
@@ -93,6 +104,7 @@ class Index extends Component
             $this->physicalStocks[$r->article_id] = $r->physical_saved ?? null;
         }
     }
+
 
     /** Limpia input físico por fila */
     public function clearPhysical(int $articleId): void
