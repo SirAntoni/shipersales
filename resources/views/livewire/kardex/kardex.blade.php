@@ -1,3 +1,4 @@
+
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-1">
         <div class="col-span-12">
@@ -17,28 +18,52 @@
                         <div class="-mt-px">Buscar Producto</div>
                     </div>
                     <div class="grid grid-cols-12 pt-4">
-                        <div class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2">
-
-                            <div>
-                                <div class="mt-2" wire:ignore>
+                        <div class="col-span-12 px-5 py-2">
+                            <div class="flex items-center gap-2">
+                                <!-- INPUT ocupa todo -->
+                                <div class="flex-1 min-w-0" wire:ignore>
                                     <x-base.tom-select
                                         id="tomArticles"
                                         class="w-full"
                                         data-placeholder="Buscar producto por nombre"
-                                        wire:model.live="article"
-                                    >
+                                        wire:model.live="article">
                                     </x-base.tom-select>
                                 </div>
-                                @error('articlesSelected')
-                                <div class="p-1">
-                                    {{$message}}
+
+                                <!-- Botón: Copiar Nombre + toast encima -->
+                                <div class="relative shrink-0 inline-block">
+                                    <button type="button" id="btnCopyName"
+                                            class="inline-flex items-center px-3 py-1.5 rounded-md text-sm bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
+                                        Copiar Nombre
+                                    </button>
+                                    <div id="toastName"
+                                         class="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2
+                    bg-emerald-600 text-white text-xs px-2.5 py-1 rounded shadow
+                    opacity-0 translate-y-1 transition duration-200">
+                                        Copiado
+                                    </div>
                                 </div>
-                                @enderror
+
+                                <!-- Botón: Copiar SKU + toast encima -->
+                                <div class="relative shrink-0 inline-block">
+                                    <button type="button" id="btnCopySku"
+                                            class="inline-flex items-center px-3 py-1.5 rounded-md text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                                        Copiar SKU
+                                    </button>
+                                    <div id="toastSku"
+                                         class="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2
+                    bg-emerald-600 text-white text-xs px-2.5 py-1 rounded shadow
+                    opacity-0 translate-y-1 transition duration-200">
+                                        Copiado
+                                    </div>
+                                </div>
                             </div>
-
                         </div>
-
                     </div>
+
+
+
+
                 </div>
             </div>
         </div>
@@ -210,29 +235,96 @@
 
         </div>
     </div>
+
+    <div id="copyToast"
+         class="fixed z-50 top-4 right-4 pointer-events-none transition-all duration-300
+            opacity-0 translate-y-2 hidden">
+        <div class="rounded-md bg-emerald-600 text-white px-4 py-2 shadow-lg text-sm">
+            Copiado
+        </div>
+    </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-
-        new TomSelect('#tomArticles', {
+        const ts = new TomSelect('#tomArticles', {
             valueField: 'value',
             labelField: 'text',
             searchField: 'text',
             maxItems: 1,
             create: false,
+            shouldLoad: q => q.length > 0,
             load: function (query, callback) {
-                if (!query.length) return callback();
-
-                @this.
-                call('searchArticles', query)
-                    .then(data => callback(data))
-                    .catch(() => callback());
+                @this.call('searchArticles', query).then(callback).catch(() => callback());
             }
         });
 
+        const btnName   = document.getElementById('btnCopyName');
+        const btnSku    = document.getElementById('btnCopySku');
+        const toastName = document.getElementById('toastName');
+        const toastSku  = document.getElementById('toastSku');
+
+        function setButtonsState() {
+            const has = !!ts.getValue();
+            btnName.disabled = !has;
+            btnSku.disabled  = !has;
+        }
+        ts.on('change', setButtonsState);
+        setButtonsState();
+
+        function getSelectedText() {
+            const item = ts.control.querySelector('.item');
+            if (item) return item.textContent.trim();
+            const val = ts.getValue();
+            const opt = ts.getOption(val);
+            return opt ? opt.textContent.trim() : '';
+        }
+        function splitNameSku(full) {
+            const sep = ' - ';
+            const idx = full.lastIndexOf(sep);
+            if (idx === -1) return { name: full, sku: '' };
+            return { name: full.slice(0, idx).trim(), sku: full.slice(idx + sep.length).trim() };
+        }
+
+        function showInlineToast(el, msg='Copiado') {
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.remove('opacity-0','translate-y-1');
+            el.classList.add('opacity-100','translate-y-0');
+            clearTimeout(el._t);
+            el._t = setTimeout(() => {
+                el.classList.add('opacity-0','translate-y-1');
+                el.classList.remove('opacity-100','translate-y-0');
+            }, 1200);
+        }
+
+        async function copyToClipboard(text, toastEl) {
+            if (!text) { showInlineToast(toastEl, 'Sin datos'); return; }
+            try {
+                await navigator.clipboard.writeText(text);
+                showInlineToast(toastEl, 'Copiado');
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly','');
+                ta.style.position = 'fixed';
+                ta.style.top = '-1000px';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); showInlineToast(toastEl, 'Copiado'); }
+                finally { document.body.removeChild(ta); }
+            }
+        }
+
+        btnName.addEventListener('click', () => {
+            const { name } = splitNameSku(getSelectedText());
+            copyToClipboard(name, toastName);
+        });
+        btnSku.addEventListener('click', () => {
+            const { sku } = splitNameSku(getSelectedText());
+            copyToClipboard(sku, toastSku);
+        });
     });
-
-
 </script>
+
 
