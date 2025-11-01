@@ -48,15 +48,15 @@ class Dashboard extends Component
 
     public function getCantidadVentas(): int{
         return Cache::remember('ventas_hoy_count', 60, function () {
-            return Sale::whereDate('created_at', Carbon::today())->count();
+            return Sale::whereDate('created_at', Carbon::today())->whereIn('status',[1,2,3])->count();
         });
-
     }
 
     public function getTotalVentasHoy(): float
     {
         return Cache::remember('total_ventas_hoy', 60, function () {
             return (float) Sale::whereDate('created_at', Carbon::today())
+                ->whereIn('status',[1,2,3])
                 ->sum('total');
         });
     }
@@ -98,6 +98,7 @@ class Dashboard extends Component
 
         // 1) Obtenemos por día: suma de total y cantidad de ventas
         $raw = Sale::whereBetween('date', [$start, $end])
+            ->whereIn('status',[1,2,3])
             ->groupBy(DB::raw('DATE(date)'))
             ->orderBy(DB::raw('DATE(date)'), 'ASC')
             ->get([
@@ -153,7 +154,7 @@ class Dashboard extends Component
                 // Realiza la operación por cada registro de sale_details
                 DB::raw('SUM(sale_details.price - (articles.purchase_price * '. Purchase::exchangeRate() .')) as total')
             )
-            ->where('sales.status',"!=",0)
+            ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
             ->whereMonth('sale_details.created_at', $month)
             // Filtro por provider (suponiendo que es en articles, columna provider_id)
@@ -205,7 +206,7 @@ class Dashboard extends Component
                 // Calcula el margen promedio en porcentaje
                 DB::raw("AVG((sale_details.price - (articles.purchase_price * $this->exchange)) / sale_details.price * 100) as margen_promedio")
             )
-            ->where('sales.status',"!=",0)
+            ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
             ->whereMonth('sale_details.created_at', $month)
             // Filtro opcional por proveedor (provider_id de la tabla articles)
@@ -254,7 +255,7 @@ class Dashboard extends Component
                 // Realiza la operación por cada registro de sale_details
                 DB::raw("SUM(sale_details.price - (articles.purchase_price * $this->exchange)) as total")
             )
-            ->where('sales.status',"!=",0)
+            ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
             ->whereMonth('sale_details.created_at', $month)
             // Filtro opcional por proveedor (provider_id de la tabla articles)
@@ -302,7 +303,7 @@ class Dashboard extends Component
                 // Realiza la operación por cada registro de sale_details
                 DB::raw("SUM(sale_details.price - (articles.purchase_price * $this->exchange)) as total")
             )
-            ->where('sales.status',"!=",0)
+            ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
             ->whereMonth('sale_details.created_at', $month)
             // Filtro opcional por proveedor (provider_id de la tabla articles)
@@ -350,7 +351,7 @@ class Dashboard extends Component
                 // Realiza la operación por cada registro de sale_details
                 DB::raw("SUM(sale_details.price - (articles.purchase_price * $this->exchange)) as total")
             )
-            ->where('sales.status',"!=",0)
+            ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
             ->whereMonth('sale_details.created_at', $month)
             // Filtro opcional por proveedor (provider_id de la tabla articles)
@@ -399,7 +400,7 @@ class Dashboard extends Component
                 // Realiza la operación por cada registro de sale_details
                 DB::raw("SUM(sale_details.price - (articles.purchase_price * $this->exchange)) as total")
             )
-            ->where('sales.status',"!=",0)
+            ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
             ->whereMonth('sale_details.created_at', $month)
             // Filtro opcional por proveedor (provider_id de la tabla articles)
@@ -447,7 +448,7 @@ class Dashboard extends Component
                 // Realiza la operación por cada registro de sale_details
                 DB::raw('SUM(sale_details.price) as total_ventas')
             )
-            ->where('sales.status',"!=",0)
+            ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
             ->whereMonth('sale_details.created_at', $month)
             // Filtro opcional por proveedor (provider_id de la tabla articles)
@@ -484,7 +485,7 @@ class Dashboard extends Component
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales',   'sale_details.sale_id',   '=', 'sales.id')
             ->join('clients',  'sales.client_id',        '=', 'clients.id')
-            ->where('sales.status', '!=', 0)
+            ->whereIn('sales.status', [1,2,3])
             // filtros opcionales
             ->when($provider,   fn($q) => $q->where('articles.provider_id',    $provider))
             ->when($category,   fn($q) => $q->where('sale_details.category_id', $category))
@@ -536,7 +537,7 @@ class Dashboard extends Component
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales',   'sale_details.sale_id',   '=', 'sales.id')
             ->join('clients',  'sales.client_id',        '=', 'clients.id')
-            ->where('sales.status', '!=', 0)
+            ->whereIn('sales.status', [1,2,3])
             // filtros opcionales
             ->when($provider,   fn($q) => $q->where('articles.provider_id',    $provider))
             ->when($category,   fn($q) => $q->where('sale_details.category_id', $category))

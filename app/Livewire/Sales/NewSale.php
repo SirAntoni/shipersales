@@ -22,6 +22,7 @@ class NewSale extends Component
     public $articles;
     public $contacts;
     public $tax;
+    public $square;
     public $number;
     public $contact;
     public $paymentMethod;
@@ -135,7 +136,7 @@ class NewSale extends Component
             'user_id' => auth()->id(),
             'contact_id' => $this->contact,
             'payment_method_id' => $this->paymentMethod,
-            'status' => Sale::SALE_PENDING,
+            'status' => ($this->square == 1) ? Sale::SALE_SQUARE : Sale::SALE_PENDING,
         ]);
 
         foreach ($this->articlesSelected as $article) {

@@ -66,6 +66,7 @@ class ReportMonthExport implements
             ->join('districts','clients.district_id','=','districts.id')
             ->join('departments','clients.department_id','=','departments.id')
             ->join('provinces','clients.province_id','=','provinces.id')
+            ->whereIn('sales.status', [1,2,3])
             ->whereMonth('sale_details.created_at', $this->month)
             ->whereYear('sale_details.created_at', $this->year)
             ->where('articles.provider_id', $this->provider);

@@ -70,6 +70,7 @@ class ReportDayliExport implements
             ->join('districts','clients.district_id','=','districts.id')
             ->join('departments','clients.department_id','=','departments.id')
             ->join('provinces','clients.province_id','=','provinces.id')
+            ->whereIn('sales.status', [1,2,3])
             ->whereDate('sale_details.created_at', $this->date);
     }
 

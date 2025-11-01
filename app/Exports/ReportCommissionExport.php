@@ -48,7 +48,7 @@ class ReportCommissionExport implements
                 'contact:id,name',
                 'paymentMethod:id,name'
             ])
-            ->where('status', '!=', Sale::SALE_CANCELED)
+            ->whereIn('status', [1,2,3])
             ->whereIn('sales.contact_id', [5, 1, 4, 12])
             ->whereMonth('sales.created_at', '=', $this->month)
             ->whereYear('sales.created_at', '=', $this->year)

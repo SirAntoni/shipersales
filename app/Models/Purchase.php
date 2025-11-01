@@ -10,6 +10,8 @@ class Purchase extends Model
     const PURCHASE_FINISHED = 1;
     const PURCHASE_NOT_FINISHED = 2;
 
+    const PURCHASE_SQUARE = 3;
+
     protected $fillable = [
         'provider_id',
         'user_id',

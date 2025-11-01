@@ -11,6 +11,7 @@ class Sale extends Model
     const SALE_PENDING = 1;
     const SALE_APPROVED = 2;
     const SALE_OBSERVATION = 3;
+    const SALE_SQUARE = 4;
 
     protected $fillable = [
         'number',
