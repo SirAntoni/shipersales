@@ -5,6 +5,7 @@ namespace App\Livewire\Inventory;
 use App\Models\Article;
 use App\Models\InventoryAdjustment;
 use App\Models\InventoryCount;
+use App\Models\InventorySession;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +14,7 @@ use Livewire\Component;
 
 class Index extends Component
 {
-    /** Fecha que define “ventas del día” */
+    /** Fecha que define “ventas del día” (YYYY-mm-dd) */
     public string $date = '';
 
     /** Filas con datos: almacén, kardex, diff, vendidos, físico guardado */
@@ -28,6 +29,13 @@ class Index extends Component
     /** Mensaje simple para UI */
     public ?string $flash = null;
 
+    /** ====== Modo inventario / tiempo ====== */
+    public bool $editing = false;        // habilita/deshabilita edición
+    public ?string $startedAt = null;    // ISO 8601 para cronómetro UI
+    public ?int $sessionId = null;       // inventory_sessions.id
+    public int $totalRows = 0;           // total de filas a completar
+    public int $completedRows = 0;       // filas con valor válido
+
     public function mount(): void
     {
         $this->date = Carbon::today()->format('Y-m-d');
@@ -37,7 +45,17 @@ class Index extends Component
 
     public function updatedDate(): void
     {
+        // si está en modo inventario, no permitir cambiar la fecha
+        if ($this->editing) return;
         $this->loadRows();
+    }
+
+    public function updated($name): void
+    {
+        // Cuando cambia cualquier clave de physicalStocks.*, recalculamos progreso
+        if (str_starts_with($name, 'physicalStocks.')) {
+            $this->recountCompleted();
+        }
     }
 
     /**
@@ -60,18 +78,18 @@ class Index extends Component
             ->where('s.status', '<>', 0)         // excluye canceladas
             ->whereNull('sd.deleted_at')
             ->whereNull('s.deleted_at')
-            ->selectRaw('COALESCE(SUM(sd.quantity), 0)'); // devuelve 0 si no hay ventas
+            ->selectRaw('COALESCE(SUM(sd.quantity), 0)');
 
         $rows = DB::table('articles as a')
             ->leftJoin('v_kardex_stock as k', 'k.article_id', '=', 'a.id')
             ->whereNull('a.deleted_at')
-            // Incluir SOLO artículos que sí tuvieron ventas ese día (EXISTS)
+            // Incluir SOLO artículos que sí tuvieron ventas ese día
             ->whereExists(function ($q) use ($day) {
                 $q->from('sale_details as sd')
                     ->join('sales as s', 's.id', '=', 'sd.sale_id')
                     ->whereColumn('sd.article_id', 'a.id')
                     ->whereDate(DB::raw('COALESCE(s.date, s.created_at)'), $day)
-                    ->where('s.status', '<>', 0)   // excluye canceladas
+                    ->where('s.status', '<>', 0)
                     ->whereNull('sd.deleted_at')
                     ->whereNull('s.deleted_at');
             })
@@ -99,32 +117,96 @@ class Index extends Component
 
         $this->rows = collect($rows);
 
-        // Sincroniza SIEMPRE los inputs con lo que hay en BD
+        // Sincroniza inputs con lo último guardado (o null)
+        $this->physicalStocks = [];
         foreach ($this->rows as $r) {
             $this->physicalStocks[$r->article_id] = $r->physical_saved ?? null;
         }
+
+        $this->totalRows = $this->rows->count();
+        $this->recountCompleted();
     }
 
+    /** Recalcula cuántos inputs están llenos (para progreso) */
+    public function recountCompleted(): void
+    {
+        $this->completedRows = 0;
+        foreach ($this->rows as $r) {
+            $v = $this->physicalStocks[$r->article_id] ?? null;
+            if ($v !== null && $v !== '') $this->completedRows++;
+        }
+    }
+
+    /** Hook: si el usuario va llenando, recalculamos progreso */
+    public function updatedPhysicalStocks(): void
+    {
+        $this->recountCompleted();
+    }
 
     /** Limpia input físico por fila */
     public function clearPhysical(int $articleId): void
     {
+        if (!$this->editing) return;
         $this->physicalStocks[$articleId] = null;
+        $this->recountCompleted();
+    }
+
+    /** Arranca el modo inventario: habilita inputs, marca inicio y crea sesión */
+    public function startInventory(): void
+    {
+        if ($this->editing) return;
+
+        // refresca filas (aseguramos totalRows correcto)
+        $this->loadRows();
+
+        $this->editing   = true;
+        $this->startedAt = now()->toISOString();
+
+        $session = InventorySession::create([
+            'count_date'     => $this->date,
+            'user_id'        => Auth::id(),
+            'started_at'     => now(),
+            'total_rows'     => $this->totalRows,
+            'completed_rows' => 0,
+            'note'           => $this->note,
+        ]);
+
+        $this->sessionId = $session->id;
+        $this->dispatch('inventory-started', startedAt: $this->startedAt);
+    }
+
+    /** Cancela el modo inventario (no persiste duración) */
+    public function cancelInventory(): void
+    {
+        if (!$this->editing) return;
+
+        $this->editing   = false;
+        $this->startedAt = null;
+        $this->sessionId = null;
+        $this->flash     = 'Inventario cancelado.';
+        $this->dispatch('inventory-stopped');
     }
 
     /**
-     * Guarda conteos físicos del día (NO toca articles.stock) y recarga tabla/inputs.
+     * Guarda conteos físicos del día (NO toca articles.stock) y persiste duración.
+     * Bloquea si no están TODAS las filas completas.
      */
     public function saveCounts(): void
     {
-        // Reglas por fila: cuando esté seteado, entero >= 0
+        if (!$this->editing || !$this->sessionId) {
+            $this->flash = 'Inicia el inventario antes de guardar.';
+            return;
+        }
+
+        // Exigir TODOS los campos: required|integer|min:0
         $rules = [];
         foreach ($this->rows as $r) {
-            $rules["physicalStocks.{$r->article_id}"] = 'nullable|integer|min:0';
+            $rules["physicalStocks.{$r->article_id}"] = 'required|integer|min:0';
         }
         $this->validate($rules, [
-            'integer' => 'Sólo números enteros.',
-            'min'     => 'No puede ser negativo.',
+            'required' => 'Completa todos los productos antes de guardar.',
+            'integer'  => 'Sólo números enteros.',
+            'min'      => 'No puede ser negativo.',
         ]);
 
         $day = Carbon::parse($this->date)->toDateString();
@@ -133,24 +215,39 @@ class Index extends Component
         try {
             DB::transaction(function () use ($day, $uid) {
                 foreach ($this->rows as $r) {
-                    $physical = $this->physicalStocks[$r->article_id] ?? null;
-                    if ($physical === '' || $physical === null) {
-                        continue;
-                    }
-
+                    $physical = (int) $this->physicalStocks[$r->article_id];
                     InventoryCount::create([
                         'article_id'    => $r->article_id,
-                        'counted_stock' => (int) $physical,
+                        'counted_stock' => $physical,
                         'counted_date'  => $day,
-                        'counted_by'    => $uid,   // nullable
+                        'counted_by'    => $uid,
                         'note'          => $this->note,
                     ]);
                 }
+
+                // Duración
+                $duration = null;
+                if ($this->startedAt) {
+                    $duration = Carbon::parse($this->startedAt)->diffInSeconds(now());
+                }
+
+                // Actualiza la sesión
+                InventorySession::where('id', $this->sessionId)->update([
+                    'finished_at'    => now(),
+                    'duration_sec'   => $duration,
+                    'completed_rows' => $this->totalRows,
+                    'note'           => $this->note,
+                ]);
             });
 
             $this->flash = 'Conteos físicos guardados.';
-            // Relee BD y pre-carga inputs con el último conteo
+            // Salimos de modo inventario y refrescamos
+            $this->editing   = false;
+            $this->startedAt = null;
+            $this->sessionId = null;
+
             $this->loadRows();
+            $this->dispatch('inventory-stopped');
 
         } catch (\Throwable $e) {
             \Log::error('Inventory saveCounts error', [
@@ -163,9 +260,12 @@ class Index extends Component
 
     /**
      * Actualiza almacén (articles.stock) para UNA fila y audita.
+     * Habilitado sólo si $editing y el input está lleno.
      */
     public function updateWarehouseStock(int $articleId): void
     {
+        if (!$this->editing) return;
+
         $this->validate([
             "physicalStocks.$articleId" => 'required|integer|min:0',
         ], [
@@ -198,7 +298,6 @@ class Index extends Component
             });
 
             $this->flash = 'Stock de almacén actualizado.';
-            // Relee para ver almacén actualizado y mantener input
             $this->loadRows();
 
         } catch (\Throwable $e) {

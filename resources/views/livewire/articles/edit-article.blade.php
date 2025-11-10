@@ -383,6 +383,53 @@
 
                                 </div>
 
+                                <div class="flex-col block pt-5 mt-5 first:mt-0 first:pt-0 sm:flex xl:flex-row xl:items-start">
+                                    <div class="inline-block mb-2 sm:mb-0 sm:mr-5 sm:text-right xl:mr-14 xl:w-60">
+                                        <div class="text-left">
+                                            <div class="font-medium">Precios por contacto</div>
+                                            <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80">
+                                                Si se selecciona el contacto en la venta, se usará este precio en lugar de <b>sale_price</b>.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-4">
+                                        @foreach ($priceRows as $i => $row)
+                                            <div class="flex items-center space-x-2">
+                                                <x-base.form-select class="w-40" wire:model.defer="priceRows.{{ $i }}.contact_id">
+                                                    <option value="">-- Contacto --</option>
+                                                    @foreach($contacts as $contact)
+                                                        <option value="{{ $contact->id }}">{{ $contact->name }}</option>
+                                                    @endforeach
+                                                </x-base.form-select>
+
+                                                <x-base.form-input
+                                                    class="w-32 text-right"
+                                                    type="number" step="0.01" min="0"
+                                                    wire:model.defer="priceRows.{{ $i }}.price"
+                                                    placeholder="0.00"
+                                                />
+
+                                                <label class="inline-flex items-center space-x-1 text-sm">
+                                                    <input type="checkbox" wire:model.defer="priceRows.{{ $i }}.active">
+                                                    <span>Activo</span>
+                                                </label>
+
+                                                @if(count($priceRows) > 1)
+                                                    <button wire:click.prevent="removePriceRow({{ $i }})" class="text-red-500 hover:text-red-700">
+                                                        &times;
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+
+                                        <div class="flex space-x-2">
+                                            <x-base.button wire:click.prevent="addPriceRow" class="border-slate-300/80 bg-white/80" variant="outline-primary">
+                                                <i class="fa-solid fa-plus mr-1"></i> Agregar precio
+                                            </x-base.button>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>

@@ -50,4 +50,9 @@ class Article extends Model
     {
         return $this->hasMany(ArticleMarketplace::class);
     }
+
+    public function contactPrices()
+    {
+        return $this->hasMany(\App\Models\ArticleContactPrice::class);
+    }
 }
