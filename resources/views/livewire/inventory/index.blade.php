@@ -71,6 +71,18 @@
                     <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
                         <div>
                             <div class="relative mr-2">
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 text-slate-500 fa-solid fa-magnifying-glass"></i>
+                                <x-base.form-input
+                                    class="rounded-[0.5rem] pl-9 sm:w-72"
+                                    type="text"
+                                    wire:model.live="q"
+                                    placeholder="Buscar por SKU o título…"
+                                    :disabled="$editing"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <div class="relative mr-2">
                                 <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
                                 <x-base.litepicker
                                     id="datepicker"

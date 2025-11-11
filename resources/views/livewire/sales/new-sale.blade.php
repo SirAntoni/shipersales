@@ -505,23 +505,29 @@
                                         </div>
 
                                     </div>
-                                    <div
-                                        class="col-span-12 sm:col-span-3 flex flex-col gap-3.5 px-5 sm:pt-1 pt-10  md:pt-10 pb-4">
-                                        <div>
 
-                                            <x-base.form-switch>
-                                                <x-base.form-switch.input
-                                                    id="checkbox-switch-7"
-                                                    type="checkbox"
-                                                    wire:model.live="square"
-                                                />
-                                                <x-base.form-switch.label for="checkbox-switch-7">
-                                                    Venta de cuadre {{$square}}
-                                                </x-base.form-switch.label>
-                                            </x-base.form-switch>
-                                        </div>
+                                    @auth
+                                        @if (auth()->id() === 1)
+                                            <div
+                                                class="col-span-12 sm:col-span-3 flex flex-col gap-3.5 px-5 sm:pt-1 pt-10  md:pt-10 pb-4">
+                                                <div>
 
-                                    </div>
+                                                    <x-base.form-switch>
+                                                        <x-base.form-switch.input
+                                                            id="checkbox-switch-7"
+                                                            type="checkbox"
+                                                            wire:model.live="square"
+                                                        />
+                                                        <x-base.form-switch.label for="checkbox-switch-7">
+                                                            Venta de cuadre {{$square}}
+                                                        </x-base.form-switch.label>
+                                                    </x-base.form-switch>
+                                                </div>
+
+                                            </div>
+                                        @endif
+                                    @endauth
+
                                 </div>
                             </div>
                         </div>

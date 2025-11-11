@@ -57,7 +57,9 @@ class Kardex extends Component
             purchases.`number`  AS `number`,
             purchases.created_at AS fecha,
             'entrada'           AS tipo,
-            purchase_details.quantity AS cantidad
+            purchase_details.quantity AS cantidad,
+            purchases.document AS document,
+            purchases.passenger AS passenger
         ")
             ->join('purchases', 'purchases.id', '=', 'purchase_details.purchase_id')
             ->join('articles',  'articles.id',  '=', 'purchase_details.article_id')
@@ -80,7 +82,9 @@ class Kardex extends Component
             sales.`number`      AS `number`,
             COALESCE(sales.date, sales.created_at) AS fecha,
             'salida'            AS tipo,
-            sale_details.quantity AS cantidad
+            sale_details.quantity AS cantidad,
+             NULL                AS document,
+             NULL                AS passenger
         ")
             ->join('sales',   'sales.id',   '=', 'sale_details.sale_id')
             ->join('users',   'users.id',   '=', 'sales.user_id')

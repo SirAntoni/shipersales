@@ -146,7 +146,7 @@
 
                                             <div
                                                 class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
-                                                {{$article->number}}
+                                                {{($article->tipo == "salida") ? $article->number:$article->document}}
                                             </div>
 
                                         </x-base.table.td>
@@ -155,7 +155,7 @@
                                         >
                                             <div
                                                 class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
-                                                {{($article->tipo == "salida") ? $article->contact_name:"-"}}
+                                                {{($article->tipo == "salida") ? $article->contact_name:$article->provider_name}}
                                             </div>
                                         </x-base.table.td>
                                         <x-base.table.td
@@ -163,7 +163,7 @@
                                         >
                                             <div
                                                 class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
-                                                {{($article->tipo == "salida") ? $article->client_name:"-"}}
+                                                {{($article->tipo == "salida") ? $article->client_name:$article->passenger}}
                                             </div>
                                         </x-base.table.td>
                                         <x-base.table.td

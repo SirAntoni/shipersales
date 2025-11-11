@@ -36,10 +36,18 @@ class Index extends Component
     public int $totalRows = 0;           // total de filas a completar
     public int $completedRows = 0;       // filas con valor válido
 
+    public string $q = '';
+
     public function mount(): void
     {
         $this->date = Carbon::today()->format('Y-m-d');
         $this->rows = collect();
+        $this->loadRows();
+    }
+
+    public function updatedQ(): void
+    {
+        if ($this->editing) return;
         $this->loadRows();
     }
 
@@ -66,16 +74,17 @@ class Index extends Component
      * - sold_today
      * - physical_saved (último conteo guardado del día)
      */
+    // 3) En loadRows(), aplicar el filtro si viene texto
     public function loadRows(): void
     {
         $day = $this->date; // 'Y-m-d'
+        $term = trim($this->q);
 
-        // Subselect correlacionado: SUM de vendidos en el día por artículo
         $soldTodaySum = DB::table('sale_details as sd')
             ->join('sales as s', 's.id', '=', 'sd.sale_id')
             ->whereColumn('sd.article_id', 'a.id')
             ->whereDate(DB::raw('COALESCE(s.date, s.created_at)'), $day)
-            ->where('s.status', '<>', 0)         // excluye canceladas
+            ->where('s.status', '<>', 0)
             ->whereNull('sd.deleted_at')
             ->whereNull('s.deleted_at')
             ->selectRaw('COALESCE(SUM(sd.quantity), 0)');
@@ -83,7 +92,12 @@ class Index extends Component
         $rows = DB::table('articles as a')
             ->leftJoin('v_kardex_stock as k', 'k.article_id', '=', 'a.id')
             ->whereNull('a.deleted_at')
-            // Incluir SOLO artículos que sí tuvieron ventas ese día
+            ->when($term !== '', function ($q) use ($term) {
+                $q->where(function ($qq) use ($term) {
+                    $qq->where('a.title', 'like', "%{$term}%")
+                        ->orWhere('a.sku', 'like', "%{$term}%");
+                });
+            })
             ->whereExists(function ($q) use ($day) {
                 $q->from('sale_details as sd')
                     ->join('sales as s', 's.id', '=', 'sd.sale_id')
@@ -102,7 +116,6 @@ class Index extends Component
                 DB::raw('(COALESCE(k.kardex_stock, 0) - a.stock) AS diff_kardex_vs_warehouse'),
             ])
             ->selectSub($soldTodaySum, 'sold_today')
-            // último conteo físico del día
             ->selectSub(
                 DB::table('inventory_counts as ic')
                     ->select('ic.counted_stock')
@@ -117,7 +130,6 @@ class Index extends Component
 
         $this->rows = collect($rows);
 
-        // Sincroniza inputs con lo último guardado (o null)
         $this->physicalStocks = [];
         foreach ($this->rows as $r) {
             $this->physicalStocks[$r->article_id] = $r->physical_saved ?? null;
@@ -126,6 +138,7 @@ class Index extends Component
         $this->totalRows = $this->rows->count();
         $this->recountCompleted();
     }
+
 
     /** Recalcula cuántos inputs están llenos (para progreso) */
     public function recountCompleted(): void
