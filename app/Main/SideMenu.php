@@ -20,14 +20,14 @@ class SideMenu
                 'sub_menu' => [
                     [
                         'icon' => "DollarSign",
-                        'route_name' => "dashboard",
+                        'route_name' => "dashboard.index",
                         'params' => [],
                         'title' => "Ventas",
                         'permission' => 'dashboard',
                     ],
                     [
                         'icon' => "Activity",
-                        'route_name' => "categories.index",
+                        'route_name' => "dashboard.inventory",
                         'params' => [],
                         'title' => "Inventario",
                         'permission' => 'dashboard',

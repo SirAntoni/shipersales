@@ -587,6 +587,7 @@ class Dashboard extends Component
 
         $rate = Purchase::exchangeRate();
 
+        // 1) Traer top 10 por utilidad + ventas por producto (ingreso bruto)
         $rows = DB::table('articles as a')
             ->join('sale_details as sd', 'sd.article_id', '=', 'a.id')
             ->join('sales as s', 'sd.sale_id', '=', 's.id')
@@ -594,7 +595,8 @@ class Dashboard extends Component
             ->selectRaw("
             a.id,
             a.title,
-            SUM( (sd.price - (a.purchase_price * ?)) * sd.quantity ) as total_profit
+            SUM( (sd.price - (a.purchase_price * ?)) * sd.quantity ) as total_profit,
+            SUM( sd.price * sd.quantity ) as product_sales
         ", [$rate])
             ->whereIn('s.status', [1,2,3])
             ->whereYear('sd.created_at', $year)
@@ -608,80 +610,37 @@ class Dashboard extends Component
             ->limit(10)
             ->get();
 
-        $labels = $rows->pluck('title')->values()->all();
-        $totals = $rows->pluck('total_profit')->map(fn($v) => (float) $v)->values()->all();
+        // 2) Ventas totales del período (mismos filtros)
+        $totalSales = DB::table('sale_details as sd')
+            ->join('sales as s', 'sd.sale_id', '=', 's.id')
+            ->join('clients as c', 's.client_id', '=', 'c.id')
+            ->when($category,   fn($q) => $q->where('sd.category_id', $category))
+            ->when($department, fn($q) => $q->where('c.department_id', $department))
+            ->when($district,   fn($q) => $q->where('c.district_id', $district))
+            ->whereIn('s.status', [1,2,3])
+            ->whereYear('sd.created_at', $year)
+            ->whereMonth('sd.created_at', $month)
+            ->sum(DB::raw('sd.price * sd.quantity'));
 
-        // Respuesta para Chart.js (labels = nombres de productos, totals = ganancias)
-        return [
-            'labels' => $labels,
-            'totals' => $totals,
-        ];
-    }
+        // 3) Armar datos para Chart.js
+        $labels      = $rows->pluck('title')->values()->all();
+        $profits     = $rows->pluck('total_profit')->map(fn($v) => (float)$v)->values()->all();
+        $sales       = $rows->pluck('product_sales')->map(fn($v) => (float)$v)->values()->all();
 
-    public function inventoryMonthlyAvgByUser(int $year, int $month): array
-    {
-        // Rango del mes [start, end)
-        $start = Carbon::create($year, $month, 1)->startOfDay();
-        $end   = (clone $start)->addMonth()->startOfDay();
-
-        $sql = <<<SQL
-WITH RECURSIVE d AS (
-    SELECT DATE(?) AS dt
-    UNION ALL
-    SELECT DATE_ADD(dt, INTERVAL 1 DAY)
-    FROM d
-    WHERE DATE_ADD(dt, INTERVAL 1 DAY) < DATE(?)
-),
-workdays AS (
-    -- Excluir domingos (1 = domingo en MySQL)
-    SELECT dt FROM d WHERE DAYOFWEEK(dt) <> 1
-),
-workday_count AS (
-    SELECT COUNT(*) AS n FROM workdays
-),
-perday AS (
-    -- Máxima duración por usuario y día, solo dentro del mes y sin domingos
-    SELECT s.user_id,
-           s.count_date,
-           MAX(s.duration_sec) AS dur_sec
-    FROM inventory_sessions s
-    WHERE s.count_date >= DATE(?) AND s.count_date < DATE(?)
-      AND DAYOFWEEK(s.count_date) <> 1
-    GROUP BY s.user_id, s.count_date
-),
-peruser AS (
-    -- Suma de duraciones del mes (sin domingos); si un día no llenó, luego se "compensa" al dividir entre n workdays
-    SELECT p.user_id,
-           COALESCE(SUM(p.dur_sec), 0) AS sum_sec
-    FROM perday p
-    GROUP BY p.user_id
-)
-SELECT u.name,
-       -- Forzar división decimal para no caer en división entera
-       (CAST(peruser.sum_sec AS DECIMAL(18,6)) / workday_count.n) AS avg_sec
-FROM peruser
-JOIN users u ON u.id = peruser.user_id
-CROSS JOIN workday_count
-ORDER BY avg_sec DESC
-SQL;
-
-        $rows = DB::select($sql, [
-            $start->toDateString(), // d: inicio
-            $end->toDateString(),   // d: fin
-            $start->toDateString(), // perday: inicio
-            $end->toDateString(),   // perday: fin
-        ]);
-
-        $labels = [];
-        $times  = []; // minutos (si prefieres segundos, usa (float)$r->avg_sec)
-        foreach ($rows as $r) {
-            $labels[] = $r->name;
-            $times[]  = round(((float)$r->avg_sec) / 60, 2);
+        // Porcentaje de cada producto respecto a la venta total del período
+        $percents = [];
+        foreach ($sales as $s) {
+            $percents[] = $totalSales > 0 ? round(($s / $totalSales) * 100, 2) : 0.0;
         }
 
-        return ['labels' => $labels, 'times' => $times];
+        return [
+            'labels'        => $labels,      // nombres de productos
+            'totals'        => $profits,     // utilidad por producto (para tu bar principal)
+            'sales'         => $sales,       // ventas brutas por producto (opcional)
+            'percents'      => $percents,    // % de participación en la venta total
+            'total_sales'   => (float) $totalSales, // útil si quieres mostrar el denominador
+        ];
     }
-
 
     public function render()
     {
@@ -695,7 +654,7 @@ SQL;
         $gananciasVentasTotal = $this->gananciaVentasTotal();
         $getSalesChartData = $this->getSalesChartData();
         $charRevenueAndAmount = ($this->filterChart == "Ganancia") ? $this->margenGananciasAnualesMensuales():$this->cantidadAnualMensual();
-        $inventoryMonthlyAvgByUser = $this->inventoryMonthlyAvgByUser($this->year, $this->month);
+
 
         $this->dispatch('dashboard-report', [
             $gananciasProveedores,
@@ -706,8 +665,7 @@ SQL;
             $gananciasVentasTotal,
             $getSalesChartData,
             $charRevenueAndAmount,
-            $this->top10ProductsByProfit(),
-            $inventoryMonthlyAvgByUser
+            $this->top10ProductsByProfit()
         ]);
 
         return view('livewire.dashboard.dashboard');

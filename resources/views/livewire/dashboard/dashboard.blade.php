@@ -158,23 +158,6 @@
         <div class="col-span-12 sm:colspan-12">
             <div>
                 <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
-                    <div class="text-base font-medium ">Promedio de llenado de inventario (Seg) - Usuarios
-                    </div>
-
-                </div>
-                <div class="box box--stacked mt-3.5 p-5">
-
-                    <div class="mb-1 mt-10">
-                        <x-report-bar-chart-5 classReport="topUsersInventory" height="h-[400px]"/>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-        <div class="col-span-12 sm:colspan-12">
-            <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium ">Ganancias por año
                     </div>
 
@@ -538,89 +521,16 @@
                                         borderWidth: 1,
                                         borderColor: getColor("primary", 0.7),
                                         backgroundColor: getColor("primary", 0.35),
-                                    }
-                                ],
-                            },
-                            options: {
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: {
-                                        display: true,
                                     },
-                                },
-                                scales: {
-                                    x: {
-                                        ticks: {
-                                            color: getColor("slate.500", 0.7),
-                                        },
-                                        grid: {
-                                            display: false,
-                                        },
-                                        border: {
-                                            display: false,
-                                        },
-                                    },
-                                    y: {
-                                        ticks: {
-                                            autoSkipPadding: 15,
-                                            color: getColor("slate.500", 0.9),
-                                            beginAtZero: true,
-                                        },
-                                        grid: {
-                                            color: getColor("slate.200", 0.7),
-                                        },
-                                        border: {
-                                            display: false,
-                                        },
-                                    },
-                                },
-                            },
-                        });
-
-                        // Opcional: Vigilar cambios en las variables CSS para actualizar los colores del gráfico
-                        helper.watchCssVariables(
-                            "html",
-                            ["color-primary", "color-success"],
-                            (newValues) => {
-                                newChart.data.datasets[0].borderColor = getColor("primary", 0.7);
-                                newChart.data.datasets[0].backgroundColor = getColor("primary", 0.35);
-                                newChart.update();
-                            }
-                        );
-                    });
-                }
-
-
-                const $topUsersInventory = $(".topUsersInventory");
-
-
-                if ($topUsersInventory.length) {
-                    $topUsersInventory.each(function () {
-                        const ctx = this.getContext("2d");
-
-                        console.log(event.detail[0][9]);
-                        // Verifica si ya hay un gráfico asociado al canvas
-                        const existingChart = Chart.getChart(ctx);
-                        if (existingChart) {
-                            console.log("Destruyendo gráfico existente...");
-                            existingChart.destroy();
-                        }
-
-                        // Ahora creamos el nuevo gráfico
-                        const newChart = new Chart(ctx, {
-                            type: "bar",
-                            data: {
-                                labels:event.detail[0][9]['labels'],
-                                datasets: [
                                     {
-                                        label: "Promedio (Seg)",
+                                        label: "Margen %.",
                                         categoryPercentage: 0.4,
                                         barPercentage: 0.8,
                                         borderRadius: 2,
-                                        data: event.detail[0][9]['times'],
+                                        data: event.detail[0][8]['percents'],
                                         borderWidth: 1,
-                                        borderColor: getColor("primary", 0.7),
-                                        backgroundColor: getColor("primary", 0.35),
+                                        borderColor: getColor("success", 0.7),
+                                        backgroundColor: getColor("success", 0.35),
                                     }
                                 ],
                             },

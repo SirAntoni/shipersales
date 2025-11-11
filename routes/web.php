@@ -30,7 +30,8 @@ Route::middleware(['guest'])->group(function () {
 });
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/', [DashboardController::class,'index'])->middleware(['auth', RedirectIfNoDashboardPermission::class])->name('dashboard');
+    Route::get('/', [DashboardController::class,'index'])->middleware(['auth', RedirectIfNoDashboardPermission::class])->name('dashboard.index');
+    Route::get('/dashboard/inventory', [DashboardController::class,'inventory'])->name('dashboard.inventory');
     Route::get('/inventory', [InventoryController::class,'index'])->name('inventory');
 
     Route::resource('categories', CategoryController::class)->middleware('can:store','can:categories');
