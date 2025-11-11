@@ -13,10 +13,26 @@ class SideMenu
             "NAVEGACIÓN",
             [
                 'icon' => "Home",
-                'route_name' => "dashboard",
+                'route_name' => "",
                 'params' => [],
-                'title' => "Dashboard",
+                'title' => "Dashboards",
                 'permission' => 'dashboard',
+                'sub_menu' => [
+                    [
+                        'icon' => "DollarSign",
+                        'route_name' => "dashboard",
+                        'params' => [],
+                        'title' => "Ventas",
+                        'permission' => 'dashboard',
+                    ],
+                    [
+                        'icon' => "Activity",
+                        'route_name' => "categories.index",
+                        'params' => [],
+                        'title' => "Inventario",
+                        'permission' => 'dashboard',
+                    ],
+                ],
             ],
             [
                 'icon' => "Package",
