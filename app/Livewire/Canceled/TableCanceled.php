@@ -55,7 +55,7 @@ class TableCanceled extends Component
                     });
                 }
             })
-            ->orderByDesc('id')
+            ->orderByDesc('sales.deletion_date')
             ->paginate($limit);
 
         foreach ($sales as $sale) {
