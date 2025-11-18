@@ -21,7 +21,15 @@ class TablePurchases extends Component
     public $startDate;
     public $endDate;
 
+    public $statusFilter = '';
+
     public function updatingSearch(){
+        $this->resetPage();
+    }
+
+// NUEVO
+    public function updatingStatusFilter()
+    {
         $this->resetPage();
     }
 
@@ -91,12 +99,10 @@ class TablePurchases extends Component
 
             // Búsqueda avanzada multi-término
             ->when($this->search, function ($query, $search) {
-                // 1. Reemplazamos "+" por espacio y separamos por espacios
                 $terms = collect(preg_split('/[\s\+]+/', trim($search)))
-                    ->filter()    // eliminamos strings vacíos
+                    ->filter()
                     ->map(fn($t) => Str::lower($t));
 
-                // 2. Por cada término, forzamos que aparezca en algún campo/relación
                 foreach ($terms as $term) {
                     $query->where(function ($q) use ($term) {
                         $q->whereRaw('LOWER(document) LIKE ?', ["%{$term}%"])
@@ -119,6 +125,11 @@ class TablePurchases extends Component
                 ]);
             })
 
+            // 🔹 NUEVO: filtro por estado
+            ->when($this->statusFilter !== '' && $this->statusFilter !== null, function ($query) {
+                $query->where('status', (int) $this->statusFilter);
+            })
+
             ->orderByDesc('id')
             ->paginate($limit);
 
@@ -132,7 +143,7 @@ class TablePurchases extends Component
                     $btnColor = 'warning';
                     break;
                 default:
-                    $btnColor = 'info';
+                    $btnColor = 'primary';
                     break;
             }
 

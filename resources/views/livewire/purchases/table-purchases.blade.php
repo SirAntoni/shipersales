@@ -19,6 +19,24 @@
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
                     <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
+                        <div class="col-span-12 md:col-span-3 mr-2">
+
+                            <x-base.form-select
+                                id="statusFilter"
+                                wire:model.live="statusFilter"
+                            >
+                                <option value="">Todos</option>
+                                <option value="{{ \App\Models\Purchase::PURCHASE_FINISHED }}">
+                                    Finalizado
+                                </option>
+                                <option value="{{ \App\Models\Purchase::PURCHASE_NOT_FINISHED }}">
+                                    No finalizado
+                                </option>
+                                <option value="{{ \App\Models\Purchase::PURCHASE_SQUARE }}">
+                                    Compra de cuadre
+                                </option>
+                            </x-base.form-select>
+                        </div>
                         <div>
                             <div class="relative mr-2">
                                 <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>

@@ -8,7 +8,6 @@ use Livewire\Component;
 use App\Models\Provider;
 use DB;
 
-
 class NewPurchase extends Component
 {
     public $provider;
@@ -25,71 +24,98 @@ class NewPurchase extends Component
     public $status;
     public $providers;
 
+    // NUEVO: flag para compra de cuadre
+    public $square = 0;
+
     protected $rules = [
-        'provider' => 'required',
-        'voucher_type' => 'required',
-        'document' => 'required',
-        'passenger' => 'required',
+        'provider'         => 'required',
+        'voucher_type'     => 'required',
+        'document'         => 'required',
+        'passenger'        => 'required',
         'articlesSelected' => 'required|array|min:1',
     ];
 
     protected $validationAttributes = [
-        'provider' => 'proveedor',
+        'provider'     => 'proveedor',
         'voucher_type' => 'tipo de documento',
-        'document' => 'número de documento',
-        'passenger' => 'pasajero'
+        'document'     => 'número de documento',
+        'passenger'    => 'pasajero'
     ];
 
     protected $messages = [
         'articlesSelected.required' => 'Debe seleccionar al menos 1 artículo'
     ];
 
-    public function mount(){
-        $this->providers = DB::table('providers')->get(['id','name']);
+    public function mount()
+    {
+        $this->providers    = DB::table('providers')->get(['id','name']);
         $this->voucher_type = "Boleta";
-        $this->status = 1;
+        $this->status       = 1;   // NOT_FINISHED por defecto
+        $this->square       = 0;   // no es cuadre por defecto
     }
 
-    public function updateStatus(){
+    public function updateStatus()
+    {
         $this->status ^= 1;
     }
 
-    public function save(){
+    public function save()
+    {
         $this->validate();
+
+        // ===== NUEVO: resolver status de la compra =====
+        // Prioridad: si es cuadre => PURCHASE_SQUARE
+        // Si no, usa tu lógica de finalizado / no finalizado
+        if ($this->square) {
+            $status = Purchase::PURCHASE_SQUARE; // const PURCHASE_SQUARE = 3;
+        } else {
+            $status = $this->status
+                ? Purchase::PURCHASE_NOT_FINISHED
+                : Purchase::PURCHASE_FINISHED;
+        }
+
         $purchase = Purchase::create([
             'voucher_type' => $this->voucher_type,
-            'document' => $this->document,
-            'passenger' => $this->passenger,
-            'subtotal'=>$this->granSubtotal,
-            'tax' => $this->granTax,
-            'total' => $this->granTotal,
-            'status'=> $this->status ? Purchase::PURCHASE_NOT_FINISHED : Purchase::PURCHASE_FINISHED,
-            'provider_id'=> $this->provider,
-            'user_id'=> auth()->id()
+            'document'     => $this->document,
+            'passenger'    => $this->passenger,
+            'subtotal'     => $this->granSubtotal,
+            'tax'          => $this->granTax,
+            'total'        => $this->granTotal,
+            'status'       => $status,
+            'provider_id'  => $this->provider,
+            'user_id'      => auth()->id(),
         ]);
 
-        foreach($this->articlesSelected as $article){
+        foreach ($this->articlesSelected as $article) {
             $purchase->purchaseDetails()->create([
-                'article_id' => $article['id'],
+                'article_id'  => $article['id'],
                 'category_id' => $article['category'],
-                'brand_id' => $article['brand'],
-                'price' => $article['price'],
-                'quantity' => $article['quantity'],
-                'subtotal' => $article['total'],
-                'tax' => ($this->tax == 1) ? $article['total'] * 0.18:0,
-                'total' => ($this->tax == 1) ? $article['total'] + ($article['total'] * 0.18): $article['total']
+                'brand_id'    => $article['brand'],
+                'price'       => $article['price'],
+                'quantity'    => $article['quantity'],
+                'subtotal'    => $article['total'],
+                'tax'         => ($this->tax == 1)
+                    ? $article['total'] * 0.18
+                    : 0,
+                'total'       => ($this->tax == 1)
+                    ? $article['total'] + ($article['total'] * 0.18)
+                    : $article['total'],
             ]);
 
+            // Mantengo tu comportamiento actual de stock y proveedor
             Article::find($article['id'])->increment('stock', $article['quantity']);
-            Article::find($article['id'])->update(['provider_id'=> $this->provider]);
-
+            Article::find($article['id'])->update(['provider_id' => $this->provider]);
         }
-        $this->dispatch('success', ['label' => 'La compra fue registrada con éxito.', 'btn' => 'Ir a compras', 'route' => route('purchases.index')]);
+
+        $this->dispatch('success', [
+            'label' => 'La compra fue registrada con éxito.',
+            'btn'   => 'Ir a compras',
+            'route' => route('purchases.index'),
+        ]);
     }
 
     public function updatedArticleSelected($id)
     {
-
         if ($id) {
             $this->addToArticle($id);
             $this->articleSelected = null;
@@ -108,18 +134,17 @@ class NewPurchase extends Component
                 $this->articlesSelected[$index]['quantity']++;
             } else {
                 $this->articlesSelected[] = [
-                    'id' => $article->id,
+                    'id'       => $article->id,
                     'category' => $article->category_id,
-                    'brand' => $article->brand_id,
-                    'title' => $article->title,
-                    'price' => $article->purchase_price,
+                    'brand'    => $article->brand_id,
+                    'title'    => $article->title,
+                    'price'    => $article->purchase_price,
                     'quantity' => 1,
-                    'total'=> $article->purchase_price
+                    'total'    => $article->purchase_price,
                 ];
             }
 
             $this->calculateTotals();
-
         }
     }
 
@@ -132,42 +157,44 @@ class NewPurchase extends Component
     public function updateTotal($index)
     {
         if (isset($this->articlesSelected[$index])) {
-            $price = (float)$this->articlesSelected[$index]['price'];
-            $quantity = (int)$this->articlesSelected[$index]['quantity'];
+            $price    = (float) $this->articlesSelected[$index]['price'];
+            $quantity = (int)   $this->articlesSelected[$index]['quantity'];
             $this->articlesSelected[$index]['total'] = $price * $quantity;
             $this->calculateTotals();
         }
     }
 
-    public function calculateTotals(){
+    public function calculateTotals()
+    {
         $this->granSubtotal = collect($this->articlesSelected)->sum('total');
+
         if ($this->tax == 1) {
-            $this->granTotal =  $this->granSubtotal + ($this->granSubtotal * 0.18);
-            $this->granTax = $this->granSubtotal * 0.18;
-        }else{
-            $this->granTotal =  $this->granSubtotal;
-            $this->granTax = 0;
+            $this->granTax   = $this->granSubtotal * 0.18;
+            $this->granTotal = $this->granSubtotal + $this->granTax;
+        } else {
+            $this->granTax   = 0;
+            $this->granTotal = $this->granSubtotal;
         }
     }
 
-    public function updateTax(){
+    public function updateTax()
+    {
         $this->calculateTotals();
     }
 
     public function searchArticles($query)
     {
         return Article::where('title', 'like', '%'.$query.'%')
-            ->where('status','active')
-            ->orWhereHas('brand', fn($q) =>
+            ->where('status', 'active')
+            ->orWhereHas('brand', fn ($q) =>
             $q->where('name', 'like', '%'.$query.'%')
             )
             ->limit(10)
             ->get()
-            ->map(fn($c) => [
+            ->map(fn ($c) => [
                 'value' => $c->id,
                 'text'  => trim(
                     $c->title
-                    // si existe brand, lo pinto entre paréntesis
                     . ($c->brand?->name ? " ({$c->brand->name})" : '')
                     . " | stock: {$c->stock}"
                     . " | precio: S/. {$c->sale_price}"
