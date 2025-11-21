@@ -5,16 +5,15 @@ namespace App\Livewire\Documents;
 use App\Models\Article;
 use App\Models\Client;
 use App\Models\Document;
-use App\Services\MigoApiService;
-use App\Services\SunatService;
 use App\Models\Sale;
 use App\Models\SaleDetail;
+use App\Models\Voucher;
+use App\Services\MigoApiService;
+use App\Services\SunatService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
-use App\Models\Voucher;
 use Luecano\NumeroALetras\NumeroALetras;
-use App\Models\Setting;
 
 class NewDocument extends Component
 {
@@ -33,7 +32,6 @@ class NewDocument extends Component
     public $articlesSelected = [];
 
     public $clientSelected;
-
 
     public $serie;
     public $correlative;
@@ -55,37 +53,15 @@ class NewDocument extends Component
         ],
     ];
 
-    public function mount(){
-        $sale = Sale::find($this->id);
-        $this->token = env('MIGO_API_TOKEN');
-        $this->serie = "-";
-        $this->correlative = "-";
-
-        //Inicio Client
-        $this->client = $sale->client_id;
-        $this->clientSelected = $sale->client;
-        //Fin Client
-
-        $this->date = $sale->date;
-        $this->defaultClient = $sale->client->id;
-        $this->number = $sale->number;
-        $this->granSubtotal = $sale->granSubtotal;
-
-        foreach ($sale->saleDetails as $detail) {
-            $this->addToArticleSale($detail->id);
-        }
-    }
-
     protected $rules = [
-        'date'=>'required',
-        'documentType' => 'required',
+        'date'             => 'required',
+        'documentType'     => 'required',
         'articlesSelected' => 'required|array|min:1',
-        'client' => 'required',
+        'client'           => 'required',
     ];
 
     public function rules()
     {
-        // Calculamos la fecha mínima permitida (hoy menos 5 días).
         $minDate = Carbon::now()->subDays(5)->format('Y-m-d');
 
         return [
@@ -96,9 +72,50 @@ class NewDocument extends Component
         ];
     }
 
+    public function mount()
+    {
+        $sale            = Sale::find($this->id);
+        $this->token     = env('MIGO_API_TOKEN');
+        $this->serie     = '-';
+        $this->correlative = '-';
+
+        // Cliente
+        $this->client         = $sale->client_id;
+        $this->clientSelected = $sale->client;
+
+        $this->date          = $sale->date;
+        $this->defaultClient = $sale->client->id;
+        $this->number        = $sale->number;
+        $this->granSubtotal  = $sale->granSubtotal;
+
+        foreach ($sale->saleDetails as $detail) {
+            $this->addToArticleSale($detail->id);
+        }
+    }
+
+    /**
+     * Guarda el detalle del documento (document_details) a partir de $this->articlesSelected.
+     */
+    protected function persistDocumentDetails(Document $document): void
+    {
+        foreach ($this->articlesSelected as $article) {
+            $art = Article::find($article['id']);
+
+            $document->documentDetails()->create([
+                'price'      => $article['price'],
+                'quantity'   => $article['quantity'],
+                'tax'        => $article['total'] * 0.18,
+                'total'      => $article['total'] + ($article['total'] * 0.18),
+                'article_id' => $article['id'],
+                'category_id'=> $article['category'],
+                'brand_id'   => $article['brand'],
+                'subtotal'   => $article['total'],
+            ]);
+        }
+    }
+
     public function save(MigoApiService $api)
     {
-
         Log::info("inicio de emisión de comprobante");
 
         $this->validate();
@@ -117,8 +134,6 @@ class NewDocument extends Component
 
         $client = Client::find($this->client);
 
-
-
         $textoDoc = $client->document_type;
         $tipoDoc  = $inverseTipos[$textoDoc] ?? null;
 
@@ -126,7 +141,7 @@ class NewDocument extends Component
 
         Log::info("documento creado: " . $textoDoc);
 
-        if($textoDoc != 'CE'){
+        if ($textoDoc != 'CE') {
             $config = $this->docConfig[$textoDoc];
 
             $payload = [
@@ -140,94 +155,147 @@ class NewDocument extends Component
             );
         }
 
-
-        if ($this->documentType == '1'
-            && $client->document_type != 'RUC') {
+        // Validación: factura solo a RUC
+        if ($this->documentType == '1' && $client->document_type != 'RUC') {
             $this->dispatch('error', ['label' => 'No puede emitir una factura a un cliente con un documento diferente a RUC.']);
             return;
         }
 
         $data = [
-            "serie" => $this->serie,
+            "serie"       => $this->serie,
             "correlative" => $this->correlative,
-            "date" => $this->date ?? "2005-01-01",
-            "tipoDoc" => ($this->documentType == '1') ? '01' : '03',
-            "subtotal" => $this->granSubtotal,
-            "igv"=> $this->granTax,
-            "total" => $this->granTotal,
-            "client" => [
+            "date"        => $this->date ?? "2005-01-01",
+            "tipoDoc"     => ($this->documentType == '1') ? '01' : '03',
+            "subtotal"    => $this->granSubtotal,
+            "igv"         => $this->granTax,
+            "total"       => $this->granTotal,
+            "client"      => [
                 "tipoDoc" => $tipoDoc,
-                "numDoc" => $client->document_number,
-                "name" => ($responseMigoApi === null) ? $client->name : $responseMigoApi[$config['responseKey']] ?? '',
+                "numDoc"  => $client->document_number,
+                "name"    => ($responseMigoApi === null)
+                    ? $client->name
+                    : ($responseMigoApi[$config['responseKey']] ?? ''),
                 "address" => $client->address,
             ],
-            "items"=> $items,
-            "legend"=> $this->legends,
+            "items"  => $items,
+            "legend" => $this->legends,
         ];
 
         Log::info("data: " . json_encode($data));
 
         $sunat = new SunatService();
 
-        $see = $sunat->getSee();
-
+        $see     = $sunat->getSee();
         $invoice = $sunat->getInvoice($data);
 
-        Log::info("invoice: " . json_encode($data));;
+        Log::info("invoice: " . json_encode($data));
 
-        $result = $see->send($invoice);
+        $result   = $see->send($invoice);
+        $lastXml  = $see->getFactory()->getLastXml();
+        $xmlPath  = '/xml_path/' . $invoice->getName() . '.xml';
+        file_put_contents(storage_path($xmlPath), $lastXml);
 
-        file_put_contents(storage_path('/xml_path/'.$invoice->getName().'.xml'),$see->getFactory()->getLastXml());
+        $sunatResponse = $sunat->sunatResponse($invoice, $result);
 
-        $sunatResponse = $sunat->sunatResponse($invoice,$result);
+        // === 1) Manejo de error 1032: correlativo ya usado ===
+        if ($sunatResponse['status'] != 1 && (string)($sunatResponse['code'] ?? '') === '1032') {
+            Log::warning("SUNAT 1032: Correlativo ya existe. Reintentando con nuevo correlativo.");
 
-        $pdf_path = "";
-        if($sunatResponse['status'] == 1){
-            $pdf_path = $sunat->generatePDF($invoice);
+            // Nuevo correlativo
+            $this->correlative   = Voucher::nextCorrelativeById($this->documentType);
+            $data['correlative'] = $this->correlative;
+
+            // Regenerar invoice con nuevo correlativo
+            $invoice = $sunat->getInvoice($data);
+            $result  = $see->send($invoice);
+
+            $lastXml = $see->getFactory()->getLastXml();
+            $xmlPath = '/xml_path/' . $invoice->getName() . '.xml';
+            file_put_contents(storage_path($xmlPath), $lastXml);
+
+            $sunatResponse = $sunat->sunatResponse($invoice, $result);
         }
 
-        if($sunatResponse['status'] != 1){
-            $this->dispatch('error', ['label' => 'No se puede emitir un comprobante en estos momentos por fallos con sunat, Intentarlo mas tarde.']);
+        // === 2) Si sigue fallando, controlar caso HTTP vs otros ===
+        if ($sunatResponse['status'] != 1) {
+
+            $code = (string)($sunatResponse['code'] ?? '');
+
+            // Caso HTTP: se guarda el documento como pendiente
+            if (stripos($code, 'HTTP') !== false) {
+                Log::warning("SUNAT HTTP ERROR ({$code}): se guardará el documento como PENDIENTE.");
+
+                $document = Document::create([
+                    'estado'        => "pendiente",
+                    'document_type' => $this->documentType,
+                    'serie'         => $this->serie,
+                    'correlative'   => $this->correlative,
+                    'date'          => $this->date,
+                    'currency'      => 'PEN',
+                    'payment_method'=> 'CONTADO',
+                    'subtotal'      => $this->granSubtotal,
+                    'tax'           => $this->granTax,
+                    'total'         => $this->granTotal,
+                    'xml_path'      => null,
+                    'cdr_path'      => null,
+                    'pdf_path'      => null,
+                    'status_sunat'  => "pendiente",
+                    'notes'         => $sunatResponse['notes'] ?? [],
+                    'sale_id'       => $this->id,
+                    'client_id'     => $this->client,
+                    'user_id'       => auth()->id(),
+                ]);
+
+                // Guardar detalles también para pendientes
+                $this->persistDocumentDetails($document);
+
+                $this->dispatch('error', [
+                    'label' => 'El comprobante se guardó como PENDIENTE por un error de comunicación con SUNAT. Se volverá a enviar desde el proceso programado.',
+                ]);
+
+                return;
+            }
+
+            // Otros errores distintos de HTTP y no corregibles con 1032
+            $this->dispatch('error', [
+                'label' => 'No se puede emitir un comprobante en estos momentos por fallos con SUNAT. Inténtelo más tarde.',
+            ]);
+
             return;
         }
 
+        // === 3) Caso OK (status == 1) ===
+        $pdf_path = $sunat->generatePdf($invoice);
+
         $document = Document::create([
-            'estado' => "enviado",
+            'estado'        => "enviado",
             'document_type' => $this->documentType,
-            'serie' => $this->serie,
-            'correlative' => $this->correlative,
-            'date' => $this->date,
-            'currency' => 'PEN',
-            'payment_method' => 'CONTADO',
-            'subtotal' => $this->granSubtotal,
-            'tax' => $this->granTax,
-            'total' => $this->granTotal,
-            'xml_path' => '/xml_path/'.$invoice->getName().'.xml',
-            'cdr_path' => $sunatResponse['cdr'] ?? '',
-            'pdf_path' => $pdf_path,
-            'status_sunat'=> ($sunatResponse['status'] == "1") ? "aceptado" : "rechazado",
-            'notes'=> $sunatResponse['notes'],
-            'sale_id' => $this->id,
-            'client_id' => $this->client,
-            'user_id' => auth()->id()
+            'serie'         => $this->serie,
+            'correlative'   => $this->correlative,
+            'date'          => $this->date,
+            'currency'      => 'PEN',
+            'payment_method'=> 'CONTADO',
+            'subtotal'      => $this->granSubtotal,
+            'tax'           => $this->granTax,
+            'total'         => $this->granTotal,
+            'xml_path'      => $xmlPath,
+            'cdr_path'      => $sunatResponse['cdr'] ?? '',
+            'pdf_path'      => $pdf_path,
+            'status_sunat'  => $sunatResponse['status'] === 1 ? "aceptado" : "rechazado",
+            'notes'         => $sunatResponse['notes'] ?? [],
+            'sale_id'       => $this->id,
+            'client_id'     => $this->client,
+            'user_id'       => auth()->id(),
         ]);
 
-        foreach ($this->articlesSelected as $article) {
-            $art = Article::find($article['id']);
-            $document->documentDetails()->create([
-                'price' => $article['price'],
-                'quantity' => $article['quantity'],
-                'tax' => $article['total'] * 0.18,
-                'total' => $article['total'] + ($article['total'] * 0.18),
-                'article_id' => $article['id'],
-                'category_id' => $article['category'],
-                'brand_id' => $article['brand'],
-                'subtotal' => $article['total'],
-            ]);
+        // Detalle del documento (enviados)
+        $this->persistDocumentDetails($document);
 
-        }
-        $this->dispatch('success', ['label' => 'La documento fue registrada con éxito.', 'btn' => 'Ir a documentos', 'route' => route('documents.index')]);
-
+        $this->dispatch('success', [
+            'label' => 'La documento fue registrada con éxito.',
+            'btn'   => 'Ir a documentos',
+            'route' => route('documents.index'),
+        ]);
     }
 
     public function searchClients($query)
@@ -236,16 +304,17 @@ class NewDocument extends Component
             ->where('name', 'like', '%'.$query.'%')
             ->orWhere('document_number', 'like', '%'.$query.'%')
             ->limit(10)
-            ->get(['id', 'name','document_number'])
-            ->map(fn($c) => [
+            ->get(['id', 'name', 'document_number'])
+            ->map(fn ($c) => [
                 'value' => $c->id,
-                'text'  => $c->name . " - ".  $c->document_number,
+                'text'  => $c->name . " - " . $c->document_number,
             ])
             ->toArray();
     }
 
-    public function updatedDocumentType(){
-        $this->serie = Voucher::serie($this->documentType);
+    public function updatedDocumentType()
+    {
+        $this->serie       = Voucher::serie($this->documentType);
         $this->correlative = Voucher::nextCorrelativeById($this->documentType);
     }
 
@@ -258,7 +327,7 @@ class NewDocument extends Component
 
         $showPurchase = auth()->id() === 1;
 
-        return $qb->map(function($c) use ($showPurchase) {
+        return $qb->map(function ($c) use ($showPurchase) {
             $text = "{$c->title} | Stock: {$c->stock} | Precio Venta: S/.{$c->sale_price}";
 
             if ($showPurchase) {
@@ -282,28 +351,27 @@ class NewDocument extends Component
 
     public function addToArticle($id)
     {
-
         $article = Article::find($id);
 
         if ($article) {
-
             $index = collect($this->articlesSelected)->search(function ($item) use ($article) {
                 return $item['id'] == $article->id;
             });
 
             if ($index !== false) {
-                    $this->articlesSelected[$index]['quantity']++;
-                    $this->articlesSelected[$index]['total'] = $this->articlesSelected[$index]['quantity'] * $this->articlesSelected[$index]['price'];
+                $this->articlesSelected[$index]['quantity']++;
+                $this->articlesSelected[$index]['total'] =
+                    $this->articlesSelected[$index]['quantity'] * $this->articlesSelected[$index]['price'];
             } else {
-                    $this->articlesSelected[] = [
-                        'id' => $article->id,
-                        'category' => $article->category_id,
-                        'brand' => $article->brand_id,
-                        'title' => $article->title,
-                        'price' => $article->sale_price,
-                        'quantity' => 1,
-                        'total' => $article->sale_price
-                    ];
+                $this->articlesSelected[] = [
+                    'id'       => $article->id,
+                    'category' => $article->category_id,
+                    'brand'    => $article->brand_id,
+                    'title'    => $article->title,
+                    'price'    => $article->sale_price,
+                    'quantity' => 1,
+                    'total'    => $article->sale_price,
+                ];
             }
 
             $this->calculateTotals();
@@ -312,34 +380,28 @@ class NewDocument extends Component
 
     public function addToArticleSale($id)
     {
-
         $article = SaleDetail::with('article')->find($id);
 
-
         if ($article) {
-
             $index = collect($this->articlesSelected)->search(function ($item) use ($article) {
                 return $item['id'] == $article->id;
             });
 
             if ($index !== false) {
-
-
-                    $this->articlesSelected[$index]['quantity']++;
-                    $this->articlesSelected[$index]['total'] = $this->articlesSelected[$index]['quantity'] * $this->articlesSelected[$index]['price'];
-
-
+                $this->articlesSelected[$index]['quantity']++;
+                $this->articlesSelected[$index]['total'] =
+                    $this->articlesSelected[$index]['quantity'] * $this->articlesSelected[$index]['price'];
             } else {
-                    $this->articlesSelected[] = [
-                        'id' => $article->article->id,
-                        'category' => $article->article->category_id,
-                        'sku' => $article->article->sku,
-                        'brand' => $article->brand_id,
-                        'title' => $article->article->title,
-                        'price' => $article->price,
-                        'quantity' => $article->quantity,
-                        'total' => $article->price * $article->quantity,
-                    ];
+                $this->articlesSelected[] = [
+                    'id'       => $article->article->id,
+                    'category' => $article->article->category_id,
+                    'sku'      => $article->article->sku,
+                    'brand'    => $article->brand_id,
+                    'title'    => $article->article->title,
+                    'price'    => $article->price,
+                    'quantity' => $article->quantity,
+                    'total'    => $article->price * $article->quantity,
+                ];
             }
 
             $this->calculateTotals();
@@ -349,17 +411,15 @@ class NewDocument extends Component
     public function calculateTotals()
     {
         $this->granSubtotal = collect($this->articlesSelected)->sum('total');
-        $this->granTax = $this->granSubtotal * 0.18;
-        $this->granTotal = $this->granSubtotal + $this->granTax;
+        $this->granTax      = $this->granSubtotal * 0.18;
+        $this->granTotal    = $this->granSubtotal + $this->granTax;
 
-        $formatter = new NumeroALetras();
-
+        $formatter     = new NumeroALetras();
         $this->legends = $formatter->toInvoice($this->granTotal, 2, 'SOLES');
     }
 
     public function updateTotal($index)
     {
-
         if (!isset($this->articlesSelected[$index])) {
             return;
         }
