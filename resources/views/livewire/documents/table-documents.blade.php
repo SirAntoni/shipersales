@@ -105,7 +105,7 @@
                                                     </a>
                                                 @else
                                                     {{-- Sin PDF (pendiente o no generado) --}}
-                                                    <img src="{{ asset('images/pdf.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="PDF no disponible">
+                                                    <img src="{{ asset('images/reload.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="PDF no disponible">
                                                 @endif
                                             </x-base.table.td>
 
@@ -116,7 +116,7 @@
                                                     </a>
                                                 @else
                                                     {{-- Muy raro, pero por si hay registros viejos sin XML --}}
-                                                    <img src="{{ asset('images/xml.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="XML no disponible">
+                                                    <img src="{{ asset('images/reload.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="XML no disponible">
                                                 @endif
                                             </x-base.table.td>
 
