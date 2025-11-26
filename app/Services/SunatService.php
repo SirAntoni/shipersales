@@ -164,6 +164,20 @@ class SunatService
      */
     public function sunatResponse($invoice, $result, $type = "invoice")
     {
+        // ==============================
+        // SIMULACIÓN DE ERROR HTTP
+        // ==============================
+        if (env('SUNAT_SIMULATE_HTTP_PENDING', false)) {
+            Log::warning("Simulando error HTTP para pruebas (SUNAT_SIMULATE_HTTP_PENDING=true)");
+
+            return [
+                'status' => 0,
+                'code'   => 'HTTP_SIMULATED',               // contiene 'HTTP' => entra en tu stripos(...)
+                'cdr'    => null,
+                'notes'  => ['Error HTTP simulado para pruebas de documento pendiente.'],
+            ];
+        }
+
         $response = [];
 
         // Error a nivel de envío (HTTP, credenciales, etc.)

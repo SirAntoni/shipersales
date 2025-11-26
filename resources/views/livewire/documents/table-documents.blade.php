@@ -99,30 +99,38 @@
 
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
-
-                                                <a href="{{route('documents.download',['path' => $document->pdf_path])}}"><img
-                                                        src="{{asset('images/pdf.svg')}}" width="35px" alt=""></a>
-
-                                            </x-base.table.td>
-                                            <x-base.table.td class="text-center border-dashed dark:bg-darkmode-600"
-                                            >
-
-                                                <a href="{{route('documents.download',['path' => $document->xml_path])}}"><img
-                                                        src="{{asset('images/xml.svg')}}" width="35px" alt=""></a>
-
-                                            </x-base.table.td>
-                                            <x-base.table.td class="border-dashed dark:bg-darkmode-600">
-
-                                                @if (!empty($document->cdr_path))
-                                                    <a href="{{route('documents.download',['path' => $document->cdr_path])}}"><img
-                                                            src="{{asset('images/cdr.png')}}" width="35px" alt=""></a>
+                                                @if(!empty($document->pdf_path))
+                                                    <a href="{{ route('documents.download', ['path' => ltrim($document->pdf_path, '/')]) }}">
+                                                        <img src="{{ asset('images/pdf.svg') }}" width="35px" alt="Descargar PDF">
+                                                    </a>
                                                 @else
-                                                    <img
-                                                        src="{{asset('images/reload.svg')}}" width="35px" alt="">
+                                                    {{-- Sin PDF (pendiente o no generado) --}}
+                                                    <img src="{{ asset('images/pdf.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="PDF no disponible">
                                                 @endif
-
-
                                             </x-base.table.td>
+
+                                            <x-base.table.td class="text-center border-dashed dark:bg-darkmode-600">
+                                                @if(!empty($document->xml_path))
+                                                    <a href="{{ route('documents.download', ['path' => ltrim($document->xml_path, '/')]) }}">
+                                                        <img src="{{ asset('images/xml.svg') }}" width="35px" alt="Descargar XML">
+                                                    </a>
+                                                @else
+                                                    {{-- Muy raro, pero por si hay registros viejos sin XML --}}
+                                                    <img src="{{ asset('images/xml.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="XML no disponible">
+                                                @endif
+                                            </x-base.table.td>
+
+                                            <x-base.table.td class="border-dashed dark:bg-darkmode-600">
+                                                @if (!empty($document->cdr_path))
+                                                    <a href="{{ route('documents.download', ['path' => ltrim($document->cdr_path, '/')]) }}">
+                                                        <img src="{{ asset('images/cdr.png') }}" width="35px" alt="Descargar CDR">
+                                                    </a>
+                                                @else
+                                                    {{-- Sin CDR: aún pendiente o error --}}
+                                                    <img src="{{ asset('images/reload.svg') }}" width="35px" alt="CDR pendiente">
+                                                @endif
+                                            </x-base.table.td>
+
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                                 @if($document->status_sunat == "aceptado")
                                                     <span

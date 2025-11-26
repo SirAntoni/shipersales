@@ -74,9 +74,9 @@ class NewDocument extends Component
 
     public function mount()
     {
-        $sale            = Sale::find($this->id);
-        $this->token     = env('MIGO_API_TOKEN');
-        $this->serie     = '-';
+        $sale              = Sale::find($this->id);
+        $this->token       = env('MIGO_API_TOKEN');
+        $this->serie       = '-';
         $this->correlative = '-';
 
         // Cliente
@@ -99,8 +99,6 @@ class NewDocument extends Component
     protected function persistDocumentDetails(Document $document): void
     {
         foreach ($this->articlesSelected as $article) {
-            $art = Article::find($article['id']);
-
             $document->documentDetails()->create([
                 'price'      => $article['price'],
                 'quantity'   => $article['quantity'],
@@ -109,7 +107,6 @@ class NewDocument extends Component
                 'article_id' => $article['id'],
                 'category_id'=> $article['category'],
                 'brand_id'   => $article['brand'],
-                'subtotal'   => $article['total'],
             ]);
         }
     }
@@ -236,8 +233,11 @@ class NewDocument extends Component
                     'subtotal'      => $this->granSubtotal,
                     'tax'           => $this->granTax,
                     'total'         => $this->granTotal,
-                    'xml_path'      => null,
-                    'cdr_path'      => null,
+                    // 👉 No null: ya tenemos XML generado
+                    'xml_path'      => $xmlPath,
+                    // 👉 No null: string vacío
+                    'cdr_path'      => '',
+                    // pdf_path puede ser null (es nullable)
                     'pdf_path'      => null,
                     'status_sunat'  => "pendiente",
                     'notes'         => $sunatResponse['notes'] ?? [],
