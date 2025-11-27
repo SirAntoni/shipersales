@@ -641,24 +641,30 @@ class Dashboard extends Component
             ->sum(DB::raw('sd.price * sd.quantity'));
 
         // 3) Armar datos para Chart.js
-        $labels      = $rows->pluck('title')->values()->all();
-        $profits     = $rows->pluck('total_profit')->map(fn($v) => (float)$v)->values()->all();
-        $sales       = $rows->pluck('product_sales')->map(fn($v) => (float)$v)->values()->all();
+        $labels  = $rows->pluck('title')->values()->all();
+        $profits = $rows->pluck('total_profit')->map(fn($v) => (float) $v)->values()->all();
+        $sales   = $rows->pluck('product_sales')->map(fn($v) => (float) $v)->values()->all();
 
-        // Porcentaje de cada producto respecto a la venta total del período
+        // Margen % por producto usando:
+        // (Precio venta − (Precio compra * TC)) / Precio venta * 100
+        // A nivel agregado: total_profit / product_sales * 100
         $percents = [];
-        foreach ($sales as $s) {
-            $percents[] = $totalSales > 0 ? round(($s / $totalSales) * 100, 2) : 0.0;
+        foreach ($profits as $index => $profit) {
+            $sale = $sales[$index] ?? 0.0;
+            $percents[] = $sale > 0
+                ? round(($profit / $sale) * 100, 2)
+                : 0.0;
         }
 
         return [
-            'labels'        => $labels,      // nombres de productos
-            'totals'        => $profits,     // utilidad por producto (para tu bar principal)
-            'sales'         => $sales,       // ventas brutas por producto (opcional)
-            'percents'      => $percents,    // % de participación en la venta total
-            'total_sales'   => (float) $totalSales, // útil si quieres mostrar el denominador
+            'labels'      => $labels,           // nombres de productos
+            'totals'      => $profits,          // utilidad por producto
+            'sales'       => $sales,            // ventas brutas por producto
+            'percents'    => $percents,         // margen % por producto (ya con tu fórmula)
+            'total_sales' => (float) $totalSales,
         ];
     }
+
 
     public function render()
     {
