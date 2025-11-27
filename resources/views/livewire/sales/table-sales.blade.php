@@ -258,7 +258,7 @@
                             <x-base.table.tbody>
                                 @if($sales->count() > 0 )
                                     @foreach ($sales as $sale)
-                                        <x-base.table.tr class="[&_td]:last:border-b-0 {{$sale->status == 4 ? 'bg-slate-500 text-white':''}}">
+                                        <x-base.table.tr class="[&_td]:last:border-b-0 ">
                                             <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 text">
 
                                                 {{ $sale->created_at->format("d-m-Y H:i:s")}}

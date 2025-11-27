@@ -310,6 +310,9 @@ class TableSales extends Component
                 case Sale::SALE_OBSERVATION:
                     $btnDetails = 'warning';
                     break;
+                case Sale::SALE_SQUARE:
+                    $btnDetails = 'primary';
+                    break;
                 default:
                     $btnDetails = 'dark';
                     break;

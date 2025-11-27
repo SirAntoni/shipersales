@@ -156,7 +156,9 @@ class Dashboard extends Component
             )
             ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
-            ->whereMonth('sale_details.created_at', $month)
+            ->when($month, function ($query, $month) {
+                return $query->whereMonth('sale_details.created_at', $month);
+            })
             // Filtro por provider (suponiendo que es en articles, columna provider_id)
             ->when($provider, function ($query) use ($provider) {
                 return $query->where('articles.provider_id', $provider);
@@ -208,7 +210,9 @@ class Dashboard extends Component
             )
             ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
-            ->whereMonth('sale_details.created_at', $month)
+            ->when($month, function ($query, $month) {
+                return $query->whereMonth('sale_details.created_at', $month);
+            })
             // Filtro opcional por proveedor (provider_id de la tabla articles)
             ->when($provider, function ($query, $provider) {
                 return $query->where('articles.provider_id', $provider);
@@ -257,7 +261,9 @@ class Dashboard extends Component
             )
             ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
-            ->whereMonth('sale_details.created_at', $month)
+            ->when($month, function ($query, $month) {
+                return $query->whereMonth('sale_details.created_at', $month);
+            })
             // Filtro opcional por proveedor (provider_id de la tabla articles)
             ->when($provider, function ($query, $provider) {
                 return $query->where('articles.provider_id', $provider);
@@ -305,7 +311,9 @@ class Dashboard extends Component
             )
             ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
-            ->whereMonth('sale_details.created_at', $month)
+            ->when($month, function ($query, $month) {
+                return $query->whereMonth('sale_details.created_at', $month);
+            })
             // Filtro opcional por proveedor (provider_id de la tabla articles)
             ->when($provider, function ($query, $provider) {
                 return $query->where('articles.provider_id', $provider);
@@ -353,7 +361,9 @@ class Dashboard extends Component
             )
             ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
-            ->whereMonth('sale_details.created_at', $month)
+            ->when($month, function ($query, $month) {
+                return $query->whereMonth('sale_details.created_at', $month);
+            })
             // Filtro opcional por proveedor (provider_id de la tabla articles)
             ->when($provider, function ($query, $provider) {
                 return $query->where('articles.provider_id', $provider);
@@ -402,7 +412,9 @@ class Dashboard extends Component
             )
             ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
-            ->whereMonth('sale_details.created_at', $month)
+            ->when($month, function ($query, $month) {
+                return $query->whereMonth('sale_details.created_at', $month);
+            })
             // Filtro opcional por proveedor (provider_id de la tabla articles)
             ->when($provider, function ($query, $provider) {
                 return $query->where('articles.provider_id', $provider);
@@ -443,14 +455,16 @@ class Dashboard extends Component
             ->join('sales', 'sale_details.sale_id', '=', 'sales.id')
             ->join('clients', 'sales.client_id', '=', 'clients.id')
             ->select(
-                // Calcula la ganancia total aplicando la fórmula y el tipo de cambio
+            // Calcula la ganancia total aplicando la fórmula y el tipo de cambio
                 DB::raw("SUM(sale_details.price - (articles.purchase_price * $this->exchange)) as total_ganancias"),
                 // Realiza la operación por cada registro de sale_details
                 DB::raw('SUM(sale_details.price) as total_ventas')
             )
             ->whereIn('sales.status',[1,2,3])
             ->whereYear('sale_details.created_at', $year)
-            ->whereMonth('sale_details.created_at', $month)
+            ->when($month, function ($query, $month) {
+                return $query->whereMonth('sale_details.created_at', $month);
+            })
             // Filtro opcional por proveedor (provider_id de la tabla articles)
             ->when($provider, function ($query, $provider) {
                 return $query->where('articles.provider_id', $provider);
@@ -600,7 +614,9 @@ class Dashboard extends Component
         ", [$rate])
             ->whereIn('s.status', [1,2,3])
             ->whereYear('sd.created_at', $year)
-            ->whereMonth('sd.created_at', $month)
+            ->when($month, function ($query, $month) {
+                return $query->whereMonth('sd.created_at', $month);
+            })
             ->when($provider,   fn($q) => $q->where('a.provider_id', $provider))
             ->when($category,   fn($q) => $q->where('sd.category_id', $category))
             ->when($department, fn($q) => $q->where('c.department_id', $department))
@@ -619,7 +635,9 @@ class Dashboard extends Component
             ->when($district,   fn($q) => $q->where('c.district_id', $district))
             ->whereIn('s.status', [1,2,3])
             ->whereYear('sd.created_at', $year)
-            ->whereMonth('sd.created_at', $month)
+            ->when($month, function ($query, $month) {
+                return $query->whereMonth('sd.created_at', $month);
+            })
             ->sum(DB::raw('sd.price * sd.quantity'));
 
         // 3) Armar datos para Chart.js
