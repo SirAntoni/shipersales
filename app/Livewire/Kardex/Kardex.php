@@ -80,7 +80,7 @@ class Kardex extends Component
             clients.name        AS client_name,
             users.name          AS user_name,
             sales.`number`      AS `number`,
-            COALESCE(sales.date, sales.created_at) AS fecha,
+            sales.created_at AS fecha,
             'salida'            AS tipo,
             sale_details.quantity AS cantidad,
              NULL                AS document,

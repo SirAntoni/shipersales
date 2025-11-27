@@ -136,7 +136,7 @@
 
                                             <div
                                                 class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
-                                                {{$article->fecha}}
+                                               {{$article->fecha}}
                                             </div>
 
                                         </x-base.table.td>
