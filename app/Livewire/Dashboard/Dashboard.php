@@ -599,71 +599,66 @@ class Dashboard extends Component
         $department = $this->department;
         $district   = $this->district;
 
-        $rate = Purchase::exchangeRate();
+        // Usa el mismo tipo de cambio que el resto del componente
+        $rate = $this->exchange ?? Purchase::exchangeRate();
 
-        // 1) Traer top 10 por utilidad + ventas por producto (ingreso bruto)
-        $rows = DB::table('articles as a')
-            ->join('sale_details as sd', 'sd.article_id', '=', 'a.id')
-            ->join('sales as s', 'sd.sale_id', '=', 's.id')
-            ->join('clients as c', 's.client_id', '=', 'c.id')
+        // Query base con todos los filtros compartidos
+        $base = DB::table('sale_details as sd')
+            ->join('articles as a', 'sd.article_id', '=', 'a.id')
+            ->join('sales as s',    'sd.sale_id',    '=', 's.id')
+            ->join('clients as c',  's.client_id',   '=', 'c.id')
+            ->whereIn('s.status', [1, 2, 3])
+            ->whereYear('sd.created_at', $year)
+            ->when($month,      fn($q) => $q->whereMonth('sd.created_at', $month))
+            ->when($provider,   fn($q) => $q->where('a.provider_id',      $provider))
+            ->when($category,   fn($q) => $q->where('sd.category_id',     $category))
+            ->when($department, fn($q) => $q->where('c.department_id',    $department))
+            ->when($district,   fn($q) => $q->where('c.district_id',      $district));
+
+        // 1) Top 10 productos por ganancia
+        $rows = (clone $base)
             ->selectRaw("
             a.id,
             a.title,
-            SUM( (sd.price - (a.purchase_price * ?)) * sd.quantity ) as total_profit,
-            SUM( sd.price * sd.quantity ) as product_sales
+            SUM(sd.price - (a.purchase_price * ?)) as total_profit
         ", [$rate])
-            ->whereIn('s.status', [1,2,3])
-            ->whereYear('sd.created_at', $year)
-            ->when($month, function ($query, $month) {
-                return $query->whereMonth('sd.created_at', $month);
-            })
-            ->when($provider,   fn($q) => $q->where('a.provider_id', $provider))
-            ->when($category,   fn($q) => $q->where('sd.category_id', $category))
-            ->when($department, fn($q) => $q->where('c.department_id', $department))
-            ->when($district,   fn($q) => $q->where('c.district_id', $district))
             ->groupBy('a.id', 'a.title')
             ->orderByDesc('total_profit')
             ->limit(10)
             ->get();
 
-        // 2) Ventas totales del período (mismos filtros)
-        $totalSales = DB::table('sale_details as sd')
-            ->join('sales as s', 'sd.sale_id', '=', 's.id')
-            ->join('clients as c', 's.client_id', '=', 'c.id')
-            ->when($category,   fn($q) => $q->where('sd.category_id', $category))
-            ->when($department, fn($q) => $q->where('c.department_id', $department))
-            ->when($district,   fn($q) => $q->where('c.district_id', $district))
-            ->whereIn('s.status', [1,2,3])
-            ->whereYear('sd.created_at', $year)
-            ->when($month, function ($query, $month) {
-                return $query->whereMonth('sd.created_at', $month);
-            })
-            ->sum(DB::raw('sd.price * sd.quantity'));
+        // 2) Ganancia total del período (mismos filtros)
+        $totals = (clone $base)
+            ->selectRaw("
+            SUM(sd.price - (a.purchase_price * ?)) as total_profit
+        ", [$rate])
+            ->first();
 
-        // 3) Armar datos para Chart.js
-        $labels  = $rows->pluck('title')->values()->all();
-        $profits = $rows->pluck('total_profit')->map(fn($v) => (float) $v)->values()->all();
-        $sales   = $rows->pluck('product_sales')->map(fn($v) => (float) $v)->values()->all();
+        $totalProfitGlobal = $totals ? (float) $totals->total_profit : 0.0;
 
-        // Margen % por producto usando:
-        // (Precio venta − (Precio compra * TC)) / Precio venta * 100
-        // A nivel agregado: total_profit / product_sales * 100
+        // 3) Armar respuesta: ganancia por producto + margen de esa ganancia
+        $labels   = [];
+        $profits  = [];
         $percents = [];
-        foreach ($profits as $index => $profit) {
-            $sale = $sales[$index] ?? 0.0;
-            $percents[] = $sale > 0
-                ? round(($profit / $sale) * 100, 2)
+
+        foreach ($rows as $row) {
+            $labels[]  = $row->title;
+            $profit    = (float) $row->total_profit;
+            $profits[] = $profit;
+
+            // margen del producto = ganancia_producto / ganancia_total * 100
+            $percents[] = $totalProfitGlobal > 0
+                ? round(($profit / $totalProfitGlobal) * 100, 2)
                 : 0.0;
         }
 
         return [
-            'labels'      => $labels,           // nombres de productos
-            'totals'      => $profits,          // utilidad por producto
-            'sales'       => $sales,            // ventas brutas por producto
-            'percents'    => $percents,         // margen % por producto (ya con tu fórmula)
-            'total_sales' => (float) $totalSales,
+            'labels'   => $labels,   // nombre de producto
+            'profits'  => $profits,  // ganancia del producto
+            'percents' => $percents, // % de la ganancia total que aporta cada producto
         ];
     }
+
 
 
     public function render()

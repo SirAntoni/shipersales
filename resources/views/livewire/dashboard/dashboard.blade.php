@@ -498,7 +498,7 @@
                     $top10ProductsByProfit.each(function () {
                         const ctx = this.getContext("2d");
 
-                        console.log(event.detail[0][9]);
+
                         // Verifica si ya hay un gráfico asociado al canvas
                         const existingChart = Chart.getChart(ctx);
                         if (existingChart) {
@@ -517,7 +517,7 @@
                                         categoryPercentage: 0.4,
                                         barPercentage: 0.8,
                                         borderRadius: 2,
-                                        data: event.detail[0][8]['totals'],
+                                        data: event.detail[0][8]['profits'],
                                         borderWidth: 1,
                                         borderColor: getColor("primary", 0.7),
                                         backgroundColor: getColor("primary", 0.35),
