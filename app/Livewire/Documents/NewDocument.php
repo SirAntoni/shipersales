@@ -219,11 +219,12 @@ class NewDocument extends Component
             $code = (string)($sunatResponse['code'] ?? '');
 
             // Caso HTTP: se guarda el documento como pendiente
+            // Caso HTTP: se guarda el documento como pendiente
             if (stripos($code, 'HTTP') !== false) {
                 Log::warning("SUNAT HTTP ERROR ({$code}): se guardará el documento como PENDIENTE.");
 
                 $document = Document::create([
-                    'estado'        => "pendiente",
+                    'status'        => "pendiente",
                     'document_type' => $this->documentType,
                     'serie'         => $this->serie,
                     'correlative'   => $this->correlative,
@@ -233,11 +234,8 @@ class NewDocument extends Component
                     'subtotal'      => $this->granSubtotal,
                     'tax'           => $this->granTax,
                     'total'         => $this->granTotal,
-                    // 👉 No null: ya tenemos XML generado
                     'xml_path'      => $xmlPath,
-                    // 👉 No null: string vacío
                     'cdr_path'      => '',
-                    // pdf_path puede ser null (es nullable)
                     'pdf_path'      => null,
                     'status_sunat'  => "pendiente",
                     'notes'         => $sunatResponse['notes'] ?? [],
@@ -249,12 +247,16 @@ class NewDocument extends Component
                 // Guardar detalles también para pendientes
                 $this->persistDocumentDetails($document);
 
-                $this->dispatch('error', [
-                    'label' => 'El comprobante se guardó como PENDIENTE por un error de comunicación con SUNAT. Se volverá a enviar desde el proceso programado.',
+                // Mismo flujo visual que el caso OK: mensaje + botón + redirect
+                $this->dispatch('success', [
+                    'label' => 'El comprobante se guardó como PENDIENTE por un error con SUNAT. Podrá reenviarse luego desde Documentos.',
+                    'btn'   => 'Ir a documentos',
+                    'route' => route('documents.index'),
                 ]);
 
                 return;
             }
+
 
             // Otros errores distintos de HTTP y no corregibles con 1032
             $this->dispatch('error', [
@@ -268,7 +270,7 @@ class NewDocument extends Component
         $pdf_path = $sunat->generatePdf($invoice);
 
         $document = Document::create([
-            'estado'        => "enviado",
+            'status'        => "enviado",
             'document_type' => $this->documentType,
             'serie'         => $this->serie,
             'correlative'   => $this->correlative,

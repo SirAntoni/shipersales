@@ -8,6 +8,7 @@ use App\Http\Controllers\KardexController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Middleware\RedirectIfNoDashboardPermission;
+use App\Services\PendingDocumentsService;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
@@ -28,6 +29,15 @@ Route::middleware(['guest'])->group(function () {
         return response()->json(['message' => 'view ml']);
     })->name('ml');
 });
+
+Route::get('/cron/sunat/resend-pending', function (PendingDocumentsService $service) {
+    $service->resendAll();
+
+    return response()->json([
+        'status'  => 'ok',
+        'message' => 'Reenvío de documentos pendientes ejecutado.',
+    ]);
+})->name('sunat.resend.pending');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/', [DashboardController::class,'index'])->middleware(['auth', RedirectIfNoDashboardPermission::class])->name('dashboard.index');
