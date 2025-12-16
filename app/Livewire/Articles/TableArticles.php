@@ -3,6 +3,7 @@
 namespace App\Livewire\Articles;
 
 use App\Models\Article;
+use App\Models\Setting;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -17,6 +18,15 @@ class TableArticles extends Component
 
     public $sortTitle   = null;  // 'asc' | 'desc' | null
     public $sortStock   = null;  // 'asc' | 'desc' | null
+
+    public $sortMargin = null; // 'asc' | 'desc' | null
+
+    public float $rate = 1;
+
+    public function mount()
+    {
+        $this->rate = (float) (Setting::value('exchange_rate') ?? 1);
+    }
 
     public function reportArticle(){
         $url = route('reports.articles');
@@ -44,6 +54,10 @@ class TableArticles extends Component
         $this->render();
     }
 
+    public function updatedSortTitle($v)  { if($v) { $this->sortStock = null; $this->sortMargin = null; } }
+    public function updatedSortStock($v)  { if($v) { $this->sortTitle = null; $this->sortMargin = null; } }
+    public function updatedSortMargin($v) { if($v) { $this->sortTitle = null; $this->sortStock = null; } }
+
     public function delete($id)
     {
         $this->dispatch('delete', ['label' => 'Esta seguro que desea eliminar el articulo?.', 'btn' => 'Eliminar', 'route' => route('articles.index'), 'id' => $id]);
@@ -57,48 +71,32 @@ class TableArticles extends Component
     public function render()
     {
         $limit = 15;
+        $rate  = (float) $this->rate;
+
         $articles = Article::query()
             ->active()
-            ->with([
-                'category:id,name',
-                'brand:id,name'
-            ])
+            ->with(['category:id,name', 'brand:id,name'])
             ->whereNot('id', 1)
-            // Búsqueda avanzada multi-término
-            ->when($this->search, function ($query, $search) {
-                // 1. Dividimos por espacios o '+' y limpiamos términos vacíos
-                $terms = collect(preg_split('/[\s\+]+/', trim($search)))
-                    ->filter()
-                    ->map(fn($t) => Str::lower($t));
 
-                // 2. Por cada término, forzamos que aparezca en al menos un campo/relación
-                foreach ($terms as $term) {
-                    $query->where(function ($q) use ($term) {
-                        $q->whereRaw('LOWER(title) LIKE ?', ["%{$term}%"])
-                            ->orWhereRaw('LOWER(description) LIKE ?', ["%{$term}%"])
-                            ->orWhereRaw('LOWER(detail) LIKE ?', ["%{$term}%"])
-                            ->orWhereRaw('LOWER(sku) LIKE ?', ["%{$term}%"])
-                            ->orWhereHas('category', fn($c) =>
-                            $c->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            )
-                            ->orWhereHas('brand', fn($b) =>
-                            $b->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            );
-                    });
-                }
+            // ...tu búsqueda...
+
+            ->when(in_array($this->sortTitle, ['asc','desc']), fn($q) =>
+            $q->orderBy('title', $this->sortTitle)
+            )
+            ->when(in_array($this->sortStock, ['asc','desc']), fn($q) =>
+            $q->orderBy('stock', $this->sortStock)
+            )
+            ->when(in_array($this->sortMargin, ['asc','desc']), function ($q) use ($rate) {
+                // orden por ratio (margen sobre costo)
+                $expr = "((sale_price - (purchase_price * ?)) / NULLIF((purchase_price * ?), 0))";
+                $q->orderByRaw("$expr {$this->sortMargin}", [$rate, $rate]);
             })
-            // Orden dinámico por título (alfabético A-Z / Z-A)
-            ->when(in_array($this->sortTitle, ['asc','desc']), function ($q) {
-                $q->orderBy('title', $this->sortTitle);
-            })
-            // Orden dinámico por stock (numérico ascendente/descendente)
-            ->when(in_array($this->sortStock, ['asc','desc']), function ($q) {
-                $q->orderBy('stock', $this->sortStock);
-            })
-            // Si no se aplica ningún orden, por defecto ordenar por el último ID
-            ->when(!$this->sortTitle && !$this->sortStock, fn($q) => $q->orderByDesc('id'))
+            ->when(!$this->sortTitle && !$this->sortStock && !$this->sortMargin, fn($q) =>
+            $q->orderByDesc('id')
+            )
             ->paginate($limit);
 
-        return view('livewire.articles.table-articles', compact('articles'));
+        return view('livewire.articles.table-articles', compact('articles', 'rate'));
     }
+
 }
