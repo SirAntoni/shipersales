@@ -225,11 +225,12 @@
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed py-4 dark:bg-darkmode-600">
                                                 @php
-                                                    $cost = (float) $article->purchase_price * (float) $rate; // costo en S/
-                                                    $sale = (float) $article->sale_price;
+                                                    $sale   = (float) $article->sale_price;
+                                                    $cost   = (float) $article->purchase_price * (float) $rate; // costo en S/
+                                                    $profit = $sale - $cost;
 
-                                                    // margen sobre costo (purchase_price convertido)
-                                                    $margin = $cost > 0 ? (($sale - $cost) / $cost) * 100 : null;
+                                                    // margen sobre venta
+                                                    $margin = $sale > 0 ? ($profit / $sale) * 100 : null;
                                                 @endphp
 
                                                 @if($margin === null)

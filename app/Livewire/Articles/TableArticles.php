@@ -87,9 +87,8 @@ class TableArticles extends Component
             $q->orderBy('stock', $this->sortStock)
             )
             ->when(in_array($this->sortMargin, ['asc','desc']), function ($q) use ($rate) {
-                // orden por ratio (margen sobre costo)
-                $expr = "((sale_price - (purchase_price * ?)) / NULLIF((purchase_price * ?), 0))";
-                $q->orderByRaw("$expr {$this->sortMargin}", [$rate, $rate]);
+                $expr = "((sale_price - (purchase_price * ?)) / NULLIF(sale_price, 0))";
+                $q->orderByRaw("$expr {$this->sortMargin}", [$rate]);
             })
             ->when(!$this->sortTitle && !$this->sortStock && !$this->sortMargin, fn($q) =>
             $q->orderByDesc('id')
