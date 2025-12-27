@@ -10,6 +10,30 @@
                 <div class="box box--stacked flex flex-col">
                     <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
                         <div>
+                            @can('delete')
+                                <x-base.tippy
+                                    as="x-base.button"
+                                    class="mr-2"
+                                    variant="primary"
+                                    content="Reenviar a SUNAT todos los documentos pendientes"
+                                    wire:click="resendPending"
+                                    wire:loading.attr="disabled"
+                                    wire:target="resendPending"
+                                >
+                <span wire:loading.remove wire:target="resendPending">
+                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i>
+                    Enviar a SUNAT (masivo)
+                </span>
+
+                                    <span wire:loading wire:target="resendPending">
+                    <i class="fa-solid fa-spinner fa-spin mr-1"></i>
+                    Enviando...
+                </span>
+                                </x-base.tippy>
+                            @endcan
+                        </div>
+
+                        <div>
                             <div class="relative mr-2">
 
                                 <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>

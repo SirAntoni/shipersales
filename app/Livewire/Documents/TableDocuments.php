@@ -3,8 +3,8 @@
 namespace App\Livewire\Documents;
 
 use App\Models\Document;
+use App\Services\PendingDocumentsService;
 use App\Services\SunatService;
-use App\Services\UtilSunat;
 use DateTime;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
@@ -107,6 +107,32 @@ class TableDocuments extends Component
     function creditNote($id)
     {
         return redirect()->route('documents.credit-note.blade.php', $id);
+    }
+
+
+    public function resendPending(PendingDocumentsService $service)
+    {
+        try {
+            // Opcional: si quieres validar permisos aquí también
+            // abort_unless(auth()->user()?->can('sunat-resend-pending'), 403);
+
+            $service->resendAll();
+
+            $this->dispatch('success', [
+                'label' => 'Reenvío de documentos pendientes ejecutado.',
+            ]);
+
+            $this->dispatch('success',['label' => 'Reenvío de documentos pendientes ejecutado.','btn' => 'Genial!','route' => route('documents.index')]);
+        } catch (\Throwable $e) {
+            Log::error('Error reenviando pendientes a SUNAT', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
+
+            $this->dispatch('error', [
+                'label' => 'Ocurrió un error enviando a SUNAT. Revisa los logs.',
+            ]);
+        }
     }
 
     public
