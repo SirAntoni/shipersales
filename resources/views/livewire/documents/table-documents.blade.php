@@ -10,7 +10,7 @@
                 <div class="box box--stacked flex flex-col">
                     <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
                         <div>
-                            @can('delete')
+
                                 <x-base.tippy
                                     as="x-base.button"
                                     class="mr-2"
@@ -30,7 +30,7 @@
                     Enviando...
                 </span>
                                 </x-base.tippy>
-                            @endcan
+
                         </div>
 
                         <div>
