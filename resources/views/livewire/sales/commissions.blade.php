@@ -14,14 +14,16 @@
                         <div class="px-2"><i class="fa-solid fa-plus"></i></div>
                         Nueva venta
                     </x-base.button>
-                    <x-base.button
-                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
-                        variant="primary"
-                        wire:click="reportCommissions"
-                    >
-                        <div class="px-2"><i class="fa-solid fa-file-excel"></i></div>
-                        Exportar Excel
-                    </x-base.button>
+                    @can('update')
+                        <x-base.button
+                            class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                            variant="primary"
+                            wire:click="reportCommissions"
+                        >
+                            <div class="px-2"><i class="fa-solid fa-file-excel"></i></div>
+                            Exportar Excel
+                        </x-base.button>
+                    @endcan
                 </div>
             </div>
             <div class="mt-3.5">
