@@ -186,6 +186,8 @@ class NewSale extends Component
         $this->date         = Carbon::now()->format('Y-m-d');
         $this->userId       = auth()->id() ?? 0;
         $this->departments  = DB::table('departments')->get();
+        $this->email = "info@shipersales.pe";
+        $this->phone = "990062896";
     }
 
     public function updatedDepartmentSelect($value)
