@@ -727,6 +727,7 @@
             maxItems: 1,
             plugins: ['clear_button'],
             create: false,
+            loadThrottle: 300,
             render: {
                 option: function (data, escape) {
 

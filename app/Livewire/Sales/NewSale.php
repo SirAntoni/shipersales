@@ -350,6 +350,7 @@ class NewSale extends Component
             ->where('a.status', 'active')
             ->where(function($q) use ($query) {
                 $q->where('a.title', 'like', '%'.$query.'%')
+                    ->orWhere('a.sku', 'like', '%'.$query.'%')
                     ->orWhereExists(function($bq) use ($query) {
                         $bq->from('brands as b2')
                             ->whereColumn('b2.id', 'a.brand_id')

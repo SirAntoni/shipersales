@@ -244,29 +244,5 @@
     </div>
 </div>
 
-{{--<script>--}}
-{{--    document.addEventListener('DOMContentLoaded', function () {--}}
-
-{{--        const pickerFilter = new Litepicker({--}}
-{{--            element: document.getElementById('datepickerFilter'),--}}
-{{--            autoApply: false,--}}
-{{--            singleMode: false,--}}
-{{--            numberOfColumns: 2,--}}
-{{--            numberOfMonths: 2,--}}
-{{--            dropdowns: {--}}
-{{--                minYear: 2020,--}}
-{{--                maxYear: null,--}}
-{{--                months: true,--}}
-{{--                years: true,--}}
-{{--            },--}}
-{{--        });--}}
-
-{{--        pickerFilter.on('selected', (startDate, endDate) => {--}}
-{{--            @this.set('startDate', startDate.format('YYYY-MM-DD'));--}}
-{{--            @this.set('endDate', endDate.format('YYYY-MM-DD'));--}}
-{{--        });--}}
-
-{{--    });--}}
-{{--</script>--}}
 
 

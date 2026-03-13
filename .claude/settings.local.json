@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php /Users/antonyalfredoculquicarranza/projects/shiper-template/artisan make:migration add_index_status_title_to_articles_table --table=articles 2>&1)",
+      "Bash(php artisan:*)"
+    ]
+  }
+}

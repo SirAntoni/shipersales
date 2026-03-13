@@ -45,6 +45,17 @@
     background-color: #fff !important;
 }
 
+/*
+   |--------------------------------------------------------------------------
+   | Utility Classes
+   |--------------------------------------------------------------------------
+   |
+   | Custom utility classes used across the application.
+   |
+   */
+.mark-green { color: #28a745; font-weight: bold; }
+.mark-red   { color: #dc3545; font-weight: bold; }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
