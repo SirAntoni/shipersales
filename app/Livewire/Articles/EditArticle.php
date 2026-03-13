@@ -18,6 +18,7 @@ class EditArticle extends Component
     public $detail = '';
     public $description = '';
     public $sku;
+    public $barcode;
     public $stock;
     public $brand_id = '';
     public $category_id = '';
@@ -41,6 +42,7 @@ class EditArticle extends Component
         $this->detail         = $article->detail;
         $this->description    = $article->description;
         $this->sku            = $article->sku;
+        $this->barcode        = $article->barcode;
         $this->stock          = $article->stock;
         $this->brand_id       = $article->brand_id;
         $this->category_id    = $article->category_id;
@@ -86,6 +88,7 @@ class EditArticle extends Component
         'category_id'    => 'required|integer|exists:categories,id',
         'purchase_price' => 'decimal:2|nullable',
         'sale_price'     => 'decimal:2|nullable',
+        'barcode'        => 'string|nullable|max:100',
         // Filas dinámicas: validaremos manual en save() para evitar ruido al tipear
     ];
 
@@ -133,6 +136,7 @@ class EditArticle extends Component
             'title'          => $this->title,
             'detail'         => $this->detail,
             'description'    => $this->description,
+            'barcode'        => $this->barcode ?: null,
             'brand_id'       => $this->brand_id,
             'category_id'    => $this->category_id,
             'purchase_price' => $this->purchase_price,

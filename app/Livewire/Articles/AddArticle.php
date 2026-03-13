@@ -11,6 +11,7 @@ class AddArticle extends Component
     public $title = '';
     public $detail = '';
     public $description = '';
+    public $barcode = '';
     public $stock;
     public $brand_id = '';
     public $category_id = '';
@@ -31,6 +32,7 @@ class AddArticle extends Component
         'title'          => 'required|min:3',
         'detail'         => 'string|nullable|max:250',
         'description'    => 'string|nullable|max:500',
+        'barcode'        => 'string|nullable|max:100',
         'brand_id'       => 'required|integer|exists:brands,id',
         'category_id'    => 'required|integer|exists:categories,id',
         'purchase_price' => 'nullable|numeric|min:0',
@@ -45,6 +47,7 @@ class AddArticle extends Component
         'title'          => 'título',
         'detail'         => 'detalle',
         'description'    => 'descripción',
+        'barcode'        => 'código de barras',
         'brand_id'       => 'marca',
         'category_id'    => 'categoría',
         'purchase_price' => 'precio de compra',
@@ -113,6 +116,7 @@ class AddArticle extends Component
                 'detail'         => $this->detail ?? '',
                 'description'    => $this->description ?? '',
                 'sku'            => $this->generateSku(),
+                'barcode'        => $this->barcode ?: null,
                 'stock'          => 0,
                 'brand_id'       => $this->brand_id,
                 'category_id'    => $this->category_id,

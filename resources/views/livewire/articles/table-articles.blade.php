@@ -33,6 +33,14 @@
                                 <div class="px-2"><i class="fa-solid fa-file-excel"></i></div>
                                 Exportar Excel
                             </x-base.button>
+                            <x-base.button
+                                class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                                variant="primary"
+                                x-on:click="$dispatch('open-import-modal')"
+                            >
+                                <div class="px-2"><i class="fa-solid fa-file-import"></i></div>
+                                Importar Barcodes
+                            </x-base.button>
                     </div>
 
 
@@ -140,6 +148,11 @@
                                         SKU
                                     </x-base.table.td>
                                     <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 py-4 font-medium text-slate-500"
+                                    >
+                                        Barcode
+                                    </x-base.table.td>
+                                    <x-base.table.td
                                         class="w-28 border-t border-slate-200/60 bg-slate-50 py-4 font-medium text-slate-500"
                                     >
                                         Stock
@@ -195,6 +208,11 @@
                                             <x-base.table.td class="border-dashed py-4 dark:bg-darkmode-600">
 
                                                 {{ $article->sku }}
+
+                                            </x-base.table.td>
+                                            <x-base.table.td class="border-dashed py-4 dark:bg-darkmode-600">
+
+                                                {{ $article->barcode ?? '-' }}
 
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed py-4 dark:bg-darkmode-600">
@@ -266,7 +284,7 @@
                                     @endforeach
                                 @else
                                     <x-base.table.tr>
-                                        <x-base.table.td colspan="10"
+                                        <x-base.table.td colspan="11"
                                                          class=" text-center border-dashed py-4 dark:bg-darkmode-600">
                                             No se encontrarón resultados.
                                         </x-base.table.td>
@@ -278,6 +296,87 @@
                     <div class="m-4">
                         {{$articles->links()}}
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Importar Barcodes (Alpine.js) -->
+    <div
+        x-data="{ open: false }"
+        x-on:open-import-modal.window="open = true"
+        x-on:close-import-modal.window="open = false"
+        x-on:keydown.escape.window="open = false"
+    >
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-[1050] bg-gradient-to-b from-theme-1/50 via-theme-2/50 to-black/50"
+            x-on:click="open = false"
+            style="display: none;"
+        ></div>
+
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 -translate-y-8"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-8"
+            class="fixed inset-0 z-[1051] overflow-y-auto"
+            style="display: none;"
+        >
+            <div class="flex min-h-full items-center justify-center p-4" x-on:click.self="open = false">
+                <div class="w-[90%] sm:w-[380px] bg-white rounded-md shadow-md dark:bg-darkmode-600" x-on:click.stop>
+
+                    <div class="flex items-center px-5 py-3 border-b border-slate-200/60 dark:border-darkmode-400">
+                        <h2 class="text-base font-medium mr-auto">Importar códigos de barras</h2>
+                    </div>
+
+                    <div class="p-5">
+                        <div class="mb-4 text-sm text-slate-500">
+                            Sube un archivo Excel (.xlsx, .xls, .csv) con las columnas <strong>sku</strong> y <strong>barcode</strong>.
+                            Se actualizarán los artículos existentes que coincidan por SKU.
+                        </div>
+
+                        <input
+                            type="file"
+                            wire:model="importFile"
+                            accept=".xlsx,.xls,.csv"
+                            class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                        @error('importFile')
+                        <div class="p-1 text-red-600 text-sm mt-1">{{ $message }}</div>
+                        @enderror
+
+                        <div wire:loading wire:target="importFile" class="mt-2 text-sm text-slate-500">
+                            <i class="fas fa-spinner animate-spin mr-1"></i> Subiendo archivo...
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end px-5 py-3 border-t border-slate-200/60 dark:border-darkmode-400">
+                        <x-base.button variant="outline-secondary" class="mr-2" x-on:click="open = false">
+                            Cancelar
+                        </x-base.button>
+                        <x-base.button
+                            variant="primary"
+                            wire:click="importBarcodes"
+                            wire:loading.attr="disabled"
+                            wire:target="importBarcodes,importFile"
+                        >
+                            <span wire:loading wire:target="importBarcodes">
+                                <i class="fas fa-spinner animate-spin mr-1"></i>
+                            </span>
+                            Importar
+                        </x-base.button>
+                    </div>
+
                 </div>
             </div>
         </div>

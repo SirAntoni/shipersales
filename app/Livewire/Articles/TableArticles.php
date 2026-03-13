@@ -4,14 +4,17 @@ namespace App\Livewire\Articles;
 
 use App\Models\Article;
 use App\Models\Setting;
+use App\Imports\ArticleBarcodeImport;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TableArticles extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public $search = "";
     public $filter = "";
@@ -22,6 +25,8 @@ class TableArticles extends Component
     public $sortMargin = null; // 'asc' | 'desc' | null
 
     public float $rate = 1;
+
+    public $importFile;
 
     public function mount()
     {
@@ -68,6 +73,33 @@ class TableArticles extends Component
         $this->reset('search');
     }
 
+    public function importBarcodes()
+    {
+        if (!$this->importFile) {
+            $this->dispatch('errorNotRoute', ['label' => 'Selecciona un archivo primero.']);
+            return;
+        }
+
+        $ext = strtolower($this->importFile->getClientOriginalExtension());
+        if (!in_array($ext, ['xlsx', 'xls', 'csv'])) {
+            $this->dispatch('errorNotRoute', ['label' => 'El archivo debe ser .xlsx, .xls o .csv']);
+            return;
+        }
+
+        try {
+            $import = new ArticleBarcodeImport();
+            Excel::import($import, $this->importFile->getRealPath());
+
+            $this->reset('importFile');
+            $this->dispatch('close-import-modal');
+            $this->dispatch('successNotRoute', [
+                'label' => "Importación completada: {$import->updated} actualizados, {$import->skipped} omitidos."
+            ]);
+        } catch (\Exception $e) {
+            $this->dispatch('errorNotRoute', ['label' => 'Error al importar: ' . $e->getMessage()]);
+        }
+    }
+
     public function render()
     {
         $limit = 15;
@@ -86,17 +118,19 @@ class TableArticles extends Component
 
                 // 2. Por cada término, forzamos que aparezca en al menos un campo/relación
                 foreach ($terms as $term) {
-                    $query->where(function ($q) use ($term) {
-                        $q->whereRaw('LOWER(title) LIKE ?', ["%{$term}%"])
-                            ->orWhereRaw('LOWER(description) LIKE ?', ["%{$term}%"])
-                            ->orWhereRaw('LOWER(detail) LIKE ?', ["%{$term}%"])
-                            ->orWhereRaw('LOWER(sku) LIKE ?', ["%{$term}%"])
-                            ->orWhereHas('category', fn($c) =>
-                            $c->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            )
-                            ->orWhereHas('brand', fn($b) =>
-                            $b->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            );
+                    $like = '%'.$term.'%';
+                    $query->where(function ($q) use ($like) {
+                        $q->where('title', 'like', $like)
+                            ->orWhere('description', 'like', $like)
+                            ->orWhere('detail', 'like', $like)
+                            ->orWhere('sku', 'like', $like)
+                            ->orWhere('barcode', 'like', $like)
+                            ->orWhereIn('category_id', function ($sub) use ($like) {
+                                $sub->select('id')->from('categories')->where('name', 'like', $like);
+                            })
+                            ->orWhereIn('brand_id', function ($sub) use ($like) {
+                                $sub->select('id')->from('brands')->where('name', 'like', $like);
+                            });
                     });
                 }
             })

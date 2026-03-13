@@ -41,8 +41,8 @@ class NewSale extends Component
     public $document_number;
     public $document_type;
     public $address;
-    public $phone;
-    public $email;
+    public $phone = '990062896';
+    public $email = 'info@shipersales.pe';
     public $token;
 
     public $departments;
@@ -282,9 +282,11 @@ class NewSale extends Component
             'district_id'   => $this->districtSelect
         ]);
 
-        $this->reset(['name','document_number','document_type','address','phone','email','departmentSelect','provinceSelect','districtSelect']);
+        $this->reset(['name','document_number','document_type','address','departmentSelect','provinceSelect','districtSelect']);
+        $this->phone = '990062896';
+        $this->email = 'info@shipersales.pe';
         $this->render();
-        $this->sectionClient = false;
+        $this->dispatch('close-client-modal');
         $this->dispatch('successNotRoute', ['label' => 'Se agrego el cliente con éxito.']);
     }
 
@@ -374,6 +376,21 @@ class NewSale extends Component
             );
             return ['value' => $a->id, 'text' => $txt];
         })->toArray();
+    }
+
+    public function addByBarcode($barcode)
+    {
+        $article = DB::table('articles')
+            ->where('barcode', $barcode)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$article) {
+            $this->dispatch('errorNotRoute', ['label' => 'No se encontró artículo con ese código de barras.']);
+            return;
+        }
+
+        $this->addToArticle($article->id);
     }
 
     public function updatedArticleSelected($id)

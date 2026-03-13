@@ -4,7 +4,6 @@ namespace App\Livewire\Sales;
 
 use App\Models\Article;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
 use Livewire\Component;
 use App\Models\Sale;
 use Livewire\Attributes\On;
@@ -257,33 +256,35 @@ class TableSales extends Component
             ->with([
                 'saleDetails.article',
                 'document',
+                'user:id,name',
                 'client:id,name',
                 'contact:id,name',
                 'paymentMethod:id,name'
             ])
             ->where('status', '!=', Sale::SALE_CANCELED)
             ->when($this->search, function ($query, $search) {
-                // 1. Reemplazamos "+" por espacio y separamos por espacios
                 $terms = collect(preg_split('/[\s\+]+/', trim($search)))
-                    ->filter()    // eliminamos strings vacíos
-                    ->map(fn($t) => Str::lower($t));
+                    ->filter()
+                    ->values();
 
-                // 2. Por cada término, forzamos que aparezca en algún campo/relación
                 foreach ($terms as $term) {
-                    $query->where(function ($q) use ($term) {
-                        $q->whereRaw('LOWER(number) LIKE ?', ["%{$term}%"])
-                            ->orWhereHas('client', fn ($c) =>
-                            $c->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            )
-                            ->orWhereHas('contact', fn ($c) =>
-                            $c->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            )
-                            ->orWhereHas('paymentMethod', fn ($p) =>
-                            $p->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
-                            )
-                            ->orWhereHas('saleDetails.article', fn ($a) =>
-                            $a->whereRaw('LOWER(title) LIKE ?', ["%{$term}%"])
-                            );
+                    $like = '%'.$term.'%';
+                    $query->where(function ($q) use ($like) {
+                        $q->where('sales.number', 'like', $like)
+                            ->orWhereIn('sales.client_id', function ($sub) use ($like) {
+                                $sub->select('id')->from('clients')->where('name', 'like', $like);
+                            })
+                            ->orWhereIn('sales.contact_id', function ($sub) use ($like) {
+                                $sub->select('id')->from('contacts')->where('name', 'like', $like);
+                            })
+                            ->orWhereIn('sales.payment_method_id', function ($sub) use ($like) {
+                                $sub->select('id')->from('payment_methods')->where('name', 'like', $like);
+                            })
+                            ->orWhereIn('sales.id', function ($sub) use ($like) {
+                                $sub->select('sale_id')->from('sale_details')
+                                    ->join('articles', 'articles.id', '=', 'sale_details.article_id')
+                                    ->where('articles.title', 'like', $like);
+                            });
                     });
                 }
             })
@@ -296,42 +297,37 @@ class TableSales extends Component
             ->when($this->status, function ($query) {
                 $query->where('sales.status', $this->status);
             })
-            ->orderByDesc('id')
+            ->orderByDesc('sales.id')
             ->paginate($limit);
 
+        $statusVariants = [
+            Sale::SALE_APPROVED    => 'success',
+            Sale::SALE_OBSERVATION => 'warning',
+            Sale::SALE_SQUARE      => 'primary',
+        ];
+
         foreach ($sales as $sale) {
-            $htmlDetails = "<p><strong>Cliente: </strong> {$sale->client->name} </p><br><table style='border: 1px solid;'><thead style='border:1px solid;'><tr><th style='border:1px solid'>Titulo</th><th style='border:1px solid;padding:10px'>Cantidad</th><th style='padding:10px'>Precio</thstyle></tr></thead><tbody style='border:1px solid;'>";
+            $sale->btnDetails = $statusVariants[$sale->status] ?? 'dark';
 
-            $btnDetails = '';
-            switch($sale->status) {
-                case Sale::SALE_APPROVED:
-                    $btnDetails = 'success';
-                    break;
-                case Sale::SALE_OBSERVATION:
-                    $btnDetails = 'warning';
-                    break;
-                case Sale::SALE_SQUARE:
-                    $btnDetails = 'primary';
-                    break;
-                default:
-                    $btnDetails = 'dark';
-                    break;
-            }
+            $rows = '';
             foreach ($sale->saleDetails as $detail) {
-                $htmlDetails .= "<tr>"
-                    . "<td style='border:1px solid;padding:5px'>"
-                    . ($detail->article?->title ?? '-')
-                    . "</td>"
+                $title = e($detail->article?->title ?? '-');
+                $rows .= "<tr><td style='border:1px solid;padding:5px'>{$title}</td>"
                     . "<td style='text-align:center;border:1px solid;'>{$detail->quantity}</td>"
-                    . "<td style='text-align:center;border:1px solid;'>{$detail->price}</td>"
-                    . "</tr>";
+                    . "<td style='text-align:center;border:1px solid;'>{$detail->price}</td></tr>";
             }
-            $sale->htmlDetails = $htmlDetails . '</tbody></table>';
-            if($sale->observations != null){
-                $sale->htmlDetails .= "<br><p>Observaciones: ".$sale->observations. "</p><br>";
-            }
-            $sale->btnDetails = $btnDetails;
 
+            $clientName = e($sale->client->name ?? '-');
+            $sale->htmlDetails = "<p><strong>Cliente: </strong> {$clientName}</p><br>"
+                . "<table style='border:1px solid;'><thead style='border:1px solid;'><tr>"
+                . "<th style='border:1px solid'>Titulo</th>"
+                . "<th style='border:1px solid;padding:10px'>Cantidad</th>"
+                . "<th style='padding:10px'>Precio</th></tr></thead>"
+                . "<tbody style='border:1px solid;'>{$rows}</tbody></table>";
+
+            if ($sale->observations) {
+                $sale->htmlDetails .= "<br><p>Observaciones: " . e($sale->observations) . "</p><br>";
+            }
         }
 
         return view('livewire.sales.table-sales', compact('sales'));

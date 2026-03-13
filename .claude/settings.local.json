@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(php /Users/antonyalfredoculquicarranza/projects/shiper-template/artisan make:migration add_index_status_title_to_articles_table --table=articles 2>&1)",
-      "Bash(php artisan:*)"
+      "Bash(php artisan:*)",
+      "Bash(grep -oP 'z-index:\\\\s*\\\\d+' /Users/antonyalfredoculquicarranza/projects/shiper-template/node_modules/tom-select/dist/css/tom-select.css 2>/dev/null | sort -t: -k2 -n -r | head -5)",
+      "Bash(grep -oP 'z-index:\\\\s*\\\\d+' /Users/antonyalfredoculquicarranza/projects/shiper-template/public/build/assets/tom-select-f7c9484a.css | sort -t: -k2 -n -r | head -5)",
+      "Bash(cat /Users/antonyalfredoculquicarranza/projects/shiper-template/public/build/assets/tom-select-f7c9484a.css | tr '}' '\\\\n' | grep 'z-index' | sed 's/.*z-index:/z-index:/' | sed 's/;.*//' | sort -t: -k2 -n -r | head -5)",
+      "Bash(cat /Users/antonyalfredoculquicarranza/projects/shiper-template/node_modules/sweetalert2/dist/sweetalert2.css 2>/dev/null | tr '}' '\\\\n' | grep 'z-index' | sed 's/.*z-index:/z-index:/' | sed 's/;.*//' | sort -t: -k2 -n -r | head -5)",
+      "Bash(curl -s https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css 2>/dev/null | tr '}' '\\\\n' | grep 'z-index' | sed 's/.*z-index:/z-index:/' | sed 's/;.*//' | sort -t: -k2 -n -r | head -5)",
+      "Bash(grep -n \"barcode\" /Users/antonyalfredoculquicarranza/projects/shiper-template/database/migrations/*.php)",
+      "Bash(grep -n \"articlemarketplace\\\\|article_contact_price\" /Users/antonyalfredoculquicarranza/projects/shiper-template/database/migrations/*.php)",
+      "Bash(php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Imports/ArticleBarcodeImport.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/TableArticles.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/AddArticle.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/EditArticle.php)"
     ]
   }
 }

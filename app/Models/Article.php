@@ -15,6 +15,7 @@ class Article extends Model
         'detail',
         'description',
         'sku',
+        'barcode',
         'stock',
         'purchase_price',
         'sale_price',
