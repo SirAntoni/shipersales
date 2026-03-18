@@ -671,7 +671,7 @@
 
 
                         <div class="-mx-8 border-t border-dashed border-slate-200/80 px-10 pt-6">
-                            <div class="mt-5 text-slate-500">© 2025 Hecho con <i class="fa-solid fa-heart"></i> | ©
+                            <div class="mt-5 text-slate-500">© {{ date('Y') }} Hecho con <i class="fa-solid fa-heart"></i> | ©
                                 InventraShop.
                             </div>
                         </div>

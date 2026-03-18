@@ -119,12 +119,9 @@
                                                 wire:model="year"
                                             >
                                                 <option value="">Selecciona un año</option>
-                                                <option value="2025">2025</option>
-                                                <option value="2024">2024</option>
-                                                <option value="2023">2023</option>
-                                                <option value="2022">2022</option>
-                                                <option value="2021">2021</option>
-                                                <option value="2020">2020</option>
+                                                @foreach(range(date('Y'), 2020) as $y)
+                                                    <option value="{{ $y }}">{{ $y }}</option>
+                                                @endforeach
 
 
                                             </x-base.form-select>

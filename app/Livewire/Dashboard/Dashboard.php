@@ -525,7 +525,7 @@ class Dashboard extends Component
             ->groupBy(DB::raw('MONTH(sale_details.created_at)'))
             ->orderBy(DB::raw('YEAR(sale_details.created_at)'), 'desc')
             ->orderBy(DB::raw('MONTH(sale_details.created_at)'), 'asc')
-            ->whereYear('sale_details.created_at', '>=', 2024)
+            ->whereYear('sale_details.created_at', '>=', now()->year)
             ->get();
 
         // 2) Reagrupamos la colección en PHP: [ 2025 => [ 'enero'=>123, … ], 2024 => […], … ]
@@ -557,7 +557,7 @@ class Dashboard extends Component
             ->when($category,   fn($q) => $q->where('sale_details.category_id', $category))
             ->when($department, fn($q) => $q->where('clients.department_id',    $department))
             ->when($district,   fn($q) => $q->where('clients.district_id',      $district))
-            ->whereYear('sale_details.created_at', '>=', 2024)
+            ->whereYear('sale_details.created_at', '>=', now()->year)
             // seleccionamos año, mes en español y la suma de quantity
             ->select([
                 DB::raw('YEAR(sale_details.created_at) AS year'),
