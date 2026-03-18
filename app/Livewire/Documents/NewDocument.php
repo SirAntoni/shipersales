@@ -259,9 +259,30 @@ class NewDocument extends Component
 
 
             // Otros errores distintos de HTTP y no corregibles con 1032
-            $this->dispatch('error', [
-                'label' => 'No se puede emitir un comprobante en estos momentos por fallos con SUNAT. Inténtelo más tarde.',
-            ]);
+            $mensajesSunat = [
+                '1033' => 'Este comprobante ya fue registrado en SUNAT con datos distintos.',
+                '1079' => 'Este comprobante es demasiado antiguo para enviarse individualmente a SUNAT.',
+                '2800' => 'El número de RUC del cliente no está activo en SUNAT.',
+                '2801' => 'El número de RUC del cliente no existe en SUNAT.',
+                '2804' => 'La dirección del cliente no coincide con la registrada en SUNAT.',
+                '3101' => 'El monto del IGV no corresponde al porcentaje declarado.',
+                '3102' => 'El monto total del comprobante no es correcto.',
+                '3106' => 'Uno o más productos no tienen la unidad de medida correcta.',
+            ];
+
+            $rawNote = $sunatResponse['notes'][0] ?? '';
+            // Limpiar el "Detalle: ..." técnico que agrega SUNAT al final del mensaje
+            $rawNote = preg_replace('/ - Detalle:.*$/s', '', $rawNote);
+
+            if (isset($mensajesSunat[$code])) {
+                $label = $mensajesSunat[$code] . " (Error SUNAT {$code})";
+            } elseif (!empty($rawNote)) {
+                $label = $rawNote;
+            } else {
+                $label = "No se pudo emitir el comprobante. Error SUNAT {$code}.";
+            }
+
+            $this->dispatch('error', ['label' => $label]);
 
             return;
         }

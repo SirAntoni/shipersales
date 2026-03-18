@@ -17,6 +17,8 @@ use Greenter\Report\HtmlReport;
 use Greenter\Report\PdfReport;
 use Greenter\Report\Resolver\DefaultTemplateResolver;
 use Greenter\See;
+use Greenter\Ws\Services\ConsultCdrService;
+use Greenter\Ws\Services\SoapClient;
 use Greenter\Ws\Services\SunatEndpoints;
 use Greenter\XMLSecLibs\Certificate\X509Certificate;
 use Greenter\XMLSecLibs\Certificate\X509ContentType;
@@ -273,6 +275,31 @@ class SunatService
         }
 
         return $response;
+    }
+
+    /**
+     * Consulta en SUNAT si un comprobante ya existe y devuelve su CDR.
+     * Usa el endpoint de consulta separado (FE_CONSULTA_CDR).
+     */
+    public function consultarCdr(string $tipoDoc, string $serie, int $correlativo): \Greenter\Model\Response\StatusCdrResult
+    {
+        $client = new SoapClient();
+        $client->setService(
+            (env('APP_ENV') === 'production')
+                ? SunatEndpoints::FE_CONSULTA_CDR
+                : 'https://e-beta.sunat.gob.pe/ol-it-wsconscpegem/billConsultService'
+        );
+        $client->setCredentials(
+            config('sunat.ruc_sol') . config('sunat.usuario_sol'),
+            config('sunat.clave_sol')
+        );
+
+        $consulta = new ConsultCdrService();
+        $consulta->setClient($client);
+
+        Log::info("Consultando CDR en SUNAT: tipo={$tipoDoc} serie={$serie} correlativo={$correlativo}");
+
+        return $consulta->getStatusCdr(config('sunat.ruc'), $tipoDoc, $serie, $correlativo);
     }
 
     public function generatePdf($invoice, $type = 'invoice')

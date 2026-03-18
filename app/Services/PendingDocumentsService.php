@@ -128,19 +128,68 @@ class PendingDocumentsService
             $sunatResponse = $this->sunat->sunatResponse($invoice, $result);
         }
 
-        // === 2) Si aún no es aceptado, seguimos dejándolo como pendiente ===
+        // === 2) Si SUNAT no lo aceptó, consultar si ya existe antes de rendirnos ===
         if ($sunatResponse['status'] != 1) {
-            Log::warning("Documento ID {$document->id} sigue pendiente/observado al reenviar.", [
-                'code'  => $sunatResponse['code'] ?? null,
+            $code = (string)($sunatResponse['code'] ?? '');
+
+            Log::warning("Documento ID {$document->id} no aceptado al reenviar.", [
+                'code'  => $code,
                 'notes' => $sunatResponse['notes'] ?? null,
             ]);
 
-            $document->update([
-                'notes' => $sunatResponse['notes'] ?? [],
-                // podrías cambiar status_sunat a algo tipo 'error' si quisieras diferenciar
-                // 'status_sunat' => 'pendiente',
+            // Si fue error HTTP (SUNAT inalcanzable), no tiene sentido consultar: dejamos pendiente
+            if (stripos($code, 'HTTP') !== false) {
+                $document->update(['notes' => $sunatResponse['notes'] ?? []]);
+                return;
+            }
+
+            // SUNAT respondió (1033, 1079, etc.) → consultar si el comprobante ya existe
+            $tipoDocStr = ($data['tipoDoc'] === '01') ? '01' : '03';
+            $consulta = $this->sunat->consultarCdr($tipoDocStr, $data['serie'], (int)$data['correlative']);
+
+            if ($consulta->isSuccess() && $consulta->getCdrZip()) {
+                // El comprobante SÍ existe en SUNAT → recuperar CDR, generar PDF y marcar aceptado
+                Log::info("Documento ID {$document->id} encontrado en SUNAT vía consulta CDR. Marcando como aceptado.");
+
+                $cdrPath = '/cdr_path/R-' . $invoice->getName() . '.zip';
+                file_put_contents(storage_path($cdrPath), $consulta->getCdrZip());
+
+                $pdfPath = $this->sunat->generatePdf($invoice);
+
+                $cdrNotes = [];
+                if ($consulta->getCdrResponse()) {
+                    $cdrNotes = $consulta->getCdrResponse()->getNotes() ?? [];
+                }
+
+                $document->update([
+                    'status'       => 'enviado',
+                    'status_sunat' => 'aceptado',
+                    'xml_path'     => $xmlPath,
+                    'cdr_path'     => $cdrPath,
+                    'pdf_path'     => $pdfPath,
+                    'notes'        => $cdrNotes,
+                ]);
+
+                return;
+            }
+
+            // El comprobante NO existe en SUNAT
+            Log::warning("Documento ID {$document->id} no encontrado en SUNAT vía consulta CDR.", [
+                'code_original' => $code,
             ]);
 
+            // 1079: demasiado antiguo para reenvío individual, requiere resumen diario → rechazar
+            if ($code === '1079') {
+                $document->update([
+                    'status_sunat' => 'rechazado',
+                    'notes'        => $sunatResponse['notes'] ?? [],
+                ]);
+                Log::warning("Documento ID {$document->id} marcado como rechazado (1079 - requiere resumen diario).");
+                return;
+            }
+
+            // Cualquier otro caso: dejar como pendiente para reintentar después
+            $document->update(['notes' => $sunatResponse['notes'] ?? []]);
             return;
         }
 
