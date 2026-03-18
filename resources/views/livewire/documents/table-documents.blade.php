@@ -33,14 +33,24 @@
 
                         </div>
 
-                        <div>
-                            <div class="relative mr-2">
+                        <div class="flex items-center gap-2">
+                            <x-base.form-select
+                                class="rounded-[0.5rem] sm:w-44"
+                                wire:model.live="statusSunat"
+                            >
+                                <option value="">Todos los estados</option>
+                                <option value="aceptado">Aceptado</option>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="rechazado">Rechazado</option>
+                                <option value="anulado">Anulado</option>
+                            </x-base.form-select>
 
+                            <div class="relative mr-2">
                                 <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
                                 <x-base.form-input
                                     class="rounded-[0.5rem] pl-9 sm:w-64"
                                     type="text"
-                                    placeholder="Buscar..."
+                                    placeholder="Buscar comprobante..."
                                     wire:model.live="search"
                                 />
                             </div>

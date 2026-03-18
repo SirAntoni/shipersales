@@ -19,9 +19,15 @@ use Greenter\Ws\Services\SunatEndpoints;
 class TableDocuments extends Component
 {
     public $search;
+    public $statusSunat = '';
     use WithPagination;
 
     public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingStatusSunat()
     {
         $this->resetPage();
     }
@@ -138,7 +144,15 @@ class TableDocuments extends Component
     public
     function render()
     {
-        $documents = Document::orderBy('id', 'desc')->paginate(10);
+        $documents = Document::when($this->search, function ($q) {
+                $q->where(function ($q) {
+                    $q->whereRaw("CONCAT(serie, '-', correlative) LIKE ?", ["%{$this->search}%"])
+                      ->orWhere('serie', 'LIKE', "%{$this->search}%")
+                      ->orWhere('correlative', 'LIKE', "%{$this->search}%");
+                });
+            })
+            ->when($this->statusSunat, fn($q) => $q->where('status_sunat', $this->statusSunat))
+            ->orderBy('id', 'desc')->paginate(10);
         return view('livewire.documents.table-documents', compact('documents'));
     }
 }
