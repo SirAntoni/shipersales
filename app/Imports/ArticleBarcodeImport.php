@@ -5,13 +5,14 @@ namespace App\Imports;
 use App\Models\Article;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\WithValidation;
 use Maatwebsite\Excel\Concerns\SkipsOnError;
 use Maatwebsite\Excel\Concerns\SkipsErrors;
+use Maatwebsite\Excel\Concerns\SkipsOnFailure;
+use Maatwebsite\Excel\Concerns\SkipsFailures;
 
-class ArticleBarcodeImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnError
+class ArticleBarcodeImport implements ToModel, WithHeadingRow, SkipsOnError, SkipsOnFailure
 {
-    use SkipsErrors;
+    use SkipsErrors, SkipsFailures;
 
     public int $updated = 0;
     public int $skipped = 0;
@@ -37,13 +38,5 @@ class ArticleBarcodeImport implements ToModel, WithHeadingRow, WithValidation, S
         $this->updated++;
 
         return null;
-    }
-
-    public function rules(): array
-    {
-        return [
-            'sku' => 'required',
-            'barcode' => 'required',
-        ];
     }
 }

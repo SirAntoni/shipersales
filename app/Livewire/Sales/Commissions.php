@@ -137,7 +137,7 @@ class Commissions extends Component
                 'contact:id,name',
                 'paymentMethod:id,name'
             ])
-            ->where('status', '!=', Sale::SALE_CANCELED)
+            ->whereNotIn('status', [Sale::SALE_CANCELED, Sale::SALE_SQUARE])
             ->whereIn('sales.contact_id', [5, 1, 4, 12])
             // —> AÑADE ESTO:
             ->when($this->user, function ($query, $userId) {
