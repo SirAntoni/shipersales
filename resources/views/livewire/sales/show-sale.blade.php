@@ -33,6 +33,12 @@
 
                 <div class="col-span-12 xl:col-span-12">
                     <div class="box box--stacked flex flex-col p-5 sm:p-14">
+                        @if($status == \App\Models\Sale::SALE_SQUARE)
+                            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded">
+                                <p class="font-bold">Venta de cuadre</p>
+                                <p class="text-sm">Esta venta fue registrada como venta de cuadre.</p>
+                            </div>
+                        @endif
                         <div class="grid grid-cols-12">
                             @if($sectionClient)
                                 <div

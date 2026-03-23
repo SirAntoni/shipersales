@@ -50,6 +50,7 @@ class ShowSale extends Component
     public $webhook_imported;
 
     public $sectionClient = false;
+    public $status;
 
     public $name;
     public $document_number;
@@ -112,6 +113,7 @@ class ShowSale extends Component
         $this->granSubtotal = $sale->granSubtotal;
         $this->tax = ($sale->tax > 0) ? 1:0;
         $this->observation = $sale->observations;
+        $this->status = $sale->status;
         $this->webhook_imported = $sale->webhook_imported;
 
         foreach ($sale->saleDetails as $detail) {
