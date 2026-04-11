@@ -13,7 +13,8 @@
       "Bash(php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Imports/ArticleBarcodeImport.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/TableArticles.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/AddArticle.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/EditArticle.php)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(ls:*)"
     ]
   }
 }

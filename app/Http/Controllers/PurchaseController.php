@@ -18,4 +18,9 @@ class PurchaseController extends Controller
     {
         return view('purchases.show',compact('id'));
     }
+
+    public function usa()
+    {
+        return view('purchases.usa');
+    }
 }

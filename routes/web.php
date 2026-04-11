@@ -55,6 +55,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('contacts', ContactController::class)->middleware('can:settings');
     Route::resource('payment-methods', PaymentMethodController::class)->middleware('can:settings');
     Route::resource('purchases', PurchaseController::class)->middleware('can:purchases.index');
+    Route::get('usa-purchases', [PurchaseController::class, 'usa'])->name('usa_purchases')->middleware('can:purchases');
     Route::get('canceled_purchases', [CanceledController::class,'purchases'])->name('canceled_purchases')->middleware('can:purchases','can:canceled_purchases');
     Route::resource('sales', SaleController::class)->middleware('can:sales');
     Route::get('commissions',[SaleController::class,'commissions'])->name('commissions')->middleware('can:commissions');

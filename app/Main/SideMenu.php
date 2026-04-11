@@ -93,6 +93,13 @@ class SideMenu
                         'permission' => 'providers',
                     ],
                     [
+                        'icon' => "Globe",
+                        'route_name' => "usa_purchases",
+                        'params' => [],
+                        'title' => "Compras USA",
+                        'permission' => 'purchases',
+                    ],
+                    [
                         'icon' => "FileMinus",
                         'route_name' => "canceled_purchases",
                         'params' => [],

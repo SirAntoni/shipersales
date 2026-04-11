@@ -112,6 +112,24 @@
         });
     });
 
+    window.addEventListener('questionDeleteUsa', event => {
+        Swal.fire({
+            title: 'Eliminar registro',
+            text: event.detail[0]['label'],
+            icon: 'warning',
+            confirmButtonText: 'Sí, eliminar',
+            confirmButtonColor: "#e74c3c",
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if(result.isConfirmed){
+                Livewire.dispatch('confirmDeleteUsa',{id:event.detail[0]['id']})
+            }
+        });
+    });
+
     window.addEventListener('questionConfirmReturn', event => {
         Swal.fire({
             title: 'Confirmar devolución',
