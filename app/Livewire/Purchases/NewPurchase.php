@@ -187,6 +187,7 @@ class NewPurchase extends Component
         return Article::where('status', 'active')
             ->where(function ($q) use ($query) {
                 $q->where('title', 'like', '%'.$query.'%')
+                  ->orWhere('sku', 'like', '%'.$query.'%')
                   ->orWhereHas('brand', fn ($b) =>
                       $b->where('name', 'like', '%'.$query.'%')
                   );
@@ -196,7 +197,8 @@ class NewPurchase extends Component
             ->map(fn ($c) => [
                 'value' => $c->id,
                 'text'  => trim(
-                    $c->title
+                    ($c->sku ? "[{$c->sku}] " : '')
+                    . $c->title
                     . ($c->brand?->name ? " ({$c->brand->name})" : '')
                     . " | stock: {$c->stock}"
                     . " | precio: S/. {$c->sale_price}"

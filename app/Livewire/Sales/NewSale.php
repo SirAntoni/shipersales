@@ -360,7 +360,7 @@ class NewSale extends Component
                     });
             })
             ->select([
-                'a.id','a.title','a.stock','a.category_id','a.brand_id',
+                'a.id','a.sku','a.title','a.stock','a.category_id','a.brand_id',
                 'b.name as brand_name',
                 DB::raw('COALESCE(acp.price, a.sale_price) as effective_price'),
             ])
@@ -369,7 +369,8 @@ class NewSale extends Component
 
         return $rows->map(function($a){
             $txt = trim(
-                $a->title
+                ($a->sku ? "[{$a->sku}] " : '')
+                . $a->title
                 . ($a->brand_name ? " ({$a->brand_name})" : '')
                 . " | stock: {$a->stock}"
                 . " | precio: S/. {$a->effective_price}"
