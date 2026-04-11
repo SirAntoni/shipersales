@@ -189,7 +189,8 @@
         x-data="{ show: false }"
         x-on:open-import-usa-modal.window="show = true"
         x-on:close-import-usa-modal.window="show = false"
-        x-on:keydown.escape.window="show = false"
+        x-on:keydown.escape.window="if(show) show = false"
+        wire:ignore.self
     >
         <div
             x-show="show"
@@ -220,14 +221,25 @@
                 </p>
                 <div class="mb-4">
                     <input type="file" wire:model="importFile" accept=".xlsx,.xls"
-                        class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
+                        class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        wire:loading.attr="disabled" wire:target="importFile"/>
+                    <div wire:loading wire:target="importFile" class="text-xs text-slate-400 mt-1">
+                        <i class="fa-solid fa-spinner animate-spin mr-1"></i> Subiendo archivo...
+                    </div>
                 </div>
                 <div class="flex justify-end gap-2">
-                    <x-base.button variant="secondary" x-on:click="show = false">
+                    <x-base.button variant="secondary" x-on:click="show = false"
+                        wire:loading.attr="disabled" wire:target="importExcel">
                         Cancelar
                     </x-base.button>
-                    <x-base.button variant="primary" wire:click="importExcel">
-                        <i class="fa-solid fa-upload mr-1"></i> Importar
+                    <x-base.button variant="primary" wire:click="importExcel"
+                        wire:loading.attr="disabled" wire:target="importExcel,importFile">
+                        <span wire:loading.remove wire:target="importExcel">
+                            <i class="fa-solid fa-upload mr-1"></i> Importar
+                        </span>
+                        <span wire:loading wire:target="importExcel">
+                            <i class="fa-solid fa-spinner animate-spin mr-1"></i> Importando...
+                        </span>
                     </x-base.button>
                 </div>
             </div>
