@@ -30,11 +30,12 @@ class UsaPurchaseImport
             $emptyStreak = 0;
 
             for ($rowNum = 2; $rowNum <= $highestRow; $rowNum++) {
-                $fecha = trim((string) ($sheet->getCell("A{$rowNum}")->getValue() ?? ''));
+                $fechaRaw = $sheet->getCell("A{$rowNum}")->getValue();
+                $fecha = is_numeric($fechaRaw) ? $fechaRaw : trim((string) ($fechaRaw ?? ''));
                 $carrier = trim((string) ($sheet->getCell("B{$rowNum}")->getValue() ?? ''));
 
                 // Skip empty rows - stop after 50 consecutive empty rows
-                if (!$fecha && !$carrier) {
+                if (empty($fecha) && empty($carrier)) {
                     $emptyStreak++;
                     if ($emptyStreak >= 50) {
                         break;
@@ -51,7 +52,7 @@ class UsaPurchaseImport
                 }
 
                 $date = $this->parseDate($fecha, $parsed['year']);
-                $arrivalRaw = trim((string) ($sheet->getCell("I{$rowNum}")->getValue() ?? ''));
+                $arrivalRaw = $sheet->getCell("I{$rowNum}")->getValue();
                 $arrivalDate = $this->parseDate($arrivalRaw, $parsed['year']);
                 $qtyRaw = $sheet->getCell("F{$rowNum}")->getValue() ?? 0;
                 $quantity = (int) filter_var($qtyRaw, FILTER_SANITIZE_NUMBER_INT);
@@ -91,12 +92,28 @@ class UsaPurchaseImport
         return null;
     }
 
-    private function parseDate(string $value, int $defaultYear): ?string
+    private function parseDate($value, int $defaultYear): ?string
     {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        // Excel serial number (integer or float)
+        if (is_numeric($value) && (int) $value > 40000) {
+            try {
+                $unix = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToTimestamp((int) $value);
+                return Carbon::createFromTimestamp($unix)->format('Y-m-d');
+            } catch (\Exception $e) {
+                // fall through
+            }
+        }
+
+        $value = trim((string) $value);
         if (!$value) {
             return null;
         }
 
+        // "5-Jan", "12-Sep" format
         try {
             $date = Carbon::createFromFormat('j-M', $value);
             $date->year($defaultYear);
