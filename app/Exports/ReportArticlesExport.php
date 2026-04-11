@@ -29,6 +29,7 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
     {
         return Article::query()->active()->select('articles.id as id',
             'sku',
+            'barcode',
             'title',
             'categories.name as category_name',
             'brands.name as brand_name',
@@ -55,6 +56,7 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
             'MARCA',
             'DETALLE',
             'STOCK',
+            'BARCODE',
             'PRECIO DE COMPRA',
             'PRECIO DE VENTA'
         ];
@@ -70,6 +72,7 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
             $row->brand_name,
             $row->detail,
             $row->stock,
+            $row->barcode,
             $row->purchase_price,
             $row->sale_price
         ];
@@ -95,9 +98,9 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
     public function columnFormats(): array
     {
         return [
-            'G' => NumberFormat::FORMAT_NUMBER_00,
             'H' => NumberFormat::FORMAT_NUMBER_00,
-            'I' => NumberFormat::FORMAT_NUMBER_00
+            'I' => NumberFormat::FORMAT_NUMBER_00,
+            'J' => NumberFormat::FORMAT_NUMBER_00
         ];
     }
 
@@ -111,7 +114,7 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
                 $sheet->setCellValue('B2', $titulo);
 
                 // 2) Fusionar B1 hasta, digamos, H1 para que el texto tenga espacio
-                $sheet->mergeCells('B2:I2');
+                $sheet->mergeCells('B2:J2');
 
                 // 3) Estilos: negrita, tamaño de letra, alineación
                 $sheet->getStyle('B2')->applyFromArray([
@@ -130,7 +133,7 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
                 $sheet->getRowDimension(4)->setRowHeight(40);
 
                 // 5) Opcional: ajustar ancho de columnas para que encaje bien
-                foreach (range('B', 'I') as $col) {
+                foreach (range('B', 'J') as $col) {
                     $sheet->getColumnDimension($col)->setAutoSize(true);
                 }
 
@@ -164,7 +167,7 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
 
 
 
-                $sheet->getStyle('A4:I4')->applyFromArray([
+                $sheet->getStyle('A4:J4')->applyFromArray([
                     'font' => [
                         'color' => [
                             'rgb' => 'FFFFFF'
