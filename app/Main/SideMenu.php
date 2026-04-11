@@ -123,6 +123,13 @@ class SideMenu
                         'permission' => 'clients',
                     ],
                     [
+                        'icon' => "RotateCcw",
+                        'route_name' => "returns",
+                        'params' => [],
+                        'title' => "Devoluciones",
+                        'permission' => 'sales',
+                    ],
+                    [
                         'icon' => "FileMinus",
                         'route_name' => "canceled",
                         'params' => [],

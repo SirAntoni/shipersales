@@ -59,7 +59,8 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('sales', SaleController::class)->middleware('can:sales');
     Route::get('commissions',[SaleController::class,'commissions'])->name('commissions')->middleware('can:commissions');
     Route::resource('documents', DocumentController::class)->middleware('can:documents');
-    Route::get('canceled', [CanceledController::class,'index'])->name('canceled')->middleware('can:canceled');;
+    Route::get('canceled', [CanceledController::class,'index'])->name('canceled')->middleware('can:canceled');
+    Route::get('returns', [SaleController::class,'returns'])->name('returns')->middleware('can:sales');
     Route::get('reports', [ReportController::class,'index'])->name('reports')->middleware('can:reports');
     Route::get('reports/dayli/export', [ReportController::class, 'dayli'])->name('reports.dayli.export')->middleware('can:reports');
     Route::get('reports/custom/export', [ReportController::class, 'custom'])->name('reports.custom.export')->middleware('can:reports');

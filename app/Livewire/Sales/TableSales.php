@@ -147,7 +147,7 @@ class TableSales extends Component
         $this->sectionDelete = false;
         $this->saleDeleteSelect = null;
 
-        $this->dispatch('successNotRoute', ['label' => 'Venta eliminada con éxito.']);
+        $this->dispatch('successNotRoute', ['label' => 'Venta anulada con éxito.']);
 
     }
 
@@ -201,8 +201,7 @@ class TableSales extends Component
     {
         $this->saleDeleteSelect = $id;
         $this->sectionDelete = true;
-        $this->dispatch('topPage');
-        //$this->dispatch('delete', ['label' => 'Esta seguro que desea anular la venta?.', 'btn' => 'Eliminar', 'route' => route('sales.index'), 'id' => $id]);
+        $this->dispatch('open-delete-modal');
     }
 
     public function questionStatus($id)
@@ -239,6 +238,28 @@ class TableSales extends Component
         $this->dispatch('abrir-nueva-pestania', ['url' => $url]);
     }
 
+    public function markAsReturn($id)
+    {
+        $this->dispatch('questionReturn', [
+            'label' => '¿Está seguro que desea marcar esta venta como devolución?',
+            'id' => $id
+        ]);
+    }
+
+    #[On('confirmReturn')]
+    public function confirmReturn($id)
+    {
+        $sale = Sale::findOrFail($id);
+
+        if ($sale->status === Sale::SALE_CANCELED) {
+            $this->dispatch('errorNotRoute', ['label' => 'No se puede marcar una venta anulada como devolución.']);
+            return;
+        }
+
+        $sale->update(['status' => Sale::SALE_RETURN]);
+        $this->dispatch('successNotRoute', ['label' => 'Venta marcada como devolución pendiente.']);
+    }
+
     public function clearSearch()
     {
         $this->reset('search');
@@ -261,7 +282,7 @@ class TableSales extends Component
                 'contact:id,name',
                 'paymentMethod:id,name'
             ])
-            ->where('status', '!=', Sale::SALE_CANCELED)
+            ->whereNotIn('status', [Sale::SALE_CANCELED, Sale::SALE_RETURN])
             ->when($this->search, function ($query, $search) {
                 $terms = collect(preg_split('/[\s\+]+/', trim($search)))
                     ->filter()
@@ -304,6 +325,7 @@ class TableSales extends Component
             Sale::SALE_APPROVED    => 'success',
             Sale::SALE_OBSERVATION => 'warning',
             Sale::SALE_SQUARE      => 'primary',
+            Sale::SALE_RETURN      => 'pending',
         ];
 
         foreach ($sales as $sale) {

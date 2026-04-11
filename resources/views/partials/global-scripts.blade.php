@@ -112,6 +112,60 @@
         });
     });
 
+    window.addEventListener('questionConfirmReturn', event => {
+        Swal.fire({
+            title: 'Confirmar devolución',
+            text: event.detail[0]['label'],
+            icon: 'warning',
+            confirmButtonText: 'Sí, anular',
+            confirmButtonColor: "#e74c3c",
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if(result.isConfirmed){
+                Livewire.dispatch('processReturn',{id:event.detail[0]['id']})
+            }
+        });
+    });
+
+    window.addEventListener('questionRevertReturn', event => {
+        Swal.fire({
+            title: 'Revertir devolución',
+            text: event.detail[0]['label'],
+            icon: 'question',
+            confirmButtonText: 'Sí, revertir',
+            confirmButtonColor: "#3085d6",
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if(result.isConfirmed){
+                Livewire.dispatch('processRevertReturn',{id:event.detail[0]['id']})
+            }
+        });
+    });
+
+    window.addEventListener('questionReturn', event => {
+        Swal.fire({
+            title: 'Devolución',
+            text: event.detail[0]['label'],
+            icon: 'warning',
+            confirmButtonText: 'Sí, marcar',
+            confirmButtonColor: "#e67e22",
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if(result.isConfirmed){
+                Livewire.dispatch('confirmReturn',{id:event.detail[0]['id']})
+            }
+        });
+    });
+
     window.addEventListener('questionNumber', event => {
         Swal.fire({
             title: 'Alerta',

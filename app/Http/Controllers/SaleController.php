@@ -40,4 +40,9 @@ class SaleController extends Controller implements hasMiddleware
     {
         return view('sales.commissions');
     }
+
+    public function returns()
+    {
+        return view('sales.returns');
+    }
 }

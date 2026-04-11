@@ -31,100 +31,93 @@
                 <div class="box box--stacked flex flex-col">
                     <div class="grid grid-cols-12">
 
-                        @if($sectionDelete)
+                        {{-- Modal Anular Venta --}}
+                        <div
+                            x-data="{ showDeleteModal: false }"
+                            x-on:open-delete-modal.window="showDeleteModal = true"
+                            x-on:close-delete-modal.window="showDeleteModal = false"
+                            x-on:keydown.escape.window="showDeleteModal = false; $wire.set('sectionDelete', false)"
+                        >
                             <div
-                                class="col-span-12 relative mb-4 mt-7 mx-4 rounded-[0.6rem] border border-slate-200/80 dark:border-darkmode-400">
+                                x-show="showDeleteModal"
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0"
+                                x-transition:enter-end="opacity-100"
+                                x-transition:leave="transition ease-in duration-150"
+                                x-transition:leave-start="opacity-100"
+                                x-transition:leave-end="opacity-0"
+                                class="fixed inset-0 flex items-center justify-center"
+                                style="z-index: 1050; display: none;"
+                            >
+                                {{-- Backdrop --}}
                                 <div
-                                    class="absolute left-0 -mt-2 ml-4 bg-white px-3 text-xs uppercase text-slate-500">
-                                    <div class="-mt-px">Eliminar venta - {{$saleDeleteSelect}}</div>
-                                </div>
-                                <div class="grid grid-cols-12 pt-4">
-                                    <div class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2">
-                                        <x-base.alert
-                                            class="flex items-center"
-                                            variant="danger"
+                                    class="fixed inset-0 bg-black/50"
+                                    x-on:click="showDeleteModal = false; $wire.set('sectionDelete', false)"
+                                ></div>
+
+                                {{-- Panel --}}
+                                <div
+                                    class="relative bg-white dark:bg-darkmode-600 rounded-lg shadow-xl w-[420px] max-h-[90vh] overflow-y-auto p-6"
+                                    style="z-index: 1051;"
+                                    x-on:click.stop
+                                >
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h3 class="text-base font-medium">Anular venta - {{ $saleDeleteSelect }}</h3>
+                                        <button
+                                            x-on:click="showDeleteModal = false; $wire.set('sectionDelete', false)"
+                                            class="text-slate-400 hover:text-slate-600"
                                         >
-                                            <i class="fa-solid fa-circle-exclamation mr-2"></i>
-                                            ¿Esta seguro que desea eliminar la venta?. Si es así, indicar un motivo.
-                                        </x-base.alert>
-
+                                            <i class="fa-solid fa-xmark text-lg"></i>
+                                        </button>
                                     </div>
 
-                                    <div class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2">
+                                    <x-base.alert class="flex items-center mb-4" variant="danger">
+                                        <i class="fa-solid fa-circle-exclamation mr-2"></i>
+                                        ¿Está seguro que desea anular la venta? Si es así, indicar un motivo.
+                                    </x-base.alert>
 
-                                        <div>
-                                            <x-base.form-label for="name">
-                                                Motivo
-                                            </x-base.form-label>
-                                            <x-base.form-select
-                                                class="mb-2"
-                                                wire:model.live="motive"
-                                            >
-                                                <option value="">Selecciona una opción</option>
-                                                <option value="Venta mal realizada">Venta mal realizada</option>
-                                                <option value="Duplicado">Duplicado</option>
-                                                <option value="Devolución">Devolución</option>
-                                                <option value="Cancelado por cliente">Cancelado por cliente</option>
-                                                <option value="Otros">Otros</option>
-                                            </x-base.form-select>
-                                            @error('motive')
-                                            <div class="p-1 text-red-600">
-                                                {{ $message }}
-                                            </div>
-                                            @enderror
-                                        </div>
-
-
+                                    <div class="mb-3">
+                                        <x-base.form-label>Motivo</x-base.form-label>
+                                        <x-base.form-select class="mb-1" wire:model.live="motive">
+                                            <option value="">Selecciona una opción</option>
+                                            <option value="Venta mal realizada">Venta mal realizada</option>
+                                            <option value="Duplicado">Duplicado</option>
+                                            <option value="Devolución">Devolución</option>
+                                            <option value="Cancelado por cliente">Cancelado por cliente</option>
+                                            <option value="Otros">Otros</option>
+                                        </x-base.form-select>
+                                        @error('motive')
+                                            <div class="text-sm text-red-600">{{ $message }}</div>
+                                        @enderror
                                     </div>
+
                                     @if($sectionMoreDetails)
-                                        <div class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2">
-
-                                            <div>
-                                                <x-base.form-label for="name">
-                                                    Mas detalles
-                                                </x-base.form-label>
-                                                <x-base.form-textarea
-                                                    class="mb-2"
-                                                    wire:model.live="motiveDetail"
-                                                >
-                                                </x-base.form-textarea>
-                                                @error('motiveDetail')
-                                                <div class="p-1 text-red-600">
-                                                    {{ $message }}
-                                                </div>
-                                                @enderror
-                                            </div>
+                                        <div class="mb-3">
+                                            <x-base.form-label>Más detalles</x-base.form-label>
+                                            <x-base.form-textarea class="mb-1" wire:model.live="motiveDetail"></x-base.form-textarea>
+                                            @error('motiveDetail')
+                                                <div class="text-sm text-red-600">{{ $message }}</div>
+                                            @enderror
                                         </div>
                                     @endif
 
-                                    <div
-                                        class="col-span-12 sm:col-span-12 flex flex-col gap-3.5 px-5 py-2 text-right">
-                                        <div>
-
-
-                                            <x-base.button
-                                                class="mb-2 mr-2"
-                                                variant="info"
-                                                wire:click="$set('sectionDelete', false)"
-                                            >
-                                                Cancelar
-                                            </x-base.button>
-                                            <x-base.button
-                                                class="mb-2"
-                                                variant="primary"
-                                                wire:click="deleteSale"
-                                            >
-                                                Guardar
-                                            </x-base.button>
-
-                                        </div>
-
-
+                                    <div class="flex justify-end gap-2 mt-4">
+                                        <x-base.button
+                                            variant="secondary"
+                                            x-on:click="showDeleteModal = false; $wire.set('sectionDelete', false)"
+                                        >
+                                            Cancelar
+                                        </x-base.button>
+                                        <x-base.button
+                                            variant="danger"
+                                            x-on:click="showDeleteModal = false; setTimeout(() => { $wire.call('deleteSale') }, 200)"
+                                        >
+                                            Anular venta
+                                        </x-base.button>
                                     </div>
-
                                 </div>
                             </div>
-                        @endif
+                        </div>
                     </div>
                     <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
                         <div>
@@ -329,6 +322,7 @@
 
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                                 <div class="flex items-center justify-center">
+                                                    {{-- Botones visibles --}}
                                                     @can('update')
                                                         <x-base.tippy
                                                             as="x-base.button-sm"
@@ -338,20 +332,8 @@
                                                             content="Ver detalle"
                                                             wire:click="edit({{$sale->id}})">
                                                             <i class="text-white fa-solid fa-eye"></i>
-
                                                         </x-base.tippy>
                                                     @endcan
-                                                    <x-base.tippy
-                                                        as="x-base.button-sm"
-                                                        variant="{{ is_null($sale->document?->id) ? 'soft-primary' : 'soft-pending' }}"
-                                                        size="sm"
-                                                        class="mr-2"
-                                                        content="Emitir comprobante"
-                                                        :disabled="! is_null($sale->document?->id)"
-                                                        wire:click="newDocument({{$sale->id}})">
-                                                        <i class="fa-solid fa-file-circle-plus"></i>
-
-                                                    </x-base.tippy>
                                                     <x-base.tippy
                                                         as="x-base.button-sm"
                                                         variant="dark"
@@ -360,60 +342,104 @@
                                                         content="Ver PDF"
                                                         wire:click="verPDF({{$sale->id}})">
                                                         <i class="text-white fa-solid fa-file-pdf"></i>
-
                                                     </x-base.tippy>
 
-                                                        @php
-                                                            $canInlineEdit = $sale->status !== \App\Models\Sale::SALE_CANCELED
-                                                                && $sale->saleDetails->count() === 1
-                                                                && (int)$sale->saleDetails->first()->quantity === 1;
-                                                        @endphp
+                                                    @php
+                                                        $canInlineEdit = $sale->status !== \App\Models\Sale::SALE_CANCELED
+                                                            && $sale->saleDetails->count() === 1
+                                                            && (int)$sale->saleDetails->first()->quantity === 1;
+                                                    @endphp
 
-                                                        @if($canInlineEdit)
-                                                            @if($editingSaleId === $sale->id)
-                                                                <x-base.tippy
-                                                                    as="x-base.button-sm"
-                                                                    variant="success"
-                                                                    size="sm"
-                                                                    class="mr-2"
-                                                                    content="Guardar"
-                                                                    wire:click="saveEditTotal({{ $sale->id }})">
-                                                                    <i class="text-white fa-solid fa-floppy-disk"></i>
-                                                                </x-base.tippy>
-                                                                <x-base.tippy
-                                                                    as="x-base.button-sm"
-                                                                    variant="danger"
-                                                                    size="sm"
-                                                                    class="mr-2"
-                                                                    content="Cancelar"
-                                                                    wire:click="cancelEditTotal">
-                                                                    <i class="text-white fa-solid fa-x"></i>
-                                                                </x-base.tippy>
-                                                            @else
-                                                                <x-base.tippy
-                                                                    as="x-base.button-sm"
-                                                                    variant="success"
-                                                                    size="sm"
-                                                                    class="mr-2"
-                                                                    content="Editar total"
-                                                                    wire:click="startEditTotal({{ $sale->id }})">
-                                                                    <i class="text-white fa-solid fa-edit"></i>
-                                                                </x-base.tippy>
-                                                            @endif
-                                                        @endif
-
-                                                    @can('delete')
+                                                    @if($canInlineEdit && $editingSaleId === $sale->id)
+                                                        <x-base.tippy
+                                                            as="x-base.button-sm"
+                                                            variant="success"
+                                                            size="sm"
+                                                            class="mr-2"
+                                                            content="Guardar"
+                                                            wire:click="saveEditTotal({{ $sale->id }})">
+                                                            <i class="text-white fa-solid fa-floppy-disk"></i>
+                                                        </x-base.tippy>
                                                         <x-base.tippy
                                                             as="x-base.button-sm"
                                                             variant="danger"
                                                             size="sm"
                                                             class="mr-2"
-                                                            content="Anular venta"
-                                                            wire:click="delete({{$sale->id}})">
-                                                            <i class="text-white fa-solid fa-xmark"></i>
-
+                                                            content="Cancelar"
+                                                            wire:click="cancelEditTotal">
+                                                            <i class="text-white fa-solid fa-x"></i>
                                                         </x-base.tippy>
-                                                    @endcan
+                                                    @endif
+
+                                                    {{-- Dropdown de más acciones --}}
+                                                    <div class="relative" x-data="{ open: false }">
+                                                        <x-base.tippy
+                                                            as="x-base.button-sm"
+                                                            variant="secondary"
+                                                            size="sm"
+                                                            content="Más acciones"
+                                                            x-on:click="open = !open">
+                                                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                        </x-base.tippy>
+
+                                                        <div
+                                                            x-show="open"
+                                                            x-on:click.outside="open = false"
+                                                            x-transition:enter="transition ease-out duration-100"
+                                                            x-transition:enter-start="opacity-0 scale-95"
+                                                            x-transition:enter-end="opacity-100 scale-100"
+                                                            x-transition:leave="transition ease-in duration-75"
+                                                            x-transition:leave-start="opacity-100 scale-100"
+                                                            x-transition:leave-end="opacity-0 scale-95"
+                                                            class="absolute right-0 mt-1 w-48 bg-white dark:bg-darkmode-600 rounded-md shadow-lg border border-slate-200 dark:border-darkmode-400 py-1"
+                                                            style="z-index: 50; display: none;"
+                                                        >
+                                                            {{-- Emitir comprobante --}}
+                                                            <button
+                                                                class="flex items-center w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-darkmode-400 {{ !is_null($sale->document?->id) ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                                                wire:click="newDocument({{$sale->id}})"
+                                                                {{ !is_null($sale->document?->id) ? 'disabled' : '' }}
+                                                                x-on:click="open = false"
+                                                            >
+                                                                <i class="fa-solid fa-file-circle-plus mr-2 text-primary"></i>
+                                                                Emitir comprobante
+                                                            </button>
+
+                                                            @if($canInlineEdit && $editingSaleId !== $sale->id)
+                                                                {{-- Editar total --}}
+                                                                <button
+                                                                    class="flex items-center w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-darkmode-400"
+                                                                    wire:click="startEditTotal({{ $sale->id }})"
+                                                                    x-on:click="open = false"
+                                                                >
+                                                                    <i class="fa-solid fa-edit mr-2 text-success"></i>
+                                                                    Editar total
+                                                                </button>
+                                                            @endif
+
+                                                            {{-- Marcar como devolución --}}
+                                                            <button
+                                                                class="flex items-center w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-darkmode-400"
+                                                                wire:click="markAsReturn({{$sale->id}})"
+                                                                x-on:click="open = false"
+                                                            >
+                                                                <i class="fa-solid fa-rotate-left mr-2 text-pending"></i>
+                                                                Marcar devolución
+                                                            </button>
+
+                                                            @can('delete')
+                                                                {{-- Anular venta --}}
+                                                                <button
+                                                                    class="flex items-center w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-darkmode-400"
+                                                                    wire:click="delete({{$sale->id}})"
+                                                                    x-on:click="open = false"
+                                                                >
+                                                                    <i class="fa-solid fa-xmark mr-2"></i>
+                                                                    Anular venta
+                                                                </button>
+                                                            @endcan
+                                                        </div>
+                                                    </div>
 
                                                 </div>
                                             </x-base.table.td>
