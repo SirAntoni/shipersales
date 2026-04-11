@@ -15,6 +15,16 @@ class TableReturns extends Component
     use WithPagination;
 
     public $search = '';
+    public $startDate;
+    public $endDate;
+    public $limit;
+
+    public function mount()
+    {
+        $this->limit = 15;
+        $this->startDate = null;
+        $this->endDate = null;
+    }
 
     public function updatingSearch()
     {
@@ -92,9 +102,14 @@ class TableReturns extends Component
         $this->dispatch('successNotRoute', ['label' => 'Venta devuelta a estado aprobado.']);
     }
 
+    public function clearSearch()
+    {
+        $this->reset('search');
+    }
+
     public function render()
     {
-        $limit = 15;
+        $limit = $this->limit ?? 15;
 
         $sales = Sale::query()
             ->with([
@@ -121,6 +136,9 @@ class TableReturns extends Component
                             ->orWhereIn('sales.contact_id', function ($sub) use ($like) {
                                 $sub->select('id')->from('contacts')->where('name', 'like', $like);
                             })
+                            ->orWhereIn('sales.payment_method_id', function ($sub) use ($like) {
+                                $sub->select('id')->from('payment_methods')->where('name', 'like', $like);
+                            })
                             ->orWhereIn('sales.id', function ($sub) use ($like) {
                                 $sub->select('sale_id')->from('sale_details')
                                     ->join('articles', 'articles.id', '=', 'sale_details.article_id')
@@ -128,6 +146,12 @@ class TableReturns extends Component
                             });
                     });
                 }
+            })
+            ->when($this->startDate && $this->endDate, function ($query) {
+                $query->whereBetween('sales.created_at', [
+                    Carbon::parse($this->startDate)->startOfDay(),
+                    Carbon::parse($this->endDate)->endOfDay(),
+                ]);
             })
             ->orderByDesc('sales.updated_at')
             ->paginate($limit);

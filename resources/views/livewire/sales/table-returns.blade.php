@@ -20,7 +20,19 @@
                 <div class="box box--stacked flex flex-col">
                     <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
                         <div>
-                            <div class="relative">
+                            <div class="relative mr-2">
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
+                                <x-base.litepicker
+                                    id="datepicker-returns"
+                                    class="rounded-[0.5rem] pl-9 sm:w-60"
+                                    data-single-mode="true"
+                                    wire:model.live="date"
+                                    placeholder="Ingresa un rango de fechas"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <div class="relative mr-2">
                                 <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
                                 <x-base.form-input
                                     class="rounded-[0.5rem] pl-9 sm:w-64"
@@ -28,6 +40,27 @@
                                     placeholder="Buscar..."
                                     wire:model.live="search"
                                 />
+                                @if($search)
+                                    <i
+                                        class="absolute inset-y-0 right-0 z-10 my-auto mr-3.5 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-600 fa-solid fa-xmark"
+                                        wire:click="clearSearch"
+                                        title="Borrar búsqueda"
+                                    ></i>
+                                @endif
+                            </div>
+                        </div>
+                        <div>
+                            <div class="relative mr-2">
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
+                                <x-base.form-select
+                                    class="rounded-[0.5rem] pl-9 sm:w-35"
+                                    wire:model.live="limit"
+                                >
+                                    <option value="15">15</option>
+                                    <option value="30">30</option>
+                                    <option value="40">40</option>
+                                    <option value="100">100</option>
+                                </x-base.form-select>
                             </div>
                         </div>
                     </div>
