@@ -5,6 +5,7 @@ namespace App\Imports;
 use App\Models\UsaPurchase;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
 class UsaPurchaseImport
 {
@@ -13,7 +14,10 @@ class UsaPurchaseImport
 
     public function import(string $filePath): void
     {
-        $spreadsheet = IOFactory::load($filePath);
+        /** @var Xlsx $reader */
+        $reader = IOFactory::createReaderForFile($filePath);
+        $reader->setReadDataOnly(true);
+        $spreadsheet = $reader->load($filePath);
 
         foreach ($spreadsheet->getSheetNames() as $sheetName) {
             $parsed = $this->parseSheetName($sheetName);
@@ -22,45 +26,56 @@ class UsaPurchaseImport
             }
 
             $sheet = $spreadsheet->getSheetByName($sheetName);
-            $rows = $sheet->toArray();
+            $highestRow = $sheet->getHighestRow();
+            $emptyStreak = 0;
 
-            // Skip header row
-            for ($i = 1; $i < count($rows); $i++) {
-                $row = $rows[$i];
+            for ($rowNum = 2; $rowNum <= $highestRow; $rowNum++) {
+                $fecha = trim((string) ($sheet->getCell("A{$rowNum}")->getValue() ?? ''));
+                $carrier = trim((string) ($sheet->getCell("B{$rowNum}")->getValue() ?? ''));
 
-                // Skip empty rows
-                $fecha = trim((string) ($row[0] ?? ''));
-                $carrier = trim((string) ($row[1] ?? ''));
+                // Skip empty rows - stop after 50 consecutive empty rows
                 if (!$fecha && !$carrier) {
+                    $emptyStreak++;
+                    if ($emptyStreak >= 50) {
+                        break;
+                    }
                     continue;
                 }
+                $emptyStreak = 0;
 
-                $date = $this->parseDate($fecha, $parsed['year']);
-                $arrivalDate = $this->parseDate(trim((string) ($row[8] ?? '')), $parsed['year']);
-                $quantity = (int) filter_var($row[5] ?? 0, FILTER_SANITIZE_NUMBER_INT);
+                $description = trim((string) ($sheet->getCell("G{$rowNum}")->getValue() ?? ''));
 
-                if (!$carrier && !trim((string) ($row[6] ?? ''))) {
+                if (!$carrier && !$description) {
                     $this->skipped++;
                     continue;
                 }
 
+                $date = $this->parseDate($fecha, $parsed['year']);
+                $arrivalRaw = trim((string) ($sheet->getCell("I{$rowNum}")->getValue() ?? ''));
+                $arrivalDate = $this->parseDate($arrivalRaw, $parsed['year']);
+                $qtyRaw = $sheet->getCell("F{$rowNum}")->getValue() ?? 0;
+                $quantity = (int) filter_var($qtyRaw, FILTER_SANITIZE_NUMBER_INT);
+
                 UsaPurchase::create([
                     'date' => $date,
                     'carrier' => $carrier,
-                    'store' => trim((string) ($row[2] ?? '')),
-                    'order_number' => trim((string) ($row[3] ?? '')),
-                    'tracking' => trim((string) ($row[4] ?? '')),
+                    'store' => trim((string) ($sheet->getCell("C{$rowNum}")->getValue() ?? '')),
+                    'order_number' => trim((string) ($sheet->getCell("D{$rowNum}")->getValue() ?? '')),
+                    'tracking' => trim((string) ($sheet->getCell("E{$rowNum}")->getValue() ?? '')),
                     'quantity' => $quantity ?: 0,
-                    'description' => trim((string) ($row[6] ?? '')),
-                    'status' => $this->normalizeStatus(trim((string) ($row[7] ?? ''))),
+                    'description' => $description,
+                    'status' => $this->normalizeStatus(trim((string) ($sheet->getCell("H{$rowNum}")->getValue() ?? ''))),
                     'arrival_date' => $arrivalDate,
-                    'comments' => trim((string) ($row[9] ?? '')) ?: null,
+                    'comments' => trim((string) ($sheet->getCell("J{$rowNum}")->getValue() ?? '')) ?: null,
                     'type' => $parsed['type'],
                     'year' => $parsed['year'],
                 ]);
 
                 $this->imported++;
             }
+
+            // Free memory after each sheet
+            $spreadsheet->removeSheetByIndex($spreadsheet->getIndex($sheet));
         }
     }
 
@@ -83,12 +98,11 @@ class UsaPurchaseImport
         }
 
         try {
-            // Try "5-Jan", "12-Sep" format
             $date = Carbon::createFromFormat('j-M', $value);
             $date->year($defaultYear);
             return $date->format('Y-m-d');
         } catch (\Exception $e) {
-            // Try other common formats
+            // Try other formats
         }
 
         try {
