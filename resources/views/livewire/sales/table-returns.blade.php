@@ -25,8 +25,6 @@
                                 <x-base.litepicker
                                     id="datepicker-returns"
                                     class="rounded-[0.5rem] pl-9 sm:w-60"
-                                    data-single-mode="true"
-                                    wire:model.live="date"
                                     placeholder="Ingresa un rango de fechas"
                                 />
                             </div>
@@ -188,4 +186,27 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const pickerFilter = new Litepicker({
+                element: document.getElementById('datepicker-returns'),
+                autoApply: false,
+                singleMode: false,
+                numberOfColumns: 2,
+                numberOfMonths: 2,
+                dropdowns: {
+                    minYear: 2020,
+                    maxYear: null,
+                    months: true,
+                    years: true,
+                },
+            });
+
+            pickerFilter.on('selected', (startDate, endDate) => {
+                @this.set('startDate', startDate.format('YYYY-MM-DD'));
+                @this.set('endDate', endDate.format('YYYY-MM-DD'));
+            });
+        });
+    </script>
 </div>
