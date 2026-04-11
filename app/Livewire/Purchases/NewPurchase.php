@@ -184,11 +184,13 @@ class NewPurchase extends Component
 
     public function searchArticles($query)
     {
-        return Article::where('title', 'like', '%'.$query.'%')
-            ->where('status', 'active')
-            ->orWhereHas('brand', fn ($q) =>
-            $q->where('name', 'like', '%'.$query.'%')
-            )
+        return Article::where('status', 'active')
+            ->where(function ($q) use ($query) {
+                $q->where('title', 'like', '%'.$query.'%')
+                  ->orWhereHas('brand', fn ($b) =>
+                      $b->where('name', 'like', '%'.$query.'%')
+                  );
+            })
             ->limit(10)
             ->get()
             ->map(fn ($c) => [

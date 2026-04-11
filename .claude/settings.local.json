@@ -10,7 +10,10 @@
       "Bash(curl -s https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css 2>/dev/null | tr '}' '\\\\n' | grep 'z-index' | sed 's/.*z-index:/z-index:/' | sed 's/;.*//' | sort -t: -k2 -n -r | head -5)",
       "Bash(grep -n \"barcode\" /Users/antonyalfredoculquicarranza/projects/shiper-template/database/migrations/*.php)",
       "Bash(grep -n \"articlemarketplace\\\\|article_contact_price\" /Users/antonyalfredoculquicarranza/projects/shiper-template/database/migrations/*.php)",
-      "Bash(php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Imports/ArticleBarcodeImport.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/TableArticles.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/AddArticle.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/EditArticle.php)"
+      "Bash(php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Imports/ArticleBarcodeImport.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/TableArticles.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/AddArticle.php && php -l /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Articles/EditArticle.php)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
