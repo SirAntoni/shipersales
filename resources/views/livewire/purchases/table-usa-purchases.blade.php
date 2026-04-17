@@ -3,7 +3,7 @@
         <div class="col-span-12">
             <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
-                    Compras USA
+                    Registros de compra
                 </div>
                 <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
                     <x-base.button
@@ -211,7 +211,7 @@
                 x-on:click.stop
             >
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-medium">Importar Compras USA</h3>
+                    <h3 class="text-base font-medium">Importar registros de compra</h3>
                     <button x-on:click="show = false" class="text-slate-400 hover:text-slate-600">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>

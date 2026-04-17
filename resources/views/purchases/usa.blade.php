@@ -1,7 +1,7 @@
 @extends('../themes/echo')
 
 @section('subhead')
-    <title>ShiperSales | Compras USA | Sistema de ventas</title>
+    <title>ShiperSales | Registros de compra | Sistema de ventas</title>
 @endsection
 
 @section('subcontent')

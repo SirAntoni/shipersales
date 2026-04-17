@@ -96,7 +96,7 @@ class SideMenu
                         'icon' => "Globe",
                         'route_name' => "usa_purchases",
                         'params' => [],
-                        'title' => "Compras USA",
+                        'title' => "Registros de compra",
                         'permission' => 'purchases',
                     ],
                     [
