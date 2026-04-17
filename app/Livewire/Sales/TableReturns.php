@@ -55,7 +55,7 @@ class TableReturns extends Component
     {
         $sale = Sale::findOrFail($id);
 
-        if ($sale->status !== Sale::SALE_RETURN) {
+        if ((int) $sale->status !== Sale::SALE_RETURN) {
             $this->dispatch('errorNotRoute', ['label' => 'Esta venta no está en estado de devolución.']);
             return;
         }
@@ -93,7 +93,7 @@ class TableReturns extends Component
     {
         $sale = Sale::findOrFail($id);
 
-        if ($sale->status !== Sale::SALE_RETURN) {
+        if ((int) $sale->status !== Sale::SALE_RETURN) {
             $this->dispatch('errorNotRoute', ['label' => 'Esta venta no está en estado de devolución.']);
             return;
         }
