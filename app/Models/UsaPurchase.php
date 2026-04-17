@@ -22,6 +22,8 @@ class UsaPurchase extends Model
         'tracking',
         'quantity',
         'description',
+        'sku',
+        'article_id',
         'status',
         'arrival_date',
         'comments',
@@ -40,5 +42,10 @@ class UsaPurchase extends Model
     public function purchase()
     {
         return $this->belongsTo(Purchase::class);
+    }
+
+    public function article()
+    {
+        return $this->belongsTo(Article::class);
     }
 }

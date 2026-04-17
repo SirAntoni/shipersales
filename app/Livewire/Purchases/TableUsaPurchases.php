@@ -2,16 +2,18 @@
 
 namespace App\Livewire\Purchases;
 
+use App\Models\Article;
+use App\Models\Provider;
+use App\Models\Purchase;
 use App\Models\UsaPurchase;
-use App\Imports\UsaPurchaseImport;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class TableUsaPurchases extends Component
 {
-    use WithPagination, WithFileUploads;
+    use WithPagination;
 
     public $search = '';
     public $filterType = '';
@@ -19,77 +21,44 @@ class TableUsaPurchases extends Component
     public $filterStatus = '';
     public $filterStore = '';
 
-    public $importFile;
-
-    // Edit modal
+    // Form fields (header)
     public $editingId = null;
     public $editDate = '';
     public $editCarrier = '';
     public $editStore = '';
     public $editOrderNumber = '';
     public $editTracking = '';
-    public $editQuantity = 0;
-    public $editDescription = '';
     public $editStatus = '';
     public $editArrivalDate = '';
     public $editComments = '';
     public $editType = '';
 
-    public function updatingSearch()
-    {
-        $this->resetPage();
-    }
+    // Article selection
+    public $articleSelected = null;
+    public $articlesSelected = [];
 
-    public function updatingFilterType()
-    {
-        $this->resetPage();
-    }
+    // Edit mode single article
+    public $editArticleId = null;
+    public $editQuantity = 1;
 
-    public function updatingFilterYear()
-    {
-        $this->resetPage();
-    }
+    // Import to stock
+    public $importingId = null;
+    public $importArticleTitle = '';
+    public $importOriginalQuantity = 0;
+    public $importQuantity = 1;
+    public $importPrice = 0;
+    public $importProviderId = null;
+    public $providers = [];
 
-    public function updatingFilterStatus()
-    {
-        $this->resetPage();
-    }
-
-    public function updatingFilterStore()
-    {
-        $this->resetPage();
-    }
-
-    public function importExcel()
-    {
-        if (!$this->importFile) {
-            $this->dispatch('errorNotRoute', ['label' => 'Selecciona un archivo primero.']);
-            return;
-        }
-
-        $ext = strtolower($this->importFile->getClientOriginalExtension());
-        if (!in_array($ext, ['xlsx', 'xls'])) {
-            $this->dispatch('errorNotRoute', ['label' => 'El archivo debe ser .xlsx o .xls']);
-            return;
-        }
-
-        try {
-            $import = new UsaPurchaseImport();
-            $import->import($this->importFile->getRealPath());
-
-            $this->reset('importFile');
-            $this->dispatch('close-import-usa-modal');
-            $this->dispatch('successNotRoute', [
-                'label' => "Importación completada: {$import->imported} registros importados, {$import->skipped} omitidos."
-            ]);
-        } catch (\Exception $e) {
-            $this->dispatch('errorNotRoute', ['label' => 'Error al importar: ' . $e->getMessage()]);
-        }
-    }
+    public function updatingSearch() { $this->resetPage(); }
+    public function updatingFilterType() { $this->resetPage(); }
+    public function updatingFilterYear() { $this->resetPage(); }
+    public function updatingFilterStatus() { $this->resetPage(); }
+    public function updatingFilterStore() { $this->resetPage(); }
 
     public function newRecord()
     {
-        $this->resetEditFields();
+        $this->resetFormFields();
         $this->editStatus = 'EMBARCADO';
         $this->editType = 'CARGO';
         $this->editDate = now()->format('Y-m-d');
@@ -105,37 +74,130 @@ class TableUsaPurchases extends Component
         $this->editStore = $record->store ?? '';
         $this->editOrderNumber = $record->order_number ?? '';
         $this->editTracking = $record->tracking ?? '';
-        $this->editQuantity = $record->quantity;
-        $this->editDescription = $record->description ?? '';
         $this->editStatus = $record->status ?? '';
         $this->editArrivalDate = $record->arrival_date?->format('Y-m-d') ?? '';
         $this->editComments = $record->comments ?? '';
         $this->editType = $record->type ?? '';
+        $this->editArticleId = $record->article_id;
+        $this->editQuantity = $record->quantity ?: 1;
+        $this->articlesSelected = [];
+
+        if ($record->article_id) {
+            $article = Article::find($record->article_id);
+            if ($article) {
+                $this->articlesSelected = [[
+                    'id' => $article->id,
+                    'sku' => $article->sku,
+                    'title' => $article->title,
+                    'quantity' => (int) $record->quantity ?: 1,
+                ]];
+            }
+        }
+
         $this->dispatch('open-edit-usa-modal');
+    }
+
+    public function searchArticles($query)
+    {
+        return Article::where('status', 'active')
+            ->where(function ($q) use ($query) {
+                $q->where('title', 'like', '%' . $query . '%')
+                    ->orWhere('sku', 'like', '%' . $query . '%')
+                    ->orWhereHas('brand', fn($b) => $b->where('name', 'like', '%' . $query . '%'));
+            })
+            ->limit(10)
+            ->get()
+            ->map(fn($a) => [
+                'value' => $a->id,
+                'text' => trim(
+                    ($a->sku ? "[{$a->sku}] " : '') .
+                    $a->title .
+                    ($a->brand?->name ? " ({$a->brand->name})" : '')
+                ),
+            ])
+            ->toArray();
+    }
+
+    public function updatedArticleSelected($id)
+    {
+        if ($id) {
+            $this->addArticle($id);
+            $this->articleSelected = null;
+        }
+    }
+
+    public function addArticle($id)
+    {
+        $article = Article::find($id);
+        if (!$article) return;
+
+        // Edit mode → replace single article
+        if ($this->editingId) {
+            $this->articlesSelected = [[
+                'id' => $article->id,
+                'sku' => $article->sku,
+                'title' => $article->title,
+                'quantity' => $this->editQuantity ?: 1,
+            ]];
+            $this->editArticleId = $article->id;
+            return;
+        }
+
+        // New mode → append if not already selected
+        $existsIndex = collect($this->articlesSelected)->search(fn($item) => $item['id'] == $article->id);
+        if ($existsIndex !== false) {
+            $this->articlesSelected[$existsIndex]['quantity']++;
+            return;
+        }
+
+        $this->articlesSelected[] = [
+            'id' => $article->id,
+            'sku' => $article->sku,
+            'title' => $article->title,
+            'quantity' => 1,
+        ];
+    }
+
+    public function removeArticle($index)
+    {
+        unset($this->articlesSelected[$index]);
+        $this->articlesSelected = array_values($this->articlesSelected);
+    }
+
+    public function incrementQty($index)
+    {
+        $this->articlesSelected[$index]['quantity']++;
+    }
+
+    public function decrementQty($index)
+    {
+        if ($this->articlesSelected[$index]['quantity'] > 1) {
+            $this->articlesSelected[$index]['quantity']--;
+        }
     }
 
     public function saveRecord()
     {
         $this->validate([
             'editCarrier' => 'required',
-            'editDescription' => 'required',
             'editStatus' => 'required',
             'editType' => 'required',
-        ], [], [
+            'articlesSelected' => 'required|array|min:1',
+        ], [
+            'articlesSelected.required' => 'Debe seleccionar al menos 1 artículo',
+            'articlesSelected.min' => 'Debe seleccionar al menos 1 artículo',
+        ], [
             'editCarrier' => 'pasajero/consignatario',
-            'editDescription' => 'descripción',
             'editStatus' => 'estado',
             'editType' => 'tipo',
         ]);
 
-        $data = [
+        $header = [
             'date' => $this->editDate ?: null,
             'carrier' => $this->editCarrier,
             'store' => $this->editStore,
             'order_number' => $this->editOrderNumber,
             'tracking' => $this->editTracking,
-            'quantity' => (int) $this->editQuantity,
-            'description' => $this->editDescription,
             'status' => $this->editStatus,
             'arrival_date' => $this->editArrivalDate ?: null,
             'comments' => $this->editComments ?: null,
@@ -144,16 +206,31 @@ class TableUsaPurchases extends Component
         ];
 
         if ($this->editingId) {
-            UsaPurchase::findOrFail($this->editingId)->update($data);
+            $article = $this->articlesSelected[0] ?? null;
+            UsaPurchase::findOrFail($this->editingId)->update(array_merge($header, [
+                'description' => $article['title'] ?? '',
+                'sku' => $article['sku'] ?? null,
+                'article_id' => $article['id'] ?? null,
+                'quantity' => (int) ($article['quantity'] ?? 1),
+            ]));
             $msg = 'Registro actualizado.';
         } else {
-            UsaPurchase::create($data);
-            $msg = 'Registro creado.';
+            foreach ($this->articlesSelected as $article) {
+                UsaPurchase::create(array_merge($header, [
+                    'description' => $article['title'],
+                    'sku' => $article['sku'],
+                    'article_id' => $article['id'],
+                    'quantity' => (int) $article['quantity'],
+                ]));
+            }
+            $msg = count($this->articlesSelected) > 1
+                ? count($this->articlesSelected) . ' registros creados.'
+                : 'Registro creado.';
         }
 
         $this->dispatch('close-edit-usa-modal');
         $this->dispatch('successNotRoute', ['label' => $msg]);
-        $this->resetEditFields();
+        $this->resetFormFields();
     }
 
     public function deleteRecord($id)
@@ -171,6 +248,99 @@ class TableUsaPurchases extends Component
         $this->dispatch('successNotRoute', ['label' => 'Registro eliminado.']);
     }
 
+    public function openImport($id)
+    {
+        $record = UsaPurchase::with('article')->findOrFail($id);
+
+        if (!in_array($record->status, ['ENTREGADO', 'PARCIAL'])) {
+            $this->dispatch('errorNotRoute', ['label' => 'Solo se pueden importar registros ENTREGADO o PARCIAL.']);
+            return;
+        }
+
+        if ($record->processed) {
+            $this->dispatch('errorNotRoute', ['label' => 'Este registro ya fue procesado.']);
+            return;
+        }
+
+        if (!$record->article_id) {
+            $this->dispatch('errorNotRoute', ['label' => 'Este registro no tiene artículo vinculado.']);
+            return;
+        }
+
+        $this->importingId = $record->id;
+        $this->importArticleTitle = ($record->article?->sku ? "[{$record->article->sku}] " : '') . $record->description;
+        $this->importOriginalQuantity = (int) $record->quantity;
+        $this->importQuantity = (int) $record->quantity;
+        $this->importPrice = (float) ($record->article?->purchase_price ?? 0);
+        $this->importProviderId = null;
+        $this->providers = Provider::select('id', 'name')->orderBy('name')->get()->toArray();
+
+        $this->dispatch('open-import-stock-modal');
+    }
+
+    public function confirmImport()
+    {
+        $this->validate([
+            'importQuantity' => 'required|integer|min:1',
+            'importPrice' => 'required|numeric|min:0',
+            'importProviderId' => 'required',
+        ], [], [
+            'importQuantity' => 'cantidad recibida',
+            'importPrice' => 'precio',
+            'importProviderId' => 'proveedor',
+        ]);
+
+        $record = UsaPurchase::findOrFail($this->importingId);
+
+        if ($record->processed) {
+            $this->dispatch('errorNotRoute', ['label' => 'Este registro ya fue procesado.']);
+            return;
+        }
+
+        DB::transaction(function () use ($record) {
+            $article = Article::findOrFail($record->article_id);
+
+            $price = (float) $this->importPrice;
+            $qty = (int) $this->importQuantity;
+            $subtotal = $price * $qty;
+
+            $purchase = Purchase::create([
+                'provider_id' => $this->importProviderId,
+                'user_id' => auth()->id(),
+                'voucher_type' => 'Boleta',
+                'document' => 'USA-' . $record->id,
+                'passenger' => $record->carrier ?? 'Compra USA',
+                'subtotal' => $subtotal,
+                'tax' => 0,
+                'total' => $subtotal,
+                'status' => Purchase::PURCHASE_FINISHED,
+            ]);
+
+            $purchase->purchaseDetails()->create([
+                'article_id' => $article->id,
+                'category_id' => $article->category_id,
+                'brand_id' => $article->brand_id,
+                'price' => $price,
+                'quantity' => $qty,
+                'subtotal' => $subtotal,
+                'tax' => 0,
+                'total' => $subtotal,
+            ]);
+
+            $article->increment('stock', $qty);
+            $article->update(['provider_id' => $this->importProviderId]);
+
+            $record->update([
+                'processed' => true,
+                'purchase_id' => $purchase->id,
+            ]);
+        });
+
+        $this->dispatch('close-import-stock-modal');
+        $this->dispatch('successNotRoute', ['label' => 'Compra importada al stock correctamente.']);
+        $this->resetImportFields();
+    }
+
     public function clearSearch()
     {
         $this->reset('search');
@@ -182,19 +352,28 @@ class TableUsaPurchases extends Component
         $this->resetPage();
     }
 
-    private function resetEditFields()
+    private function resetFormFields()
     {
         $this->reset([
             'editingId', 'editDate', 'editCarrier', 'editStore',
-            'editOrderNumber', 'editTracking', 'editQuantity',
-            'editDescription', 'editStatus', 'editArrivalDate',
-            'editComments', 'editType'
+            'editOrderNumber', 'editTracking', 'editStatus',
+            'editArrivalDate', 'editComments', 'editType',
+            'articleSelected', 'articlesSelected', 'editArticleId', 'editQuantity',
+        ]);
+    }
+
+    private function resetImportFields()
+    {
+        $this->reset([
+            'importingId', 'importArticleTitle', 'importOriginalQuantity',
+            'importQuantity', 'importPrice', 'importProviderId',
         ]);
     }
 
     public function render()
     {
         $records = UsaPurchase::query()
+            ->with('article:id,sku,title')
             ->when($this->filterType, fn($q) => $q->where('type', $this->filterType))
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
@@ -206,6 +385,7 @@ class TableUsaPurchases extends Component
                     $q->where(function ($sub) use ($like) {
                         $sub->where('carrier', 'like', $like)
                             ->orWhere('description', 'like', $like)
+                            ->orWhere('sku', 'like', $like)
                             ->orWhere('order_number', 'like', $like)
                             ->orWhere('tracking', 'like', $like)
                             ->orWhere('store', 'like', $like);
@@ -213,13 +393,12 @@ class TableUsaPurchases extends Component
                 }
             })
             ->orderByDesc('date')
+            ->orderByDesc('id')
             ->paginate(20);
 
-        // Data for filters
         $years = UsaPurchase::select('year')->distinct()->orderByDesc('year')->pluck('year');
         $stores = UsaPurchase::select('store')->distinct()->whereNotNull('store')->where('store', '!=', '')->orderBy('store')->pluck('store');
 
-        // Summary counts
         $summaryQuery = UsaPurchase::query()
             ->when($this->filterType, fn($q) => $q->where('type', $this->filterType))
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))

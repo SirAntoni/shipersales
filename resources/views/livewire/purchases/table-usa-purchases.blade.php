@@ -14,15 +14,6 @@
                         <i class="fa-solid fa-plus mr-1"></i>
                         Nuevo registro
                     </x-base.button>
-                    <x-base.button
-                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
-                        variant="secondary"
-                        x-data
-                        x-on:click="$dispatch('open-import-usa-modal')"
-                    >
-                        <i class="fa-solid fa-file-import mr-1"></i>
-                        Importar Excel
-                    </x-base.button>
                 </div>
             </div>
 
@@ -147,6 +138,16 @@
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                             <div class="flex items-center justify-center gap-1">
+                                                @if(!$record->processed && in_array($record->status, ['ENTREGADO','PARCIAL']) && $record->article_id)
+                                                    <x-base.tippy
+                                                        as="x-base.button-sm"
+                                                        variant="success"
+                                                        size="sm"
+                                                        content="Importar a stock"
+                                                        wire:click="openImport({{ $record->id }})">
+                                                        <i class="text-white fa-solid fa-file-import"></i>
+                                                    </x-base.tippy>
+                                                @endif
                                                 <x-base.tippy
                                                     as="x-base.button-sm"
                                                     variant="primary"
@@ -266,7 +267,7 @@
         >
             <div class="fixed inset-0 bg-black/50" x-on:click="show = false"></div>
             <div
-                class="relative bg-white dark:bg-darkmode-600 rounded-lg shadow-xl w-[520px] max-h-[90vh] overflow-y-auto p-6"
+                class="relative bg-white dark:bg-darkmode-600 rounded-lg shadow-xl w-[760px] max-w-[95vw] max-h-[95vh] overflow-y-auto p-6"
                 style="z-index: 1051;"
                 x-on:click.stop
             >
@@ -277,7 +278,7 @@
                     </button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-3 gap-3">
                     <div>
                         <x-base.form-label>Fecha</x-base.form-label>
                         <x-base.form-input type="date" wire:model="editDate" />
@@ -290,32 +291,6 @@
                         </x-base.form-select>
                         @error('editType') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
                     </div>
-                    <div class="col-span-2">
-                        <x-base.form-label>Pasajero / Consignatario</x-base.form-label>
-                        <x-base.form-input type="text" wire:model="editCarrier" />
-                        @error('editCarrier') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
-                    </div>
-                    <div>
-                        <x-base.form-label>Tienda</x-base.form-label>
-                        <x-base.form-input type="text" wire:model="editStore" />
-                    </div>
-                    <div>
-                        <x-base.form-label>Cantidad</x-base.form-label>
-                        <x-base.form-input type="number" wire:model="editQuantity" min="0" />
-                    </div>
-                    <div class="col-span-2">
-                        <x-base.form-label>Orden</x-base.form-label>
-                        <x-base.form-input type="text" wire:model="editOrderNumber" />
-                    </div>
-                    <div class="col-span-2">
-                        <x-base.form-label>Tracking</x-base.form-label>
-                        <x-base.form-input type="text" wire:model="editTracking" />
-                    </div>
-                    <div class="col-span-2">
-                        <x-base.form-label>Descripción</x-base.form-label>
-                        <x-base.form-input type="text" wire:model="editDescription" />
-                        @error('editDescription') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
-                    </div>
                     <div>
                         <x-base.form-label>Estado</x-base.form-label>
                         <x-base.form-select wire:model="editStatus">
@@ -327,12 +302,91 @@
                         @error('editStatus') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
                     </div>
                     <div>
+                        <x-base.form-label>Pasajero / Consignatario</x-base.form-label>
+                        <x-base.form-input type="text" wire:model="editCarrier" placeholder="Ej: Felipe Sotelo" />
+                        @error('editCarrier') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
+                    </div>
+                    <div>
+                        <x-base.form-label>Tienda</x-base.form-label>
+                        <x-base.form-input type="text" wire:model="editStore" placeholder="Ej: AMAZON, EBAY" />
+                    </div>
+                    <div>
                         <x-base.form-label>Fecha ingreso</x-base.form-label>
                         <x-base.form-input type="date" wire:model="editArrivalDate" />
                     </div>
-                    <div class="col-span-2">
+                    <div>
+                        <x-base.form-label>Orden</x-base.form-label>
+                        <x-base.form-input type="text" wire:model="editOrderNumber" placeholder="Ej: Pedido #123-456" />
+                    </div>
+                    <div>
+                        <x-base.form-label>Tracking</x-base.form-label>
+                        <x-base.form-input type="text" wire:model="editTracking" placeholder="Ej: TBA318541946298" />
+                    </div>
+                    <div></div>
+
+                    {{-- Artículos --}}
+                    <div class="col-span-3">
+                        <x-base.form-label>Buscar artículo</x-base.form-label>
+                        <div wire:ignore>
+                            <x-base.tom-select id="usaArticlesSelect" class="w-full"></x-base.tom-select>
+                        </div>
+                    </div>
+
+                    <div class="col-span-3">
+                        @error('articlesSelected') <div class="text-sm text-red-600 mb-2">{{ $message }}</div> @enderror
+
+                        @if(count($articlesSelected) > 0)
+                            <div class="border border-slate-200 rounded-md">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-slate-50">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-medium text-slate-500">Artículo</th>
+                                            <th class="px-3 py-2 text-center font-medium text-slate-500 w-32">Cantidad</th>
+                                            <th class="px-3 py-2 text-center font-medium text-slate-500 w-16"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($articlesSelected as $index => $item)
+                                            <tr class="border-t border-slate-100">
+                                                <td class="px-3 py-2">
+                                                    <span class="text-xs text-slate-500">[{{ $item['sku'] ?? '—' }}]</span>
+                                                    {{ $item['title'] }}
+                                                </td>
+                                                <td class="px-3 py-2">
+                                                    <div class="inline-flex items-center border border-slate-200 rounded-md overflow-hidden bg-white shadow-sm">
+                                                        <button type="button" wire:click="decrementQty({{ $index }})"
+                                                            class="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition">
+                                                            <i class="fa-solid fa-minus text-xs"></i>
+                                                        </button>
+                                                        <input type="number" min="1"
+                                                            class="w-14 text-center text-sm font-medium border-0 focus:ring-0 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                            wire:model="articlesSelected.{{ $index }}.quantity" />
+                                                        <button type="button" wire:click="incrementQty({{ $index }})"
+                                                            class="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition">
+                                                            <i class="fa-solid fa-plus text-xs"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td class="px-3 py-2 text-center">
+                                                    <button type="button" wire:click="removeArticle({{ $index }})" class="text-red-600 hover:text-red-800">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="text-sm text-slate-400 italic text-center py-3 border border-dashed border-slate-200 rounded-md">
+                                Busca y agrega uno o más artículos
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="col-span-3">
                         <x-base.form-label>Comentarios</x-base.form-label>
-                        <x-base.form-textarea wire:model="editComments"></x-base.form-textarea>
+                        <x-base.form-textarea wire:model="editComments" placeholder="Notas u observaciones (opcional)"></x-base.form-textarea>
                     </div>
                 </div>
 
@@ -347,4 +401,116 @@
             </div>
         </div>
     </div>
+
+    {{-- Modal Importar a stock --}}
+    <div
+        x-data="{ show: false }"
+        x-on:open-import-stock-modal.window="show = true"
+        x-on:close-import-stock-modal.window="show = false"
+        x-on:keydown.escape.window="if(show) show = false"
+        wire:ignore.self
+    >
+        <div
+            x-show="show"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 flex items-center justify-center"
+            style="z-index: 1050; display: none;"
+        >
+            <div class="fixed inset-0 bg-black/50" x-on:click="show = false"></div>
+            <div
+                class="relative bg-white dark:bg-darkmode-600 rounded-lg shadow-xl w-[480px] p-6"
+                style="z-index: 1051;"
+                x-on:click.stop
+            >
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-medium">Importar a stock</h3>
+                    <button x-on:click="show = false" class="text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="mb-3 p-3 bg-slate-50 rounded-md text-sm">
+                    <div><strong>Artículo:</strong> {{ $importArticleTitle }}</div>
+                    <div class="text-xs text-slate-500 mt-1">Cantidad pedida: {{ $importOriginalQuantity }}</div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <x-base.form-label>Cantidad recibida</x-base.form-label>
+                        <x-base.form-input type="number" min="1" wire:model="importQuantity" />
+                        @error('importQuantity') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
+                    </div>
+                    <div>
+                        <x-base.form-label>Precio compra ($)</x-base.form-label>
+                        <x-base.form-input type="number" step="0.01" min="0" wire:model="importPrice" />
+                        @error('importPrice') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
+                    </div>
+                    <div class="col-span-2">
+                        <x-base.form-label>Proveedor</x-base.form-label>
+                        <x-base.form-select wire:model="importProviderId">
+                            <option value="">Selecciona un proveedor</option>
+                            @foreach($providers as $prov)
+                                <option value="{{ $prov['id'] }}">{{ $prov['name'] }}</option>
+                            @endforeach
+                        </x-base.form-select>
+                        @error('importProviderId') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4">
+                    <x-base.button variant="secondary" x-on:click="show = false">
+                        Cancelar
+                    </x-base.button>
+                    <x-base.button variant="primary" wire:click="confirmImport">
+                        <i class="fa-solid fa-check mr-1"></i> Confirmar importación
+                    </x-base.button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let usaTs = null;
+
+            function initUsaTomSelect() {
+                const el = document.getElementById('usaArticlesSelect');
+                if (!el) return;
+                if (usaTs) { usaTs.destroy(); usaTs = null; }
+
+                usaTs = new TomSelect('#usaArticlesSelect', {
+                    valueField: 'value',
+                    labelField: 'text',
+                    searchField: 'text',
+                    maxItems: 1,
+                    create: false,
+                    loadThrottle: 300,
+                    load: function (query, callback) {
+                        if (!query.length) return callback();
+                        @this.call('searchArticles', query)
+                            .then(data => callback(data))
+                            .catch(() => callback());
+                    },
+                    onItemAdd: function (value) {
+                        @this.call('addArticle', value);
+                        this.clear();
+                        this.blur();
+                    }
+                });
+            }
+
+            window.addEventListener('open-edit-usa-modal', () => {
+                setTimeout(initUsaTomSelect, 100);
+            });
+
+            window.addEventListener('close-edit-usa-modal', () => {
+                if (usaTs) { usaTs.destroy(); usaTs = null; }
+            });
+        });
+    </script>
 </div>
