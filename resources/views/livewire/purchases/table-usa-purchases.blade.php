@@ -21,7 +21,7 @@
             <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 text-blue-700 px-3 py-1 font-medium">{{ $totalRecords }} total</span>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 text-green-700 px-3 py-1 font-medium">{{ $totalDelivered }} entregados</span>
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-700 px-3 py-1 font-medium">{{ $totalShipped }} embarcados</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-700 px-3 py-1 font-medium">{{ $totalPurchased }} comprados</span>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 text-red-700 px-3 py-1 font-medium">{{ $totalPending }} parcial/no llegó</span>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 px-3 py-1 font-medium">{{ $totalProcessed }} procesados</span>
             </div>
@@ -53,7 +53,7 @@
                         <x-base.form-select class="sm:w-36" wire:model.live="filterStatus">
                             <option value="">Estado: Todos</option>
                             <option value="ENTREGADO">Entregado</option>
-                            <option value="EMBARCADO">Embarcado</option>
+                            <option value="COMPRADO">Comprado</option>
                             <option value="PARCIAL">Parcial</option>
                             <option value="NO LLEGO">No llegó</option>
                         </x-base.form-select>
@@ -70,11 +70,43 @@
                         @endif
                     </div>
 
+                    {{-- Bulk action bar --}}
+                    @if(count($selectedIds) > 0)
+                        <div class="mx-5 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+                            <span class="font-medium text-primary">
+                                <i class="fa-solid fa-check-square mr-1"></i>
+                                {{ count($selectedIds) }} registro(s) seleccionado(s)
+                            </span>
+                            <span class="text-slate-400">|</span>
+                            <span class="text-slate-600">Cambiar estado a:</span>
+                            <x-base.form-select class="!w-36" wire:model="bulkStatus">
+                                <option value="">Seleccionar...</option>
+                                <option value="COMPRADO">Comprado</option>
+                                <option value="ENTREGADO">Entregado</option>
+                                <option value="PARCIAL">Parcial</option>
+                                <option value="NO LLEGO">No llegó</option>
+                            </x-base.form-select>
+                            <x-base.button variant="primary" size="sm" wire:click="bulkUpdateStatus">
+                                <i class="fa-solid fa-check mr-1"></i> Aplicar
+                            </x-base.button>
+                            <span class="text-slate-400">|</span>
+                            <x-base.button variant="success" size="sm" wire:click="openBulkImport">
+                                <i class="fa-solid fa-file-import mr-1"></i> Importar al stock
+                            </x-base.button>
+                            <x-base.button variant="secondary" size="sm" wire:click="clearSelection">
+                                <i class="fa-solid fa-xmark mr-1"></i> Limpiar selección
+                            </x-base.button>
+                        </div>
+                    @endif
+
                     {{-- Table --}}
                     <div class="overflow-auto xl:overflow-visible text-sm">
                         <x-base.table class="border-b border-slate-200/60">
                             <x-base.table.thead>
                                 <x-base.table.tr>
+                                    <x-base.table.td class="w-10 border-t border-slate-200/60 bg-slate-50 text-center">
+                                        <input type="checkbox" wire:model.live="selectAll" class="form-checkbox cursor-pointer" />
+                                    </x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Fecha</x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Tipo</x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Pasajero</x-base.table.td>
@@ -84,13 +116,20 @@
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500 text-center">Cant.</x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Descripción</x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Estado</x-base.table.td>
-                                    <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">F. Ingreso</x-base.table.td>
+                                    <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">F. Compra</x-base.table.td>
                                     <x-base.table.td class="w-28 border-t border-slate-200/60 bg-slate-50 text-center font-medium text-slate-500">Acciones</x-base.table.td>
                                 </x-base.table.tr>
                             </x-base.table.thead>
                             <x-base.table.tbody>
                                 @forelse ($records as $record)
                                     <x-base.table.tr class="[&_td]:last:border-b-0 {{ $record->processed ? 'bg-slate-50/50' : '' }}">
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">
+                                            <input type="checkbox"
+                                                value="{{ $record->id }}"
+                                                wire:model.live="selectedIds"
+                                                @disabled($record->processed)
+                                                class="form-checkbox {{ $record->processed ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer' }}" />
+                                        </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                             {{ $record->date?->format('d/m/Y') ?? '-' }}
                                         </x-base.table.td>
@@ -121,7 +160,7 @@
                                             @php
                                                 $statusColors = [
                                                     'ENTREGADO' => 'bg-green-100 text-green-700',
-                                                    'EMBARCADO' => 'bg-yellow-100 text-yellow-700',
+                                                    'COMPRADO' => 'bg-yellow-100 text-yellow-700',
                                                     'PARCIAL' => 'bg-orange-100 text-orange-700',
                                                     'NO LLEGO' => 'bg-red-100 text-red-700',
                                                 ];
@@ -169,7 +208,7 @@
                                     </x-base.table.tr>
                                 @empty
                                     <x-base.table.tr>
-                                        <x-base.table.td colspan="11" class="text-center border-dashed dark:bg-darkmode-600">
+                                        <x-base.table.td colspan="12" class="text-center border-dashed dark:bg-darkmode-600">
                                             No se encontraron registros.
                                         </x-base.table.td>
                                     </x-base.table.tr>
@@ -180,68 +219,6 @@
                     <div class="m-4">
                         {{ $records->links() }}
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Modal Import --}}
-    <div
-        x-data="{ show: false }"
-        x-on:open-import-usa-modal.window="show = true"
-        x-on:close-import-usa-modal.window="show = false"
-        x-on:keydown.escape.window="if(show) show = false"
-        wire:ignore.self
-    >
-        <div
-            x-show="show"
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            class="fixed inset-0 flex items-center justify-center"
-            style="z-index: 1050; display: none;"
-        >
-            <div class="fixed inset-0 bg-black/50" x-on:click="show = false"></div>
-            <div
-                class="relative bg-white dark:bg-darkmode-600 rounded-lg shadow-xl w-[420px] p-6"
-                style="z-index: 1051;"
-                x-on:click.stop
-            >
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-medium">Importar registros de compra</h3>
-                    <button x-on:click="show = false" class="text-slate-400 hover:text-slate-600">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
-                </div>
-                <p class="text-sm text-slate-500 mb-4">
-                    Sube un archivo Excel (.xlsx) con las hojas organizadas por tipo y año
-                    (ej: CARGO 2025, VIAJEROS 2025).
-                </p>
-                <div class="mb-4">
-                    <input type="file" wire:model="importFile" accept=".xlsx,.xls"
-                        class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                        wire:loading.attr="disabled" wire:target="importFile"/>
-                    <div wire:loading wire:target="importFile" class="text-xs text-slate-400 mt-1">
-                        <i class="fa-solid fa-spinner animate-spin mr-1"></i> Subiendo archivo...
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2">
-                    <x-base.button variant="secondary" x-on:click="show = false"
-                        wire:loading.attr="disabled" wire:target="importExcel">
-                        Cancelar
-                    </x-base.button>
-                    <x-base.button variant="primary" wire:click="importExcel"
-                        wire:loading.attr="disabled" wire:target="importExcel,importFile">
-                        <span wire:loading.remove wire:target="importExcel">
-                            <i class="fa-solid fa-upload mr-1"></i> Importar
-                        </span>
-                        <span wire:loading wire:target="importExcel">
-                            <i class="fa-solid fa-spinner animate-spin mr-1"></i> Importando...
-                        </span>
-                    </x-base.button>
                 </div>
             </div>
         </div>
@@ -294,7 +271,7 @@
                     <div>
                         <x-base.form-label>Estado</x-base.form-label>
                         <x-base.form-select wire:model="editStatus">
-                            <option value="EMBARCADO">Embarcado</option>
+                            <option value="COMPRADO">Comprado</option>
                             <option value="ENTREGADO">Entregado</option>
                             <option value="PARCIAL">Parcial</option>
                             <option value="NO LLEGO">No llegó</option>
@@ -311,7 +288,7 @@
                         <x-base.form-input type="text" wire:model="editStore" placeholder="Ej: AMAZON, EBAY" />
                     </div>
                     <div>
-                        <x-base.form-label>Fecha ingreso</x-base.form-label>
+                        <x-base.form-label>Fecha de compra</x-base.form-label>
                         <x-base.form-input type="date" wire:model="editArrivalDate" />
                     </div>
                     <div>
@@ -402,11 +379,11 @@
         </div>
     </div>
 
-    {{-- Modal Importar a stock --}}
+    {{-- Modal Bulk Import to stock --}}
     <div
         x-data="{ show: false }"
-        x-on:open-import-stock-modal.window="show = true"
-        x-on:close-import-stock-modal.window="show = false"
+        x-on:open-bulk-import-modal.window="show = true"
+        x-on:close-bulk-import-modal.window="show = false"
         x-on:keydown.escape.window="if(show) show = false"
         wire:ignore.self
     >
@@ -421,54 +398,175 @@
             class="fixed inset-0 flex items-center justify-center"
             style="z-index: 1050; display: none;"
         >
-            <div class="fixed inset-0 bg-black/50" x-on:click="show = false"></div>
+            <div class="fixed inset-0 bg-black/50" x-on:click="$wire.call('cancelBulkImport')"></div>
             <div
-                class="relative bg-white dark:bg-darkmode-600 rounded-lg shadow-xl w-[480px] p-6"
+                class="relative bg-white dark:bg-darkmode-600 rounded-lg shadow-xl w-[1100px] max-w-[95vw] max-h-[92vh] overflow-y-auto p-6"
                 style="z-index: 1051;"
                 x-on:click.stop
             >
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-medium">Importar a stock</h3>
-                    <button x-on:click="show = false" class="text-slate-400 hover:text-slate-600">
+                    <h3 class="text-base font-medium">
+                        <i class="fa-solid fa-file-import text-success mr-1"></i>
+                        Importar al stock — {{ count($bulkGroups) }} pedido(s)
+                    </h3>
+                    <button x-on:click="$wire.call('cancelBulkImport')" class="text-slate-400 hover:text-slate-600">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
 
-                <div class="mb-3 p-3 bg-slate-50 rounded-md text-sm">
-                    <div><strong>Artículo:</strong> {{ $importArticleTitle }}</div>
-                    <div class="text-xs text-slate-500 mt-1">Cantidad pedida: {{ $importOriginalQuantity }}</div>
+                @if($bulkDiscardedCount > 0)
+                    <div class="mb-3 px-3 py-2 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                        Se descartaron {{ $bulkDiscardedCount }} registro(s) por estar procesados, no entregados o sin artículo.
+                    </div>
+                @endif
+
+                @php
+                    $totalGeneral = 0;
+                    foreach ($bulkGroups as $g) {
+                        foreach ($g['items'] as $item) {
+                            $totalGeneral += ((float) $item['price']) * ((int) $item['quantity']);
+                        }
+                    }
+                @endphp
+
+                <div class="space-y-4">
+                    @foreach($bulkGroups as $gIndex => $group)
+                        <div class="border border-slate-200 rounded-md overflow-hidden">
+                            {{-- Group header --}}
+                            <div class="px-3 py-2 flex flex-wrap items-center gap-2 {{ $group['is_new'] ? 'bg-emerald-50 border-b border-emerald-100' : 'bg-amber-50 border-b border-amber-100' }}">
+                                @if($group['is_new'])
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-200 text-emerald-800">NUEVO</span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-200 text-amber-800">EDITAR</span>
+                                @endif
+                                <span class="text-sm font-medium">
+                                    @if($group['is_orphan'])
+                                        Sin número de pedido
+                                    @else
+                                        Pedido: {{ $group['order_number'] }}
+                                    @endif
+                                </span>
+                                @if(!$group['is_new'])
+                                    <span class="text-xs text-slate-500">→ Compra #{{ $group['existing_purchase_number'] }}</span>
+                                @endif
+                                <span class="ml-auto text-xs text-slate-500">{{ count($group['items']) }} artículo(s)</span>
+                            </div>
+
+                            {{-- Existing alert --}}
+                            @if(!$group['is_new'])
+                                <div class="px-3 py-2 bg-amber-50/50 border-b border-amber-100 text-xs text-amber-800">
+                                    <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                                    Este número de pedido ya existe. Se agregarán los artículos a la compra existente.
+                                    <label class="flex items-center gap-2 mt-1 cursor-pointer">
+                                        <input type="checkbox" wire:model.live="bulkConfirmExisting.{{ $group['key'] }}" class="form-checkbox" />
+                                        <span>Confirmo agregar artículos a esta compra</span>
+                                    </label>
+                                </div>
+                            @endif
+
+                            {{-- Provider + voucher + passenger --}}
+                            <div class="grid grid-cols-3 gap-3 p-3 border-b border-slate-100">
+                                <div>
+                                    <x-base.form-label class="text-xs">Proveedor</x-base.form-label>
+                                    <x-base.form-select
+                                        wire:model.live="bulkGroups.{{ $gIndex }}.provider_id"
+                                        :disabled="!$group['is_new']">
+                                        <option value="">Selecciona un proveedor</option>
+                                        @foreach($bulkProviders as $prov)
+                                            <option value="{{ $prov['id'] }}">{{ $prov['name'] }}</option>
+                                        @endforeach
+                                    </x-base.form-select>
+                                </div>
+                                <div>
+                                    <x-base.form-label class="text-xs">Tipo de comprobante</x-base.form-label>
+                                    <x-base.form-select
+                                        wire:model.live="bulkGroups.{{ $gIndex }}.voucher_type"
+                                        :disabled="!$group['is_new']">
+                                        <option value="FACTURA">Factura</option>
+                                        <option value="BOLETA">Boleta</option>
+                                    </x-base.form-select>
+                                </div>
+                                <div>
+                                    <x-base.form-label class="text-xs">Pasajero / Consignatario</x-base.form-label>
+                                    @if($group['is_new'])
+                                        <x-base.form-input type="text"
+                                            wire:model.live="bulkGroups.{{ $gIndex }}.passenger"
+                                            placeholder="Ej: Felipe Sotelo" />
+                                    @else
+                                        <x-base.form-input type="text"
+                                            value="(heredado de compra existente)"
+                                            disabled />
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Items table --}}
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-medium text-slate-500">Artículo</th>
+                                        <th class="px-3 py-2 text-center font-medium text-slate-500 w-24">Cantidad</th>
+                                        <th class="px-3 py-2 text-center font-medium text-slate-500 w-32">Precio ($)</th>
+                                        <th class="px-3 py-2 text-right font-medium text-slate-500 w-24">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php $groupSub = 0; @endphp
+                                    @foreach($group['items'] as $iIndex => $item)
+                                        @php $sub = ((float) $item['price']) * ((int) $item['quantity']); $groupSub += $sub; @endphp
+                                        <tr class="border-t border-slate-100">
+                                            <td class="px-3 py-2">
+                                                <span class="text-xs text-slate-500">[{{ $item['sku'] ?? '—' }}]</span>
+                                                {{ $item['title'] }}
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                <input type="number" min="1"
+                                                    class="w-full text-center text-sm font-medium border border-slate-200 rounded-md px-2 py-1"
+                                                    wire:model.live="bulkGroups.{{ $gIndex }}.items.{{ $iIndex }}.quantity" />
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                <input type="number" step="0.01" min="0"
+                                                    class="w-full text-center text-sm border border-slate-200 rounded-md px-2 py-1"
+                                                    wire:model.live="bulkGroups.{{ $gIndex }}.items.{{ $iIndex }}.price" />
+                                            </td>
+                                            <td class="px-3 py-2 text-right font-medium">
+                                                ${{ number_format($sub, 2) }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-slate-50">
+                                        <td colspan="3" class="px-3 py-2 text-right text-xs text-slate-500">Subtotal del pedido</td>
+                                        <td class="px-3 py-2 text-right font-semibold">${{ number_format($groupSub, 2) }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    @endforeach
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <x-base.form-label>Cantidad recibida</x-base.form-label>
-                        <x-base.form-input type="number" min="1" wire:model="importQuantity" />
-                        @error('importQuantity') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
+                <div class="mt-4 flex items-center justify-between border-t border-slate-200 pt-3">
+                    <div class="text-sm">
+                        <span class="text-slate-500">Total general:</span>
+                        <span class="font-semibold text-base ml-2">${{ number_format($totalGeneral, 2) }}</span>
                     </div>
-                    <div>
-                        <x-base.form-label>Precio compra ($)</x-base.form-label>
-                        <x-base.form-input type="number" step="0.01" min="0" wire:model="importPrice" />
-                        @error('importPrice') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
+                    <div class="flex gap-2">
+                        <x-base.button variant="secondary" wire:click="cancelBulkImport"
+                            wire:loading.attr="disabled" wire:target="confirmBulkImport">
+                            Cancelar
+                        </x-base.button>
+                        <x-base.button variant="primary" wire:click="confirmBulkImport"
+                            wire:loading.attr="disabled" wire:target="confirmBulkImport">
+                            <span wire:loading.remove wire:target="confirmBulkImport">
+                                <i class="fa-solid fa-check mr-1"></i> Confirmar importación
+                            </span>
+                            <span wire:loading wire:target="confirmBulkImport">
+                                <i class="fa-solid fa-spinner animate-spin mr-1"></i> Procesando...
+                            </span>
+                        </x-base.button>
                     </div>
-                    <div class="col-span-2">
-                        <x-base.form-label>Proveedor</x-base.form-label>
-                        <x-base.form-select wire:model="importProviderId">
-                            <option value="">Selecciona un proveedor</option>
-                            @foreach($providers as $prov)
-                                <option value="{{ $prov['id'] }}">{{ $prov['name'] }}</option>
-                            @endforeach
-                        </x-base.form-select>
-                        @error('importProviderId') <div class="text-sm text-red-600">{{ $message }}</div> @enderror
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-2 mt-4">
-                    <x-base.button variant="secondary" x-on:click="show = false">
-                        Cancelar
-                    </x-base.button>
-                    <x-base.button variant="primary" wire:click="confirmImport">
-                        <i class="fa-solid fa-check mr-1"></i> Confirmar importación
-                    </x-base.button>
                 </div>
             </div>
         </div>

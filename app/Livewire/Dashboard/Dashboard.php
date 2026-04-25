@@ -3,6 +3,7 @@
 namespace App\Livewire\Dashboard;
 
 use App\Models\Department;
+use App\Models\Provider;
 use App\Models\Purchase;
 use Carbon\Carbon;
 use Livewire\Component;
@@ -33,10 +34,9 @@ class Dashboard extends Component
 
     public function mount()
     {
-        $providers = DB::table('providers')->select('id', 'name')->get();
         $categories = DB::table('categories')->select('id', 'name')->get();
         $departments = DB::table('departments')->select('id', 'name')->get();
-        $this->providers = $providers;
+        $this->providers = Provider::ordered();
         $this->categories = $categories;
         $this->departments = $departments;
         $this->month = Carbon::now()->format('m');

@@ -16,7 +16,7 @@ class Reports extends Component
     public $providers = [];
 
     public function mount(){
-        $this->providers = Provider::select('id','name')->get();
+        $this->providers = Provider::ordered();
     }
 
     public function reportDayli(){

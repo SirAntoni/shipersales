@@ -48,7 +48,8 @@ class NewPurchase extends Component
 
     public function mount()
     {
-        $this->providers    = DB::table('providers')->get(['id','name']);
+        $this->providers    = Provider::ordered();
+        $this->provider     = Provider::defaultId();
         $this->voucher_type = "Boleta";
         $this->status       = 1;   // NOT_FINISHED por defecto
         $this->square       = 0;   // no es cuadre por defecto

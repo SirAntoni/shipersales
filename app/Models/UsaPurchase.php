@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class UsaPurchase extends Model
 {
-    const STATUS_SHIPPED = 'EMBARCADO';
+    const STATUS_PURCHASED = 'COMPRADO';
     const STATUS_DELIVERED = 'ENTREGADO';
     const STATUS_PARTIAL = 'PARCIAL';
     const STATUS_NOT_ARRIVED = 'NO LLEGO';

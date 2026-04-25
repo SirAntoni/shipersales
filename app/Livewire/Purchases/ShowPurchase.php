@@ -27,7 +27,7 @@ class ShowPurchase extends Component
     public function mount()
     {
 
-        $this->providers = DB::table('providers')->get();
+        $this->providers = Provider::ordered();
 
         $purchase = DB::table('purchases')->find($this->id);
         $this->number = $purchase->number;

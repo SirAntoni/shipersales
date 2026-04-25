@@ -53,6 +53,17 @@
         })
     });
 
+    window.addEventListener('errorNotRoute', event => {
+        Swal.fire({
+            title: 'Error',
+            text: event.detail[0]['label'],
+            icon: 'error',
+            confirmButtonText: 'Aceptar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        });
+    });
+
     window.addEventListener('notification', event => {
         Toastify({
             node: $("#success-notification-content")
@@ -126,6 +137,24 @@
         }).then((result) => {
             if(result.isConfirmed){
                 Livewire.dispatch('confirmDeleteUsa',{id:event.detail[0]['id']})
+            }
+        });
+    });
+
+    window.addEventListener('questionBulkStatusUsa', event => {
+        Swal.fire({
+            title: 'Cambio masivo de estado',
+            text: event.detail[0]['label'],
+            icon: 'question',
+            confirmButtonText: 'Sí, aplicar',
+            confirmButtonColor: "#3085d6",
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if(result.isConfirmed){
+                Livewire.dispatch('confirmBulkStatusUsa', {status: event.detail[0]['status']})
             }
         });
     });
