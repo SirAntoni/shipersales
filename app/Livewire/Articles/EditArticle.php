@@ -24,6 +24,7 @@ class EditArticle extends Component
     public $category_id = '';
     public $purchase_price;
     public $sale_price;
+    public bool $onDemand = false;
 
     // ===== Marketplace (ya existente) =====
     public $rows = [];      // [{id?, contact_id, code}]
@@ -48,6 +49,7 @@ class EditArticle extends Component
         $this->category_id    = $article->category_id;
         $this->purchase_price = sprintf('%.2f', $article->purchase_price);
         $this->sale_price     = sprintf('%.2f', $article->sale_price);
+        $this->onDemand       = (bool) $article->on_demand;
 
         // Catálogo de contactos (para ambos bloques)
         $this->contacts = Contact::all();
@@ -89,6 +91,7 @@ class EditArticle extends Component
         'purchase_price' => 'decimal:2|nullable',
         'sale_price'     => 'decimal:2|nullable',
         'barcode'        => 'string|nullable|max:100',
+        'onDemand'       => 'boolean',
         // Filas dinámicas: validaremos manual en save() para evitar ruido al tipear
     ];
 
@@ -141,6 +144,7 @@ class EditArticle extends Component
             'category_id'    => $this->category_id,
             'purchase_price' => $this->purchase_price,
             'sale_price'     => $this->sale_price,
+            'on_demand'      => $this->onDemand,
         ]);
 
         // ===== Persistir códigos marketplace (tal cual lo tenías) =====
@@ -213,7 +217,9 @@ class EditArticle extends Component
         $this->dispatch('success', [
             'label' => 'Se editó el artículo con éxito.',
             'btn'   => 'Ir a artículos',
-            'route' => route('articles.index'),
+            'route' => $this->onDemand
+                ? route('on-demand-products.index')
+                : route('articles.index'),
         ]);
     }
 

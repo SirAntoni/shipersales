@@ -3,7 +3,7 @@
         <div class="col-span-12">
             <div class="flex flex-col mt-4 gap-y-3 md:mt-0 md:h-10 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
-                    Agregar Articulo
+                    Agregar Producto a pedido
                 </div>
             </div>
 
@@ -15,7 +15,7 @@
                                 <div class="mx-2">
                                     <i class="fa-solid fa-plus"></i>
                                 </div>
-                                Información del articulo
+                                Información del producto a pedido
                             </div>
 
                             <div class="mt-5">
@@ -24,20 +24,20 @@
                                     <div class="inline-block mb-2 sm:mb-0 sm:mr-5 sm:text-right xl:mr-14 xl:w-60">
                                         <div class="text-left">
                                             <div class="flex items-center">
-                                                <div class="font-medium">Nombre del Articulo</div>
+                                                <div class="font-medium">Nombre del Producto</div>
                                                 <div class="ml-2.5 rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-darkmode-300 dark:text-slate-400">
                                                     Required
                                                 </div>
                                             </div>
                                             <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80 xl:mt-3">
-                                                Ingresa el nombre del artículo.
+                                                Ingresa el nombre del producto.
                                             </div>
                                         </div>
                                     </div>
                                     <div class="flex-1 w-full mt-3 xl:mt-0">
                                         <x-base.form-input
                                             type="text"
-                                            placeholder="Ingresa el nombre del articulo."
+                                            placeholder="Ingresa el nombre del producto."
                                             wire:model="title"
                                         />
                                         @error('title') <div class="p-1 text-red-600">{{ $message }}</div> @enderror
@@ -49,7 +49,7 @@
                                     <div class="inline-block mb-2 sm:mb-0 sm:mr-5 sm:text-right xl:mr-14 xl:w-60">
                                         <div class="text-left">
                                             <div class="flex items-center">
-                                                <div class="font-medium">Detalle del Articulo</div>
+                                                <div class="font-medium">Detalle del Producto</div>
                                             </div>
                                             <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80 xl:mt-3">
                                                 Texto corto opcional.
@@ -59,14 +59,14 @@
                                     <div class="flex-1 w-full mt-3 xl:mt-0">
                                         <x-base.form-input
                                             type="text"
-                                            placeholder="Ingresa detalle del articulo."
+                                            placeholder="Ingresa detalle del producto."
                                             wire:model="detail"
                                         />
                                         @error('detail') <div class="p-1 text-red-600">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
 
-                                {{-- Producto a pedido --}}
+                                {{-- Producto a pedido (toggle) --}}
                                 <div class="flex-col block pt-5 mt-5 sm:flex xl:flex-row xl:items-center">
                                     <div class="inline-block mb-2 sm:mb-0 sm:mr-5 sm:text-right xl:mr-14 xl:w-60">
                                         <div class="text-left">
@@ -74,7 +74,7 @@
                                                 <div class="font-medium">Producto a pedido</div>
                                             </div>
                                             <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80 xl:mt-3">
-                                                Si está activo, no aparecerá en Artículos sino en Productos a pedido.
+                                                Si lo desactivas, se guardará como artículo regular.
                                             </div>
                                         </div>
                                     </div>
@@ -87,7 +87,6 @@
                                             />
                                             <span>Marcar como producto a pedido</span>
                                         </label>
-                                        @error('onDemand') <div class="p-1 text-red-600">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
 
@@ -96,7 +95,7 @@
                                     <div class="inline-block mb-2 sm:mb-0 sm:mr-5 sm:text-right xl:mr-14 xl:w-60">
                                         <div class="text-left">
                                             <div class="flex items-center">
-                                                <div class="font-medium">Descripción del Articulo</div>
+                                                <div class="font-medium">Descripción del Producto</div>
                                             </div>
                                             <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80 xl:mt-3">
                                                 Descripción ampliada opcional.
@@ -105,7 +104,7 @@
                                     </div>
                                     <div class="flex-1 w-full mt-3 xl:mt-0">
                                         <x-base.form-textarea
-                                            placeholder="Ingresa una descripción del artículo."
+                                            placeholder="Ingresa una descripción del producto."
                                             wire:model="description"
                                         />
                                         @error('description') <div class="p-1 text-red-600">{{ $message }}</div> @enderror
@@ -120,7 +119,7 @@
                                                 <div class="font-medium">Código de barras</div>
                                             </div>
                                             <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80 xl:mt-3">
-                                                Opcional. Puedes importarlo masivamente desde Excel.
+                                                Opcional.
                                             </div>
                                         </div>
                                     </div>
@@ -144,9 +143,6 @@
                                                     Required
                                                 </div>
                                             </div>
-                                            <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80 xl:mt-3">
-                                                Se usará para filtrar.
-                                            </div>
                                         </div>
                                     </div>
                                     <div class="flex-1 w-full mt-3 xl:mt-0">
@@ -169,9 +165,6 @@
                                                 <div class="ml-2.5 rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-darkmode-300 dark:text-slate-400">
                                                     Required
                                                 </div>
-                                            </div>
-                                            <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80 xl:mt-3">
-                                                Se usará para búsqueda.
                                             </div>
                                         </div>
                                     </div>
@@ -230,7 +223,7 @@
                                     </div>
                                 </div>
 
-                                {{-- --------- NUEVO: Precios por contacto (opcional) --------- --}}
+                                {{-- Precios por contacto --}}
                                 <div class="mt-8 rounded-[0.6rem] border border-slate-200/60 p-4">
                                     <div class="text-[0.94rem] font-medium mb-3">
                                         Precios por contacto (opcional)
@@ -299,7 +292,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                {{-- --------- / Precios por contacto --------- --}}
 
                             </div>
                         </div>
@@ -309,7 +301,7 @@
                         <x-base.button
                             class="w-full rounded-[0.5rem] border-slate-300/80 bg-white/80 py-2.5 md:w-56"
                             variant="outline-secondary"
-                            onclick="window.location.href='{{ route('articles.index') }}'"
+                            onclick="window.location.href='{{ route('on-demand-products.index') }}'"
                         >
                             <div class="px-2"><i class="fa-solid fa-xmark"></i></div>
                             Cancel

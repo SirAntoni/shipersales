@@ -22,12 +22,27 @@ class Article extends Model
         'provider_id',
         'category_id',
         'brand_id',
-        'status'
+        'status',
+        'on_demand'
+    ];
+
+    protected $casts = [
+        'on_demand' => 'boolean',
     ];
 
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    public function scopeRegular($query)
+    {
+        return $query->where('on_demand', false);
+    }
+
+    public function scopeOnDemand($query)
+    {
+        return $query->where('on_demand', true);
     }
 
     public function category(){

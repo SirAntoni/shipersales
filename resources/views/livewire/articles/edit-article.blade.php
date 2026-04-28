@@ -86,6 +86,34 @@
                                     </div>
 
                                 </div>
+                                {{-- Producto a pedido --}}
+                                <div
+                                    class="flex-col block pt-5 mt-5 first:mt-0 first:pt-0 sm:flex xl:flex-row xl:items-center">
+                                    <div class="inline-block mb-2 sm:mb-0 sm:mr-5 sm:text-right xl:mr-14 xl:w-60">
+                                        <div class="text-left">
+                                            <div class="flex items-center">
+                                                <div class="font-medium">Producto a pedido</div>
+                                            </div>
+                                            <div class="mt-1.5 text-xs leading-relaxed text-slate-500/80 xl:mt-3">
+                                                Si está activo, no aparecerá en Artículos sino en Productos a pedido.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 w-full mt-3 xl:mt-0">
+                                        <label class="inline-flex items-center gap-2 text-sm cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                wire:model="onDemand"
+                                                class="form-check-switch"
+                                            />
+                                            <span>Marcar como producto a pedido</span>
+                                        </label>
+                                        @error('onDemand')
+                                        <div class="p-1 text-red-600">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+
                                 <div
                                     class="flex-col block pt-5 mt-5 first:mt-0 first:pt-0 sm:flex xl:flex-row xl:items-center">
                                     <div class="inline-block mb-2 sm:mb-0 sm:mr-5 sm:text-right xl:mr-14 xl:w-60">

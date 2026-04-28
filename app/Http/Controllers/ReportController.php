@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ReportArticlesExport;
+use App\Exports\ReportOnDemandProductsExport;
 use App\Exports\ReportCommissionExport;
 use App\Exports\ReportDayliExport;
 use App\Exports\ReportCustomExport;
@@ -59,6 +60,10 @@ class ReportController extends Controller
 
     public function articles(){
         return Excel::download(new ReportArticlesExport(), 'reporte-articles.xlsx');
+    }
+
+    public function onDemandProducts(){
+        return Excel::download(new ReportOnDemandProductsExport(), 'reporte-productos-a-pedido.xlsx');
     }
 
     public function commissions(Request $request){

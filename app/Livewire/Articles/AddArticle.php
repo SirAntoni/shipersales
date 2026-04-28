@@ -17,6 +17,7 @@ class AddArticle extends Component
     public $category_id = '';
     public $purchase_price;
     public $sale_price;
+    public bool $onDemand = false;
 
     /** Precios por contacto (repeater) */
     public array $contactPrices = [
@@ -37,6 +38,7 @@ class AddArticle extends Component
         'category_id'    => 'required|integer|exists:categories,id',
         'purchase_price' => 'nullable|numeric|min:0',
         'sale_price'     => 'nullable|numeric|min:0',
+        'onDemand'       => 'boolean',
         // Reglas suaves: si se llena price, exigir contact_id y numeric
         'contactPrices.*.contact_id' => 'nullable|integer|exists:contacts,id',
         'contactPrices.*.price'      => 'nullable|numeric|min:0',
@@ -123,6 +125,7 @@ class AddArticle extends Component
                 'purchase_price' => $this->purchase_price ?? 0,
                 'sale_price'     => $this->sale_price ?? 0,
                 'status'         => 'active',
+                'on_demand'      => $this->onDemand ? 1 : 0,
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]);
@@ -163,7 +166,9 @@ class AddArticle extends Component
         $this->dispatch('success', [
             'label' => 'El artículo se agregó con éxito.',
             'btn'   => 'Ir a articulos',
-            'route' => route('articles.index')
+            'route' => $this->onDemand
+                ? route('on-demand-products.index')
+                : route('articles.index'),
         ]);
     }
 

@@ -3,7 +3,6 @@
 namespace App\Exports;
 
 use App\Models\Article;
-use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
@@ -18,16 +17,13 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
-class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCustomStartCell,withDrawings,withEvents,withColumnFormatting
+class ReportOnDemandProductsExport implements FromQuery,withHeadings,withMapping,withCustomStartCell,withDrawings,withEvents,withColumnFormatting
 {
-    /**
-    * @return \Illuminate\Support\Collection
-    */
-
     private int $counter = 0;
+
     public function query()
     {
-        return Article::query()->active()->regular()->select('articles.id as id',
+        return Article::query()->active()->onDemand()->select('articles.id as id',
             'sku',
             'barcode',
             'title',
@@ -41,13 +37,12 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
             ->join('categories', 'articles.category_id', '=', 'categories.id')
             ->join('brands', 'articles.brand_id', '=', 'brands.id')
             ->whereNot('articles.id',1)
-            ->orderBy('brands.name', 'asc')   // ordena marcas A→Z
-            ->orderBy('title',       'asc');  // dentro de cada marca, ordena títulos A→Z
+            ->orderBy('brands.name', 'asc')
+            ->orderBy('title',       'asc');
     }
 
     public function headings(): array
     {
-
         return [
             '#',
             'SKU',
@@ -110,13 +105,10 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                $titulo = "LISTA DE ARTICULOS";
+                $titulo = "LISTA DE PRODUCTOS A PEDIDO";
                 $sheet->setCellValue('B2', $titulo);
-
-                // 2) Fusionar B1 hasta, digamos, H1 para que el texto tenga espacio
                 $sheet->mergeCells('B2:J2');
 
-                // 3) Estilos: negrita, tamaño de letra, alineación
                 $sheet->getStyle('B2')->applyFromArray([
                     'font' => [
                         'bold' => true,
@@ -128,33 +120,24 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
                     ],
                 ]);
 
-                // 4) Ajustar alto de la fila 1 (para que coincida con la altura del logo)
                 $sheet->getRowDimension(2)->setRowHeight(80);
                 $sheet->getRowDimension(4)->setRowHeight(40);
 
-                // 5) Opcional: ajustar ancho de columnas para que encaje bien
                 foreach (range('B', 'J') as $col) {
                     $sheet->getColumnDimension($col)->setAutoSize(true);
                 }
 
-
-                // 1) Averiguamos la última fila con datos
-                $highestRow = $sheet->getHighestRow(); // ej. “25”
-
-                // 2) Averiguamos la última columna con datos (si también es dinámica)
-                $highestColumn = $sheet->getHighestColumn(); // ej. “Q”
-
-                // 3) Construimos el rango completo de datos,
-                //    por ejemplo desde A4 (cabecera) hasta Q{última fila}
+                $highestRow = $sheet->getHighestRow();
+                $highestColumn = $sheet->getHighestColumn();
                 $rango = "A4:{$highestColumn}{$highestRow}";
 
                 $sheet->getStyle($rango)->applyFromArray([
                     'borders' => [
-                        'outline' => [            // perímetro externo
+                        'outline' => [
                             'borderStyle' => Border::BORDER_MEDIUM,
                             'color'       => ['rgb' => '000000'],
                         ],
-                        'inside' => [             // sólo líneas interiores
+                        'inside' => [
                             'borderStyle' => Border::BORDER_THIN,
                             'color'       => ['rgb' => '000000'],
                         ],
@@ -165,13 +148,9 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
                     ],
                 ]);
 
-
-
                 $sheet->getStyle('A4:J4')->applyFromArray([
                     'font' => [
-                        'color' => [
-                            'rgb' => 'FFFFFF'
-                        ],
+                        'color' => ['rgb' => 'FFFFFF'],
                         'bold' => true,
                         'size' => 14
                     ],
@@ -184,8 +163,6 @@ class ReportArticlesExport implements FromQuery,withHeadings,withMapping,withCus
                         'startColor' => ['rgb' => '374080'],
                     ]
                 ]);
-
-
             },
         ];
     }

@@ -49,6 +49,13 @@ class SideMenu
                         'permission' => 'articles',
                     ],
                     [
+                        'icon' => "Clock",
+                        'route_name' => "on-demand-products.index",
+                        'params' => [],
+                        'title' => "Productos a pedido",
+                        'permission' => 'articles',
+                    ],
+                    [
                         'icon' => "Grid",
                         'route_name' => "categories.index",
                         'params' => [],

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\OnDemandProductController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\InventoryController;
@@ -47,6 +48,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('categories', CategoryController::class)->middleware('can:store','can:categories');
     Route::resource('brands', BrandController::class)->middleware('can:store','can:brands');
     Route::resource('articles', ArticleController::class)->middleware('can:store','can:articles');
+    Route::resource('on-demand-products', OnDemandProductController::class)->middleware('can:store','can:articles');
     Route::resource('providers', ProviderController::class)->middleware('can:purchases','can:providers');
     Route::resource('clients', ClientController::class)->middleware('can:sales','can:clients');
     Route::resource('users', UserController::class)->middleware('can:users');
@@ -67,6 +69,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/custom/export', [ReportController::class, 'custom'])->name('reports.custom.export')->middleware('can:reports');
     Route::get('reports/month/export', [ReportController::class, 'month'])->name('reports.month.export')->middleware('can:reports');
     Route::get('reports/articles/export', [ReportController::class, 'articles'])->name('reports.articles')->middleware('can:store');
+    Route::get('reports/on-demand-products/export', [ReportController::class, 'onDemandProducts'])->name('reports.on-demand-products')->middleware('can:store');
     Route::get('reports/commissions/export', [ReportController::class, 'commissions'])->name('reports.commissions.export')->middleware('can:commissions');
     Route::get('kardex', [KardexController::class,'index'])->name('kardex')->middleware('can:kardex');
     Route::get('pdf/{id}', [SaleController::class,'pdf'])->name('pdf.view');
