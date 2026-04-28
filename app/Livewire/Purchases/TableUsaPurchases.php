@@ -52,6 +52,8 @@ class TableUsaPurchases extends Component
     public $bulkDiscardedCount = 0;
     public $bulkProviders = [];
 
+    public function rendered() { $this->dispatch('reinit-tippy'); }
+
     public function updatingSearch() { $this->resetPage(); $this->clearSelection(); }
     public function updatingFilterType() { $this->resetPage(); $this->clearSelection(); }
     public function updatingFilterYear() { $this->resetPage(); $this->clearSelection(); }

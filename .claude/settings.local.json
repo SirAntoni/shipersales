@@ -14,7 +14,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(php -r \"echo \\\\Composer\\\\InstalledVersions::getVersion\\('livewire/livewire'\\);\" --define=\"auto_prepend_file=/Users/antonyalfredoculquicarranza/projects/shiper-template/vendor/autoload.php\")"
     ]
   }
 }

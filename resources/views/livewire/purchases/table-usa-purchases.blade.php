@@ -145,7 +145,19 @@
                                             {{ $record->store }}
                                         </x-base.table.td-sale>
                                         <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 text-xs">
-                                            {{ \Illuminate\Support\Str::limit($record->order_number, 25) }}
+                                            @if(!empty($record->comments))
+                                                <x-base.tippy
+                                                    as="span"
+                                                    content="{{ $record->comments }}"
+                                                    data-original-title="{{ $record->comments }}"
+                                                    class="cursor-help underline decoration-dotted decoration-slate-400 underline-offset-2"
+                                                >
+                                                    {{ \Illuminate\Support\Str::limit($record->order_number, 25) }}
+                                                    <i class="fa-regular fa-comment-dots ml-1 text-slate-400"></i>
+                                                </x-base.tippy>
+                                            @else
+                                                {{ \Illuminate\Support\Str::limit($record->order_number, 25) }}
+                                            @endif
                                         </x-base.table.td-sale>
                                         <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 text-xs">
                                             {{ \Illuminate\Support\Str::limit($record->tracking, 20) }}
