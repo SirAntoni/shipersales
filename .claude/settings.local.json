@@ -15,7 +15,8 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(ls:*)",
-      "Bash(php -r \"echo \\\\Composer\\\\InstalledVersions::getVersion\\('livewire/livewire'\\);\" --define=\"auto_prepend_file=/Users/antonyalfredoculquicarranza/projects/shiper-template/vendor/autoload.php\")"
+      "Bash(php -r \"echo \\\\Composer\\\\InstalledVersions::getVersion\\('livewire/livewire'\\);\" --define=\"auto_prepend_file=/Users/antonyalfredoculquicarranza/projects/shiper-template/vendor/autoload.php\")",
+      "Bash(grep -n \"filterYear\\\\|filterStatus\\\\|filterStore\\\\|filterType\\\\|filterDate\\\\|search\\\\|public \\\\$\" /Users/antonyalfredoculquicarranza/projects/shiper-template/app/Livewire/Purchases/TableUsaPurchases.php)"
     ]
   }
 }

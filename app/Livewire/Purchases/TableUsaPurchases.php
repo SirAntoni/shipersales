@@ -8,6 +8,7 @@ use App\Models\Purchase;
 use App\Models\UsaPurchase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -15,11 +16,24 @@ class TableUsaPurchases extends Component
 {
     use WithPagination;
 
+    #[Url(as: 'q', except: '')]
     public $search = '';
+    #[Url(as: 'type', except: '')]
     public $filterType = '';
+    #[Url(as: 'year', except: '')]
     public $filterYear = '';
+    #[Url(as: 'status', except: '')]
     public $filterStatus = '';
+    #[Url(as: 'store', except: '')]
     public $filterStore = '';
+    #[Url(as: 'df', except: '')]
+    public $dateFrom = '';
+    #[Url(as: 'dt', except: '')]
+    public $dateTo = '';
+    #[Url(as: 'adf', except: '')]
+    public $arrivalDateFrom = '';
+    #[Url(as: 'adt', except: '')]
+    public $arrivalDateTo = '';
 
     // Form fields (header)
     public $editingId = null;
@@ -59,6 +73,26 @@ class TableUsaPurchases extends Component
     public function updatingFilterYear() { $this->resetPage(); $this->clearSelection(); }
     public function updatingFilterStatus() { $this->resetPage(); $this->clearSelection(); }
     public function updatingFilterStore() { $this->resetPage(); $this->clearSelection(); }
+    public function updatingDateFrom() { $this->resetPage(); $this->clearSelection(); }
+    public function updatingDateTo() { $this->resetPage(); $this->clearSelection(); }
+    public function updatingArrivalDateFrom() { $this->resetPage(); $this->clearSelection(); }
+    public function updatingArrivalDateTo() { $this->resetPage(); $this->clearSelection(); }
+
+    public function updatedDateTo()        { $this->autoSwapDateRange('dateFrom', 'dateTo'); }
+    public function updatedDateFrom()      { $this->autoSwapDateRange('dateFrom', 'dateTo'); }
+    public function updatedArrivalDateTo()   { $this->autoSwapDateRange('arrivalDateFrom', 'arrivalDateTo'); }
+    public function updatedArrivalDateFrom() { $this->autoSwapDateRange('arrivalDateFrom', 'arrivalDateTo'); }
+
+    private function autoSwapDateRange(string $fromProp, string $toProp): void
+    {
+        $from = $this->{$fromProp};
+        $to   = $this->{$toProp};
+        if ($from && $to && $from > $to) {
+            $this->{$fromProp} = $to;
+            $this->{$toProp}   = $from;
+        }
+    }
+
     public function updatingPage() { $this->clearSelection(); }
 
     public function newRecord()
@@ -562,6 +596,10 @@ class TableUsaPurchases extends Component
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
             ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore))
+            ->when($this->dateFrom,        fn($q) => $q->whereDate('date', '>=', $this->dateFrom))
+            ->when($this->dateTo,          fn($q) => $q->whereDate('date', '<=', $this->dateTo))
+            ->when($this->arrivalDateFrom, fn($q) => $q->whereDate('arrival_date', '>=', $this->arrivalDateFrom))
+            ->when($this->arrivalDateTo,   fn($q) => $q->whereDate('arrival_date', '<=', $this->arrivalDateTo))
             ->when($this->search, function ($q) {
                 $terms = collect(preg_split('/[\s\+]+/', trim($this->search)))->filter()->values();
                 foreach ($terms as $term) {
@@ -585,8 +623,17 @@ class TableUsaPurchases extends Component
 
     public function clearFilters()
     {
-        $this->reset('filterType', 'filterYear', 'filterStatus', 'filterStore');
+        $this->reset('filterType', 'filterYear', 'filterStatus', 'filterStore',
+            'dateFrom', 'dateTo', 'arrivalDateFrom', 'arrivalDateTo');
         $this->resetPage();
+        $this->clearSelection();
+    }
+
+    public function clearDateFilters()
+    {
+        $this->reset('dateFrom', 'dateTo', 'arrivalDateFrom', 'arrivalDateTo');
+        $this->resetPage();
+        $this->clearSelection();
     }
 
     private function resetFormFields()
@@ -607,6 +654,10 @@ class TableUsaPurchases extends Component
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
             ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore))
+            ->when($this->dateFrom,        fn($q) => $q->whereDate('date', '>=', $this->dateFrom))
+            ->when($this->dateTo,          fn($q) => $q->whereDate('date', '<=', $this->dateTo))
+            ->when($this->arrivalDateFrom, fn($q) => $q->whereDate('arrival_date', '>=', $this->arrivalDateFrom))
+            ->when($this->arrivalDateTo,   fn($q) => $q->whereDate('arrival_date', '<=', $this->arrivalDateTo))
             ->when($this->search, function ($q, $search) {
                 $terms = collect(preg_split('/[\s\+]+/', trim($search)))->filter()->values();
                 foreach ($terms as $term) {
@@ -631,7 +682,11 @@ class TableUsaPurchases extends Component
         $summaryQuery = UsaPurchase::query()
             ->when($this->filterType, fn($q) => $q->where('type', $this->filterType))
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
-            ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore));
+            ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore))
+            ->when($this->dateFrom,        fn($q) => $q->whereDate('date', '>=', $this->dateFrom))
+            ->when($this->dateTo,          fn($q) => $q->whereDate('date', '<=', $this->dateTo))
+            ->when($this->arrivalDateFrom, fn($q) => $q->whereDate('arrival_date', '>=', $this->arrivalDateFrom))
+            ->when($this->arrivalDateTo,   fn($q) => $q->whereDate('arrival_date', '<=', $this->arrivalDateTo));
 
         $totalRecords = (clone $summaryQuery)->count();
         $totalDelivered = (clone $summaryQuery)->where('status', 'ENTREGADO')->count();
