@@ -547,7 +547,7 @@ class TableUsaPurchases extends Component
     {
         return $this->buildBaseQuery()
             ->where('processed', false)
-            ->orderByDesc('date')
+            ->orderByRaw('COALESCE(arrival_date, date) DESC')
             ->orderByDesc('id')
             ->forPage($this->getPage(), 20)
             ->pluck('id')
@@ -621,7 +621,7 @@ class TableUsaPurchases extends Component
                     });
                 }
             })
-            ->orderByDesc('date')
+            ->orderByRaw('COALESCE(arrival_date, date) DESC')
             ->orderByDesc('id')
             ->paginate(20);
 
