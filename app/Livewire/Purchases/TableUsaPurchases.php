@@ -26,6 +26,10 @@ class TableUsaPurchases extends Component
     public $filterStatus = '';
     #[Url(as: 'store', except: '')]
     public $filterStore = '';
+    #[Url(as: 'd', except: '')]
+    public $dateExact = '';
+    #[Url(as: 'ad', except: '')]
+    public $arrivalDateExact = '';
     #[Url(as: 'df', except: '')]
     public $dateFrom = '';
     #[Url(as: 'dt', except: '')]
@@ -73,6 +77,8 @@ class TableUsaPurchases extends Component
     public function updatingFilterYear() { $this->resetPage(); $this->clearSelection(); }
     public function updatingFilterStatus() { $this->resetPage(); $this->clearSelection(); }
     public function updatingFilterStore() { $this->resetPage(); $this->clearSelection(); }
+    public function updatingDateExact() { $this->resetPage(); $this->clearSelection(); }
+    public function updatingArrivalDateExact() { $this->resetPage(); $this->clearSelection(); }
     public function updatingDateFrom() { $this->resetPage(); $this->clearSelection(); }
     public function updatingDateTo() { $this->resetPage(); $this->clearSelection(); }
     public function updatingArrivalDateFrom() { $this->resetPage(); $this->clearSelection(); }
@@ -596,6 +602,8 @@ class TableUsaPurchases extends Component
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
             ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore))
+            ->when($this->dateExact,        fn($q) => $q->whereDate('date', '=', $this->dateExact))
+            ->when($this->arrivalDateExact, fn($q) => $q->whereDate('arrival_date', '=', $this->arrivalDateExact))
             ->when($this->dateFrom,        fn($q) => $q->whereDate('date', '>=', $this->dateFrom))
             ->when($this->dateTo,          fn($q) => $q->whereDate('date', '<=', $this->dateTo))
             ->when($this->arrivalDateFrom, fn($q) => $q->whereDate('arrival_date', '>=', $this->arrivalDateFrom))
@@ -624,6 +632,7 @@ class TableUsaPurchases extends Component
     public function clearFilters()
     {
         $this->reset('filterType', 'filterYear', 'filterStatus', 'filterStore',
+            'dateExact', 'arrivalDateExact',
             'dateFrom', 'dateTo', 'arrivalDateFrom', 'arrivalDateTo');
         $this->resetPage();
         $this->clearSelection();
@@ -631,7 +640,8 @@ class TableUsaPurchases extends Component
 
     public function clearDateFilters()
     {
-        $this->reset('dateFrom', 'dateTo', 'arrivalDateFrom', 'arrivalDateTo');
+        $this->reset('dateExact', 'arrivalDateExact',
+            'dateFrom', 'dateTo', 'arrivalDateFrom', 'arrivalDateTo');
         $this->resetPage();
         $this->clearSelection();
     }
@@ -654,6 +664,8 @@ class TableUsaPurchases extends Component
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
             ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore))
+            ->when($this->dateExact,        fn($q) => $q->whereDate('date', '=', $this->dateExact))
+            ->when($this->arrivalDateExact, fn($q) => $q->whereDate('arrival_date', '=', $this->arrivalDateExact))
             ->when($this->dateFrom,        fn($q) => $q->whereDate('date', '>=', $this->dateFrom))
             ->when($this->dateTo,          fn($q) => $q->whereDate('date', '<=', $this->dateTo))
             ->when($this->arrivalDateFrom, fn($q) => $q->whereDate('arrival_date', '>=', $this->arrivalDateFrom))
@@ -683,6 +695,8 @@ class TableUsaPurchases extends Component
             ->when($this->filterType, fn($q) => $q->where('type', $this->filterType))
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
             ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore))
+            ->when($this->dateExact,        fn($q) => $q->whereDate('date', '=', $this->dateExact))
+            ->when($this->arrivalDateExact, fn($q) => $q->whereDate('arrival_date', '=', $this->arrivalDateExact))
             ->when($this->dateFrom,        fn($q) => $q->whereDate('date', '>=', $this->dateFrom))
             ->when($this->dateTo,          fn($q) => $q->whereDate('date', '<=', $this->dateTo))
             ->when($this->arrivalDateFrom, fn($q) => $q->whereDate('arrival_date', '>=', $this->arrivalDateFrom))

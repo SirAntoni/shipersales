@@ -66,8 +66,8 @@
 
                         {{-- Popover Fechas --}}
                         @php
-                            $dateGroupActive    = ($dateFrom || $dateTo) ? 1 : 0;
-                            $arrivalGroupActive = ($arrivalDateFrom || $arrivalDateTo) ? 1 : 0;
+                            $dateGroupActive    = ($dateExact || $dateFrom || $dateTo) ? 1 : 0;
+                            $arrivalGroupActive = ($arrivalDateExact || $arrivalDateFrom || $arrivalDateTo) ? 1 : 0;
                             $dateBadge          = $dateGroupActive + $arrivalGroupActive;
                         @endphp
                         <div x-data="{ open: false }" class="relative">
@@ -94,15 +94,29 @@
                                 class="absolute z-50 mt-2 w-80 rounded-md border border-slate-200 bg-white shadow-lg p-4 right-0 dark:bg-darkmode-600 dark:border-darkmode-400"
                             >
                                 <div class="text-xs font-medium text-slate-500 mb-2">Fecha</div>
-                                <div class="grid grid-cols-2 gap-2 mb-3">
-                                    <x-base.form-input type="date" wire:model.live="dateFrom" placeholder="Desde" />
-                                    <x-base.form-input type="date" wire:model.live="dateTo" placeholder="Hasta" />
+                                <div class="mb-2">
+                                    <div class="text-[11px] text-slate-400 mb-1">Día exacto</div>
+                                    <x-base.form-input type="date" wire:model.live="dateExact" />
+                                </div>
+                                <div class="mb-3">
+                                    <div class="text-[11px] text-slate-400 mb-1">Rango (desde / hasta)</div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <x-base.form-input type="date" wire:model.live="dateFrom" placeholder="Desde" />
+                                        <x-base.form-input type="date" wire:model.live="dateTo" placeholder="Hasta" />
+                                    </div>
                                 </div>
 
-                                <div class="text-xs font-medium text-slate-500 mb-2">Fecha de compra</div>
-                                <div class="grid grid-cols-2 gap-2 mb-3">
-                                    <x-base.form-input type="date" wire:model.live="arrivalDateFrom" placeholder="Desde" />
-                                    <x-base.form-input type="date" wire:model.live="arrivalDateTo" placeholder="Hasta" />
+                                <div class="text-xs font-medium text-slate-500 mb-2 pt-2 border-t border-slate-200/60">Fecha de compra</div>
+                                <div class="mb-2">
+                                    <div class="text-[11px] text-slate-400 mb-1">Día exacto</div>
+                                    <x-base.form-input type="date" wire:model.live="arrivalDateExact" />
+                                </div>
+                                <div class="mb-3">
+                                    <div class="text-[11px] text-slate-400 mb-1">Rango (desde / hasta)</div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <x-base.form-input type="date" wire:model.live="arrivalDateFrom" placeholder="Desde" />
+                                        <x-base.form-input type="date" wire:model.live="arrivalDateTo" placeholder="Hasta" />
+                                    </div>
                                 </div>
 
                                 @if($dateBadge)
