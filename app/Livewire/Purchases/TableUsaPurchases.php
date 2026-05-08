@@ -26,18 +26,8 @@ class TableUsaPurchases extends Component
     public $filterStatus = '';
     #[Url(as: 'store', except: '')]
     public $filterStore = '';
-    #[Url(as: 'd', except: '')]
-    public $dateExact = '';
-    #[Url(as: 'ad', except: '')]
-    public $arrivalDateExact = '';
-    #[Url(as: 'df', except: '')]
-    public $dateFrom = '';
-    #[Url(as: 'dt', except: '')]
-    public $dateTo = '';
-    #[Url(as: 'adf', except: '')]
-    public $arrivalDateFrom = '';
-    #[Url(as: 'adt', except: '')]
-    public $arrivalDateTo = '';
+    #[Url(as: 'sort', except: 'arrival_date')]
+    public $sortBy = 'arrival_date';
 
     // Form fields (header)
     public $editingId = null;
@@ -77,27 +67,7 @@ class TableUsaPurchases extends Component
     public function updatingFilterYear() { $this->resetPage(); $this->clearSelection(); }
     public function updatingFilterStatus() { $this->resetPage(); $this->clearSelection(); }
     public function updatingFilterStore() { $this->resetPage(); $this->clearSelection(); }
-    public function updatingDateExact() { $this->resetPage(); $this->clearSelection(); }
-    public function updatingArrivalDateExact() { $this->resetPage(); $this->clearSelection(); }
-    public function updatingDateFrom() { $this->resetPage(); $this->clearSelection(); }
-    public function updatingDateTo() { $this->resetPage(); $this->clearSelection(); }
-    public function updatingArrivalDateFrom() { $this->resetPage(); $this->clearSelection(); }
-    public function updatingArrivalDateTo() { $this->resetPage(); $this->clearSelection(); }
-
-    public function updatedDateTo()        { $this->autoSwapDateRange('dateFrom', 'dateTo'); }
-    public function updatedDateFrom()      { $this->autoSwapDateRange('dateFrom', 'dateTo'); }
-    public function updatedArrivalDateTo()   { $this->autoSwapDateRange('arrivalDateFrom', 'arrivalDateTo'); }
-    public function updatedArrivalDateFrom() { $this->autoSwapDateRange('arrivalDateFrom', 'arrivalDateTo'); }
-
-    private function autoSwapDateRange(string $fromProp, string $toProp): void
-    {
-        $from = $this->{$fromProp};
-        $to   = $this->{$toProp};
-        if ($from && $to && $from > $to) {
-            $this->{$fromProp} = $to;
-            $this->{$toProp}   = $from;
-        }
-    }
+    public function updatingSortBy() { $this->resetPage(); $this->clearSelection(); }
 
     public function updatingPage() { $this->clearSelection(); }
 
@@ -587,12 +557,19 @@ class TableUsaPurchases extends Component
     {
         return $this->buildBaseQuery()
             ->where('processed', false)
-            ->orderByRaw('COALESCE(arrival_date, date) DESC')
+            ->orderByRaw($this->orderByExpression())
             ->orderByDesc('id')
             ->forPage($this->getPage(), 20)
             ->pluck('id')
             ->map(fn($id) => (string) $id)
             ->toArray();
+    }
+
+    private function orderByExpression(): string
+    {
+        return $this->sortBy === 'date'
+            ? 'date DESC'
+            : 'COALESCE(arrival_date, date) DESC';
     }
 
     private function buildBaseQuery()
@@ -602,12 +579,6 @@ class TableUsaPurchases extends Component
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
             ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore))
-            ->when($this->dateExact,        fn($q) => $q->whereDate('date', '=', $this->dateExact))
-            ->when($this->arrivalDateExact, fn($q) => $q->whereDate('arrival_date', '=', $this->arrivalDateExact))
-            ->when($this->dateFrom,        fn($q) => $q->whereDate('date', '>=', $this->dateFrom))
-            ->when($this->dateTo,          fn($q) => $q->whereDate('date', '<=', $this->dateTo))
-            ->when($this->arrivalDateFrom, fn($q) => $q->whereDate('arrival_date', '>=', $this->arrivalDateFrom))
-            ->when($this->arrivalDateTo,   fn($q) => $q->whereDate('arrival_date', '<=', $this->arrivalDateTo))
             ->when($this->search, function ($q) {
                 $terms = collect(preg_split('/[\s\+]+/', trim($this->search)))->filter()->values();
                 foreach ($terms as $term) {
@@ -631,17 +602,7 @@ class TableUsaPurchases extends Component
 
     public function clearFilters()
     {
-        $this->reset('filterType', 'filterYear', 'filterStatus', 'filterStore',
-            'dateExact', 'arrivalDateExact',
-            'dateFrom', 'dateTo', 'arrivalDateFrom', 'arrivalDateTo');
-        $this->resetPage();
-        $this->clearSelection();
-    }
-
-    public function clearDateFilters()
-    {
-        $this->reset('dateExact', 'arrivalDateExact',
-            'dateFrom', 'dateTo', 'arrivalDateFrom', 'arrivalDateTo');
+        $this->reset('filterType', 'filterYear', 'filterStatus', 'filterStore');
         $this->resetPage();
         $this->clearSelection();
     }
@@ -664,12 +625,6 @@ class TableUsaPurchases extends Component
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
             ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore))
-            ->when($this->dateExact,        fn($q) => $q->whereDate('date', '=', $this->dateExact))
-            ->when($this->arrivalDateExact, fn($q) => $q->whereDate('arrival_date', '=', $this->arrivalDateExact))
-            ->when($this->dateFrom,        fn($q) => $q->whereDate('date', '>=', $this->dateFrom))
-            ->when($this->dateTo,          fn($q) => $q->whereDate('date', '<=', $this->dateTo))
-            ->when($this->arrivalDateFrom, fn($q) => $q->whereDate('arrival_date', '>=', $this->arrivalDateFrom))
-            ->when($this->arrivalDateTo,   fn($q) => $q->whereDate('arrival_date', '<=', $this->arrivalDateTo))
             ->when($this->search, function ($q, $search) {
                 $terms = collect(preg_split('/[\s\+]+/', trim($search)))->filter()->values();
                 foreach ($terms as $term) {
@@ -684,7 +639,7 @@ class TableUsaPurchases extends Component
                     });
                 }
             })
-            ->orderByRaw('COALESCE(arrival_date, date) DESC')
+            ->orderByRaw($this->orderByExpression())
             ->orderByDesc('id')
             ->paginate(20);
 
@@ -694,13 +649,7 @@ class TableUsaPurchases extends Component
         $summaryQuery = UsaPurchase::query()
             ->when($this->filterType, fn($q) => $q->where('type', $this->filterType))
             ->when($this->filterYear, fn($q) => $q->where('year', $this->filterYear))
-            ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore))
-            ->when($this->dateExact,        fn($q) => $q->whereDate('date', '=', $this->dateExact))
-            ->when($this->arrivalDateExact, fn($q) => $q->whereDate('arrival_date', '=', $this->arrivalDateExact))
-            ->when($this->dateFrom,        fn($q) => $q->whereDate('date', '>=', $this->dateFrom))
-            ->when($this->dateTo,          fn($q) => $q->whereDate('date', '<=', $this->dateTo))
-            ->when($this->arrivalDateFrom, fn($q) => $q->whereDate('arrival_date', '>=', $this->arrivalDateFrom))
-            ->when($this->arrivalDateTo,   fn($q) => $q->whereDate('arrival_date', '<=', $this->arrivalDateTo));
+            ->when($this->filterStore, fn($q) => $q->where('store', $this->filterStore));
 
         $totalRecords = (clone $summaryQuery)->count();
         $totalDelivered = (clone $summaryQuery)->where('status', 'ENTREGADO')->count();

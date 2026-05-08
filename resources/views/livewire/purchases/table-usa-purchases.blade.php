@@ -64,72 +64,15 @@
                             @endforeach
                         </x-base.form-select>
 
-                        {{-- Popover Fechas --}}
-                        @php
-                            $dateGroupActive    = ($dateExact || $dateFrom || $dateTo) ? 1 : 0;
-                            $arrivalGroupActive = ($arrivalDateExact || $arrivalDateFrom || $arrivalDateTo) ? 1 : 0;
-                            $dateBadge          = $dateGroupActive + $arrivalGroupActive;
-                        @endphp
-                        <div x-data="{ open: false }" class="relative">
-                            <x-base.button
-                                variant="outline-secondary"
-                                x-on:click="open = !open"
-                                x-on:keydown.escape.window="open = false"
-                                class="!h-9"
-                            >
-                                <i class="fa-regular fa-calendar mr-1"></i>
-                                Fechas
-                                @if($dateBadge)
-                                    <span class="ml-1 inline-flex items-center justify-center rounded-full bg-primary text-white text-[10px] leading-none w-4 h-4">
-                                        {{ $dateBadge }}
-                                    </span>
-                                @endif
-                            </x-base.button>
-
-                            <div
-                                x-show="open"
-                                x-cloak
-                                x-on:click.outside="open = false"
-                                x-transition.opacity.duration.150ms
-                                class="absolute z-50 mt-2 w-80 rounded-md border border-slate-200 bg-white shadow-lg p-4 right-0 dark:bg-darkmode-600 dark:border-darkmode-400"
-                            >
-                                <div class="text-xs font-medium text-slate-500 mb-2">Fecha</div>
-                                <div class="mb-2">
-                                    <div class="text-[11px] text-slate-400 mb-1">Día exacto</div>
-                                    <x-base.form-input type="date" wire:model.live="dateExact" />
-                                </div>
-                                <div class="mb-3">
-                                    <div class="text-[11px] text-slate-400 mb-1">Rango (desde / hasta)</div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <x-base.form-input type="date" wire:model.live="dateFrom" placeholder="Desde" />
-                                        <x-base.form-input type="date" wire:model.live="dateTo" placeholder="Hasta" />
-                                    </div>
-                                </div>
-
-                                <div class="text-xs font-medium text-slate-500 mb-2 pt-2 border-t border-slate-200/60">Fecha de compra</div>
-                                <div class="mb-2">
-                                    <div class="text-[11px] text-slate-400 mb-1">Día exacto</div>
-                                    <x-base.form-input type="date" wire:model.live="arrivalDateExact" />
-                                </div>
-                                <div class="mb-3">
-                                    <div class="text-[11px] text-slate-400 mb-1">Rango (desde / hasta)</div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <x-base.form-input type="date" wire:model.live="arrivalDateFrom" placeholder="Desde" />
-                                        <x-base.form-input type="date" wire:model.live="arrivalDateTo" placeholder="Hasta" />
-                                    </div>
-                                </div>
-
-                                @if($dateBadge)
-                                    <div class="flex justify-end pt-1 border-t border-slate-200/60">
-                                        <x-base.button variant="secondary" size="sm" wire:click="clearDateFilters" class="mt-2">
-                                            <i class="fa-solid fa-xmark mr-1"></i> Limpiar fechas
-                                        </x-base.button>
-                                    </div>
-                                @endif
-                            </div>
+                        <div class="relative">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 text-slate-500 fa-solid fa-arrow-down-wide-short"></i>
+                            <x-base.form-select class="rounded-[0.5rem] pl-9 sm:w-64" wire:model.live="sortBy">
+                                <option value="arrival_date">Fecha de compra</option>
+                                <option value="date">Fecha de registro</option>
+                            </x-base.form-select>
                         </div>
 
-                        @if($filterType || $filterYear || $filterStatus || $filterStore || $dateBadge)
+                        @if($filterType || $filterYear || $filterStatus || $filterStore)
                             <x-base.button variant="secondary" size="sm" wire:click="clearFilters">
                                 <i class="fa-solid fa-xmark mr-1"></i> Limpiar
                             </x-base.button>
@@ -173,7 +116,7 @@
                                     <x-base.table.td class="w-10 border-t border-slate-200/60 bg-slate-50 text-center">
                                         <input type="checkbox" wire:model.live="selectAll" class="form-checkbox cursor-pointer" />
                                     </x-base.table.td>
-                                    <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Fecha</x-base.table.td>
+                                    <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">F. Compra</x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Tipo</x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Pasajero</x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Tienda</x-base.table.td>
@@ -182,7 +125,7 @@
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500 text-center">Cant.</x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Descripción</x-base.table.td>
                                     <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">Estado</x-base.table.td>
-                                    <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">F. Compra</x-base.table.td>
+                                    <x-base.table.td class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500">F. Registro</x-base.table.td>
                                     <x-base.table.td class="w-28 border-t border-slate-200/60 bg-slate-50 text-center font-medium text-slate-500">Acciones</x-base.table.td>
                                 </x-base.table.tr>
                             </x-base.table.thead>
@@ -197,7 +140,7 @@
                                                 class="form-checkbox {{ $record->processed ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer' }}" />
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
-                                            {{ $record->date?->format('d/m/Y') ?? '-' }}
+                                            {{ $record->arrival_date?->format('d/m/Y') ?? '-' }}
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                             <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $record->type === 'CARGO' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' }}">
@@ -251,7 +194,7 @@
                                             @endif
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
-                                            {{ $record->arrival_date?->format('d/m/Y') ?? '-' }}
+                                            {{ $record->date?->format('d/m/Y') ?? '-' }}
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                             <div class="flex items-center justify-center gap-1">
