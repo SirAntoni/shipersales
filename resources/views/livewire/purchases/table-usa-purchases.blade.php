@@ -278,7 +278,7 @@
 
                 <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <x-base.form-label>Fecha</x-base.form-label>
+                        <x-base.form-label>Fecha Registro</x-base.form-label>
                         <x-base.form-input type="date" wire:model="editDate" />
                     </div>
                     <div>
