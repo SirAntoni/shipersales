@@ -140,7 +140,19 @@
                                                 class="form-checkbox {{ $record->processed ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer' }}" />
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
-                                            {{ $record->arrival_date?->format('d/m/Y') ?? '-' }}
+                                            @if(!empty($record->comments))
+                                                <x-base.tippy
+                                                    as="span"
+                                                    content="{{ $record->comments }}"
+                                                    data-original-title="{{ $record->comments }}"
+                                                    class="cursor-help underline decoration-dotted decoration-slate-400 underline-offset-2"
+                                                >
+                                                    {{ $record->arrival_date?->format('d/m/Y') ?? '-' }}
+                                                    <i class="fa-regular fa-comment-dots ml-1 text-slate-400"></i>
+                                                </x-base.tippy>
+                                            @else
+                                                {{ $record->arrival_date?->format('d/m/Y') ?? '-' }}
+                                            @endif
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                             <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $record->type === 'CARGO' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' }}">
@@ -154,18 +166,21 @@
                                             {{ $record->store }}
                                         </x-base.table.td-sale>
                                         <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 text-xs">
-                                            @if(!empty($record->comments))
+                                            @if(!empty($record->order_number))
                                                 <x-base.tippy
                                                     as="span"
-                                                    content="{{ $record->comments }}"
-                                                    data-original-title="{{ $record->comments }}"
-                                                    class="cursor-help underline decoration-dotted decoration-slate-400 underline-offset-2"
+                                                    content="{{ $record->order_number }}"
+                                                    data-original-title="{{ $record->order_number }}"
+                                                    x-data="{ copied: false }"
+                                                    x-on:click="navigator.clipboard.writeText({{ Js::from($record->order_number) }}).then(() => { copied = true; setTimeout(() => copied = false, 1500); })"
+                                                    class="cursor-pointer"
                                                 >
                                                     {{ \Illuminate\Support\Str::limit($record->order_number, 25) }}
-                                                    <i class="fa-regular fa-comment-dots ml-1 text-slate-400"></i>
+                                                    <i x-show="!copied" class="fa-regular fa-copy ml-1 text-slate-400"></i>
+                                                    <i x-show="copied" x-cloak class="fa-solid fa-check ml-1 text-green-500"></i>
                                                 </x-base.tippy>
                                             @else
-                                                {{ \Illuminate\Support\Str::limit($record->order_number, 25) }}
+                                                -
                                             @endif
                                         </x-base.table.td-sale>
                                         <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 text-xs">
@@ -175,7 +190,22 @@
                                             {{ $record->quantity }}
                                         </x-base.table.td>
                                         <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600">
-                                            {{ \Illuminate\Support\Str::limit($record->description, 30) }}
+                                            @if(!empty($record->description))
+                                                <x-base.tippy
+                                                    as="span"
+                                                    content="{{ $record->description }}"
+                                                    data-original-title="{{ $record->description }}"
+                                                    x-data="{ copied: false }"
+                                                    x-on:click="navigator.clipboard.writeText({{ Js::from($record->description) }}).then(() => { copied = true; setTimeout(() => copied = false, 1500); })"
+                                                    class="cursor-pointer"
+                                                >
+                                                    {{ \Illuminate\Support\Str::limit($record->description, 30) }}
+                                                    <i x-show="!copied" class="fa-regular fa-copy ml-1 text-slate-400"></i>
+                                                    <i x-show="copied" x-cloak class="fa-solid fa-check ml-1 text-green-500"></i>
+                                                </x-base.tippy>
+                                            @else
+                                                -
+                                            @endif
                                         </x-base.table.td-sale>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                             @php
@@ -389,11 +419,21 @@
                 </div>
 
                 <div class="flex justify-end gap-2 mt-4">
-                    <x-base.button variant="secondary" x-on:click="show = false">
+                    <x-base.button variant="secondary" x-on:click="show = false" wire:loading.attr="disabled" wire:target="saveRecord">
                         Cancelar
                     </x-base.button>
-                    <x-base.button variant="primary" wire:click="saveRecord">
-                        {{ $editingId ? 'Guardar' : 'Crear' }}
+                    <x-base.button
+                        variant="primary"
+                        wire:click="saveRecord"
+                        wire:loading.attr="disabled"
+                        wire:target="saveRecord"
+                    >
+                        <span wire:loading wire:target="saveRecord">
+                            <i class="fas fa-spinner animate-spin mr-1"></i>
+                        </span>
+                        <span wire:loading.remove wire:target="saveRecord">
+                            {{ $editingId ? 'Guardar' : 'Crear' }}
+                        </span>
                     </x-base.button>
                 </div>
             </div>

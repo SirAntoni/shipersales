@@ -230,14 +230,38 @@ class TableUsaPurchases extends Component
             ]));
             $msg = 'Registro actualizado.';
         } else {
-            foreach ($this->articlesSelected as $article) {
-                UsaPurchase::create(array_merge($header, [
-                    'description' => $article['title'],
-                    'sku' => $article['sku'],
-                    'article_id' => $article['id'],
-                    'quantity' => (int) $article['quantity'],
-                ]));
+            // Pre-check duplicados cuando se ingresa tracking
+            if (!empty($this->editTracking)) {
+                $articleIds = collect($this->articlesSelected)->pluck('id')->filter()->all();
+                $duplicates = UsaPurchase::where('tracking', $this->editTracking)
+                    ->whereIn('article_id', $articleIds)
+                    ->pluck('article_id', 'id');
+
+                if ($duplicates->isNotEmpty()) {
+                    $skus = collect($this->articlesSelected)
+                        ->whereIn('id', $duplicates->values()->all())
+                        ->pluck('sku')
+                        ->filter()
+                        ->implode(', ');
+
+                    $this->dispatch('errorNotRoute', [
+                        'label' => "Ya existe un registro con tracking {$this->editTracking} para: {$skus}. IDs: " . $duplicates->keys()->implode(', '),
+                    ]);
+                    return;
+                }
             }
+
+            DB::transaction(function () use ($header) {
+                foreach ($this->articlesSelected as $article) {
+                    UsaPurchase::create(array_merge($header, [
+                        'description' => $article['title'],
+                        'sku' => $article['sku'],
+                        'article_id' => $article['id'],
+                        'quantity' => (int) $article['quantity'],
+                    ]));
+                }
+            });
+
             $msg = count($this->articlesSelected) > 1
                 ? count($this->articlesSelected) . ' registros creados.'
                 : 'Registro creado.';
