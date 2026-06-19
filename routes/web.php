@@ -73,6 +73,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/commissions/export', [ReportController::class, 'commissions'])->name('reports.commissions.export')->middleware('can:commissions');
     Route::get('kardex', [KardexController::class,'index'])->name('kardex')->middleware('can:kardex');
     Route::get('pdf/{id}', [SaleController::class,'pdf'])->name('pdf.view');
+    Route::get('pdf-v2/{id}', [SaleController::class,'pdfV2'])->name('pdf.v2');
+    Route::get('pdf-v2/{id}/preview', [SaleController::class,'pdfV2Preview'])->name('pdf.v2.preview');
     Route::post("/logout",[AuthController::class,'logout'])->name('logout');
     Route::get('documents/{path}/download', [DocumentController::class, 'download'])->where('path', '.*')->name('documents.download');
     Route::get('documents/{id}/credit-note', [DocumentController::class, 'creditNote'])->name('documents.credit-note.blade.php')->middleware('can:documents');
