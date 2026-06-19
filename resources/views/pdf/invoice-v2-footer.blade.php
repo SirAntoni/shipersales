@@ -18,7 +18,7 @@
 
     .footer {
         position: absolute;
-        left: 11mm; right: 11mm;
+        left: 6mm; right: 6mm;
         bottom: 12mm;                /* deja sitio para el cintillo */
         border-top: 2px solid #3d079d;
         padding-top: 14px;

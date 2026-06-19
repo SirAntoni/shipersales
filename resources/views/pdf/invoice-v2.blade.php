@@ -20,7 +20,7 @@
         position: relative;
         width: 210mm;
         background: #fff;
-        padding: 24mm 11mm 6mm;
+        padding: 24mm 6mm 6mm;
     }
 
     /* ---- barras decorativas (sin gradientes: wkhtmltopdf no los soporta bien) ---- */

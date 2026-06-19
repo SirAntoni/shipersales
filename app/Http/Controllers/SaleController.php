@@ -118,6 +118,7 @@ class SaleController extends Controller implements hasMiddleware
                 ->setOption('margin-left', 0)
                 ->setOption('margin-right', 0)
                 ->setOption('margin-bottom', 40)   // mm: igual al height de la banda del footer
+                ->setOption('dpi', 96)             // evita el escalado que deja margen blanco a la derecha
                 ->setOption('footer-html', $footerFile)
                 ->setOption('footer-spacing', 0)
                 ->output();
