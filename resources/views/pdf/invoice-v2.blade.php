@@ -22,7 +22,8 @@
         /* ---- top decorative bar ---- */
         .topbar {
             height: 14px;
-            background: linear-gradient(90deg, #4b2d9f 0%, #6a45c9 60%, #6a45c9 100%);
+            background: #4b2d9f;
+            background: -webkit-linear-gradient(left, #4b2d9f 0%, #6a45c9 70%);
             position: relative;
         }
         .topbar .accent {
@@ -159,7 +160,8 @@
         .footbar {
             margin-top: 18px;
             height: 34px;
-            background: linear-gradient(90deg, #4b2d9f 0%, #6a45c9 70%, #6a45c9 100%);
+            background: #4b2d9f;
+            background: -webkit-linear-gradient(left, #4b2d9f 0%, #6a45c9 70%);
             position: relative;
             color: #fff;
             text-align: center;
