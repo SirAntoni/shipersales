@@ -96,8 +96,9 @@ class SaleController extends Controller implements hasMiddleware
             if (!is_file($path)) {
                 continue;
             }
+            $b64 = base64_encode(file_get_contents($path));
             $css .= "@font-face{font-family:'Poppins';font-style:normal;font-weight:{$weight};"
-                  . "src:url('file://{$path}') format('truetype');}";
+                  . "src:url(data:font/truetype;base64,{$b64}) format('truetype');}";
         }
         return $css;
     }
