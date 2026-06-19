@@ -144,11 +144,13 @@ class TableDocuments extends Component
     public
     function render()
     {
-        $documents = Document::when($this->search, function ($q) {
+        $documents = Document::with('sale')
+            ->when($this->search, function ($q) {
                 $q->where(function ($q) {
                     $q->whereRaw("CONCAT(serie, '-', correlative) LIKE ?", ["%{$this->search}%"])
                       ->orWhere('serie', 'LIKE', "%{$this->search}%")
-                      ->orWhere('correlative', 'LIKE', "%{$this->search}%");
+                      ->orWhere('correlative', 'LIKE', "%{$this->search}%")
+                      ->orWhereHas('sale', fn($q) => $q->where('number', 'LIKE', "%{$this->search}%"));
                 });
             })
             ->when($this->statusSunat, fn($q) => $q->where('status_sunat', $this->statusSunat))

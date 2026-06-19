@@ -73,6 +73,11 @@
                                     <x-base.table.td
                                         class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
                                     >
+                                        N° Orden
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
                                         Cliente
                                     </x-base.table.td>
                                     <x-base.table.td
@@ -120,6 +125,11 @@
                                                 <span
                                                     class="bg-blue-100 text-white-800 text-xs font-medium me-2 px-2.5 p-1 rounded-full">{{ $document->serie}}-{{$document->correlative}}</span>
 
+
+                                            </x-base.table.td>
+                                            <x-base.table.td class="border-dashed dark:bg-darkmode-600">
+
+                                                {{ $document->sale?->number ?? '—' }}
 
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
@@ -218,7 +228,7 @@
                                     @endforeach
                                 @else
                                     <x-base.table.tr>
-                                        <x-base.table.td colspan="10"
+                                        <x-base.table.td colspan="11"
                                                          class=" text-center border-dashed dark:bg-darkmode-600">
                                             No se encontrarón resultados.
                                         </x-base.table.td>
