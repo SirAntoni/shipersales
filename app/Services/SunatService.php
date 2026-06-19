@@ -9,6 +9,7 @@ use Greenter\Model\Company\Company;
 use Greenter\Model\Response\SummaryResult;
 use Greenter\Model\Sale\FormaPagos\FormaPagoContado;
 use Greenter\Model\Sale\Invoice;
+use Greenter\Model\Sale\Note;
 use Greenter\Model\Sale\Legend;
 use Greenter\Model\Sale\SaleDetail;
 use Greenter\Model\Voided\Voided;
@@ -60,6 +61,31 @@ class SunatService
             ->setFechaEmision(new DateTime($data['date']))
             ->setFormaPago(new FormaPagoContado())
             ->setTipoMoneda('PEN')
+            ->setCompany($this->getCompany())
+            ->setClient($this->getClient($data['client']))
+            ->setMtoOperGravadas($data['subtotal'])
+            ->setMtoIGV($data['igv'])
+            ->setTotalImpuestos($data['igv'])
+            ->setValorVenta($data['subtotal'])
+            ->setSubTotal($data['total'])
+            ->setMtoImpVenta($data['total'])
+            ->setDetails($this->getDetails($data['items']))
+            ->setLegends([$this->getLegends($data['legend'])]);
+    }
+
+    public function getNote($data)
+    {
+        return (new Note())
+            ->setUblVersion('2.1')
+            ->setTipoDoc('07') // Nota de credito - Catalog. 01
+            ->setSerie($data['serie'])
+            ->setCorrelativo($data['correlative'])
+            ->setFechaEmision(new DateTime($data['date']))
+            ->setTipoMoneda('PEN')
+            ->setCodMotivo($data['codMotivo'] ?? '01') // Catalog. 09
+            ->setDesMotivo($data['desMotivo'] ?? 'Anulación de la operación')
+            ->setTipDocAfectado($data['tipDocAfectado']) // 01=Factura, 03=Boleta
+            ->setNumDocfectado($data['numDocAfectado']) // serie-correlativo afectado
             ->setCompany($this->getCompany())
             ->setClient($this->getClient($data['client']))
             ->setMtoOperGravadas($data['subtotal'])
@@ -346,8 +372,9 @@ class SunatService
         $gCompany    = $invoice->getCompany();
         $gClient     = $invoice->getClient();
 
-        // Titulo segun tipo (FC/BC = nota de credito)
-        $isNote = str_starts_with($serie, 'FC') || str_starts_with($serie, 'BC');
+        // Titulo segun tipo (07 o serie FC/BC = nota de credito)
+        $isNote = $tipoDoc === '07' || $tipoDoc === '08'
+            || str_starts_with($serie, 'FC') || str_starts_with($serie, 'BC');
         if ($isNote) {
             $title   = 'Nota de crédito electrónica';
             $repText = 'NOTA DE CRÉDITO ELECTRÓNICA';

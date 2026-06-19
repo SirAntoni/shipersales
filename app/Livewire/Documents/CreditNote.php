@@ -153,6 +153,11 @@ class CreditNote extends Component
             "correlative" => $this->correlative,
             "date" => $this->date ?? "2005-01-01",
             "tipoDoc" => ($this->documentType == '1') ? '01' : '03',
+            // Datos de la nota de credito (Note)
+            "tipDocAfectado" => ($this->documentType == '1') ? '01' : '03',
+            "numDocAfectado" => $this->affected_document,
+            "codMotivo" => '01', // Catalog. 09: Anulación de la operación
+            "desMotivo" => 'Anulación de la operación',
             "subtotal" => $this->granSubtotal,
             "igv"=> $this->granTax,
             "total" => $this->granTotal,
@@ -170,7 +175,7 @@ class CreditNote extends Component
 
         $see = $sunat->getSee();
 
-        $invoice = $sunat->getInvoice($data);
+        $invoice = $sunat->getNote($data);
 
         Log::info("invoice: " . json_encode($data));;
 
