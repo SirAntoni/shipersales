@@ -1,396 +1,417 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Nota de venta - {{ $sale->number }}</title>
-    <style>
-        {!! $fontFace ?? '' !!}
+<meta charset="utf-8" />
+<title>Nota de venta - {{ $sale->number }}</title>
+<style>
+    {!! $fontFace ?? '' !!}
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            font-family: 'Poppins', 'Helvetica Neue', 'Arial', sans-serif;
-            color: #2b2b3a;
-            font-size: 12px;
-            background: #ffffff;
-        }
+    body {
+        font-family: 'Poppins', Arial, Helvetica, sans-serif;
+        color: #11102a;
+        font-size: 12px;
+        background: #ffffff;
+        -webkit-print-color-adjust: exact;
+    }
 
-        .purple        { color: #4b2d9f; }
-        .orange        { color: #f5871f; }
-        .muted         { color: #8a8a98; }
+    .invoice {
+        position: relative;
+        width: 210mm;
+        background: #fff;
+        padding: 24mm 11mm 6mm;
+    }
 
-        /* ---- top decorative bar ---- */
-        .topbar {
-            height: 14px;
-            background: #4b2d9f;
-            background: -webkit-linear-gradient(left, #4b2d9f 0%, #6a45c9 70%);
-            position: relative;
-        }
-        .topbar .accent {
-            position: absolute;
-            top: 0; right: 0;
-            width: 120px; height: 14px;
-            background: #f5871f;
-            border-bottom-left-radius: 14px;
-        }
+    /* ---- barras decorativas (sin gradientes: wkhtmltopdf no los soporta bien) ---- */
+    .topbar {
+        position: absolute; top: 0; left: 0; right: 0;
+        height: 15px;
+        background: #3d079d;
+        border-bottom-left-radius: 14px;
+        border-bottom-right-radius: 14px;
+        z-index: 2;
+    }
+    .topbar .orange {
+        position: absolute; top: 0; right: 0;
+        width: 13%; height: 15px;
+        background: #ff7900;
+        border-bottom-right-radius: 14px;
+    }
 
-        .wrap { padding: 28px 34px 24px 34px; }
-        body.preview .wrap { padding-bottom: 150px; }
+    .footer-strip {
+        position: absolute; left: 0; right: 0; bottom: 0;
+        height: 32px;
+        background: #3d079d;
+        color: #fff;
+        text-align: center;
+        line-height: 32px;
+        font-weight: 700;
+        font-size: 13px;
+        border-top-left-radius: 14px;
+        border-top-right-radius: 14px;
+        z-index: 2;
+    }
+    .footer-strip .orange {
+        position: absolute; top: 0; right: 0;
+        width: 13%; height: 32px;
+        background: #ff7900;
+        border-top-right-radius: 14px;
+    }
 
-        /* ---- header ---- */
-        table.header { width: 100%; border-collapse: collapse; }
-        table.header td { vertical-align: top; }
+    /* ---- header ---- */
+    table.header { width: 100%; border-collapse: collapse; }
+    table.header > tbody > tr > td { vertical-align: top; }
+    .seller-col { padding-right: 12mm; }
+    .doc-col { width: 105mm; }
 
-        .brand img { height: 46px; vertical-align: middle; }
-        .brand .name {
-            display: inline-block;
-            vertical-align: middle;
-            margin-left: 8px;
-            font-size: 26px;
-            font-weight: 700;
-            letter-spacing: -1px;
-        }
-        .brand .name .orange { margin-left: -2px; }
+    .brand td { vertical-align: middle; }
+    .brand .logo-img { width: 58px; height: 58px; }
+    .brand-name {
+        padding-left: 10px;
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -1.5px;
+        color: #3d079d;
+        white-space: nowrap;
+    }
+    .brand-name b { color: #ff7900; font-weight: 700; }
 
-        .emitter { margin-top: 16px; }
-        .emitter .company { font-size: 14px; font-weight: 700; color: #2b2b3a; margin-bottom: 8px; }
-        .emitter .line { margin-bottom: 6px; color: #5b5b67; }
-        .emitter .line span { vertical-align: middle; }
-        .emitter .line.indent { padding-left: 23px; margin-top: -3px; }
-        .emitter .ruc { margin-top: 8px; font-size: 13px; font-weight: 700; color: #4b2d9f; }
-        .bdg { width: 16px; height: 16px; vertical-align: middle; margin-right: 7px; }
-        .ico-sm { width: 14px; height: 14px; vertical-align: middle; margin-right: 6px; }
+    .seller-name { font-weight: 700; font-size: 15px; margin: 16px 0 12px; color: #11102a; }
 
-        /* ---- voucher card ---- */
-        .voucher {
-            border: 1px solid #ece9f6;
-            border-radius: 12px;
-            padding: 18px 20px;
-            box-shadow: 0 2px 10px rgba(75,45,159,0.06);
-        }
-        .voucher .vtitle { font-size: 17px; font-weight: 700; color: #4b2d9f; letter-spacing: 0.5px; }
-        .voucher .vnumber { font-size: 32px; font-weight: 700; color: #2b2b3a; line-height: 1.1; margin-top: 2px; }
-        .voucher hr { border: none; border-top: 2px solid #6a45c9; margin: 12px 0; }
-        .voucher .vmeta { width: 100%; border-collapse: collapse; }
-        .voucher .vmeta td { vertical-align: top; }
-        .voucher .meta-label { font-size: 11px; font-weight: 600; color: #4b2d9f; }
-        .voucher .meta-value { color: #5b5b67; margin-bottom: 10px; }
-        .voucher .qrcell { width: 104px; text-align: center; vertical-align: middle; }
-        .voucher .qr { width: 96px; height: 96px; }
-        .voucher .qr-cap { font-size: 8px; color: #8a8a98; margin-top: 2px; }
+    table.seller-list { border-collapse: collapse; }
+    table.seller-list td { vertical-align: top; padding: 5px 0; font-size: 13px; color: #2c2942; line-height: 1.3; }
+    table.seller-list td.ic { width: 26px; }
+    .ic svg { width: 18px; height: 18px; }
 
-        /* ---- client box ---- */
-        .client {
-            margin-top: 22px;
-            background: #f7f6fb;
-            border: 1px solid #ece9f6;
-            border-radius: 12px;
-            padding: 16px 20px;
-        }
-        .client .ctitle { font-size: 14px; font-weight: 700; color: #4b2d9f; letter-spacing: 0.5px; margin-bottom: 14px; }
-        .client .ctitle svg { width: 26px; height: 26px; margin-right: 9px; }
-        .client table { width: 100%; border-collapse: collapse; }
-        .client td { vertical-align: top; width: 50%; padding-right: 18px; }
-        .client td.divider { border-left: 1px solid #e3def2; padding-left: 22px; }
-        .client .lbl { font-size: 11px; font-weight: 500; color: #8a8a98; }
-        .client .val { font-weight: 600; color: #2b2b3a; margin-bottom: 8px; }
+    .ruc { margin-top: 18px; color: #3d079d; font-weight: 700; font-size: 15px; }
 
-        /* ---- items ---- */
-        table.items { width: 100%; border-collapse: collapse; margin-top: 22px; border-radius: 10px; overflow: hidden; }
-        table.items thead th {
-            background: #4b2d9f;
-            color: #fff;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            padding: 11px 12px;
-            text-align: center;
-        }
-        table.items thead th.desc { text-align: left; }
-        table.items tbody td {
-            padding: 15px 12px;
-            border-bottom: 1px solid #eee;
-            font-size: 12px;
-            text-align: center;
-            color: #3a3a47;
-        }
-        table.items tbody td.desc { text-align: left; }
-        table.items tbody td .code { display: block; font-size: 10px; color: #a0a0ac; margin-top: 3px; }
+    /* ---- doc box ---- */
+    .doc-box { border: 1px solid #dedbea; border-radius: 16px; padding: 20px 22px; }
+    .doc-title { color: #3d079d; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+    .doc-number {
+        color: #3d079d; font-size: 30px; font-weight: 700; line-height: 1.05;
+        margin: 4px 0 14px; padding-bottom: 14px;
+        border-bottom: 2px solid #3d079d;
+        word-break: break-all;
+    }
+    table.doc-info { width: 100%; border-collapse: collapse; }
+    table.doc-info > tbody > tr > td { vertical-align: top; }
+    .qr-col { width: 104px; text-align: center; }
+    .qr-col .qr { width: 92px; height: 92px; }
+    .qr-col .qr-cap { font-size: 9px; color: #3d079d; line-height: 1.25; margin-top: 5px; }
 
-        /* ---- bottom ---- */
-        table.bottom { width: 100%; border-collapse: separate; border-spacing: 16px 0; margin-top: 22px; }
-        table.bottom > tbody > tr > td { vertical-align: top; width: 50%; }
+    table.meta { border-collapse: collapse; margin-bottom: 16px; }
+    table.meta td { vertical-align: top; }
+    table.meta td.ic { width: 25px; }
+    .meta-label { color: #3d079d; font-weight: 700; font-size: 12.5px; margin-bottom: 2px; }
+    .meta-value { font-size: 13px; color: #2c2942; }
 
-        .son {
-            background: #f7f6fb;
-            border: 1px solid #ece9f6;
-            border-radius: 12px;
-            padding: 16px 18px;
-        }
-        .son .lbl { font-size: 11px; font-weight: 700; color: #4b2d9f; }
-        .son .words { font-size: 13px; font-weight: 700; color: #2b2b3a; margin-top: 4px; text-transform: uppercase; }
+    /* ---- client ---- */
+    table.client-card {
+        width: 100%; border-collapse: collapse; margin-top: 16px;
+    }
+    .client-wrap {
+        border: 1px solid #dedbea; border-radius: 16px;
+        background: #fbfaff;
+        padding: 20px 24px;
+    }
+    .client-card td { vertical-align: top; }
+    .round-icon-col { width: 52px; }
+    .round-icon {
+        width: 38px; height: 38px; background: #3d079d; border-radius: 50%;
+        text-align: center; line-height: 38px;
+    }
+    .round-icon svg { width: 22px; height: 22px; vertical-align: middle; }
+    .client-title { color: #3d079d; font-weight: 700; font-size: 16px; text-transform: uppercase; margin-bottom: 16px; letter-spacing: .3px; }
 
-        .addinfo {
-            margin-top: 16px;
-            background: #f7f6fb;
-            border: 1px solid #ece9f6;
-            border-radius: 12px;
-            padding: 16px 18px;
-        }
-        .addinfo .ctitle { font-size: 12px; font-weight: 700; color: #4b2d9f; margin-bottom: 8px; }
-        .addinfo .k { font-size: 11px; font-weight: 700; color: #4b4b58; margin-top: 6px; }
-        .addinfo .v { color: #5b5b67; }
+    table.client-grid { width: 100%; border-collapse: collapse; }
+    table.client-grid > tbody > tr > td { vertical-align: top; width: 50%; }
+    .cg-left { padding-right: 26px; }
+    .cg-right { border-left: 1px solid #dedbea; padding-left: 26px; }
+    .field-label { font-size: 12px; font-weight: 700; color: #24203d; margin-bottom: 5px; }
+    .field-value { font-size: 13.5px; font-weight: 700; line-height: 1.35; color: #11102a; }
+    .field-muted { font-size: 13px; font-weight: 400; color: #11102a; }
+    table.addr { border-collapse: collapse; }
+    table.addr td { vertical-align: top; }
+    table.addr td.ic { width: 25px; }
 
-        table.totals { width: 100%; border-collapse: collapse; }
-        table.totals td { padding: 6px 4px; }
-        table.totals td.r { text-align: right; }
-        table.totals .lbl { color: #5b5b67; }
-        table.totals .amt { text-align: right; font-weight: 700; color: #2b2b3a; }
-        table.totals .sep td { border-top: 1px solid #ece9f6; }
-        table.totals .sale .lbl { font-weight: 700; color: #2b2b3a; }
-        table.totals .sale .amt { font-size: 14px; }
+    /* ---- items ---- */
+    .items { margin-top: 16px; border: 1px solid #dedbea; border-radius: 10px; overflow: hidden; }
+    table.items-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    table.items-tbl thead th {
+        background: #3d079d; color: #fff; padding: 14px 12px;
+        font-size: 11.5px; text-transform: uppercase; letter-spacing: .3px;
+        border-right: 1px solid rgba(255,255,255,.25); font-weight: 600;
+    }
+    table.items-tbl thead th.c1 { width: 50px; }
+    table.items-tbl thead th.c3 { width: 80px; }
+    table.items-tbl thead th.c4 { width: 120px; }
+    table.items-tbl thead th.c5 { width: 120px; border-right: 0; }
+    table.items-tbl tbody td {
+        padding: 16px 16px 22px; vertical-align: top; font-size: 13px;
+        border-right: 1px solid #dedbea; border-top: 1px solid #dedbea; color: #2c2942;
+    }
+    table.items-tbl tbody td.center { text-align: center; white-space: nowrap; }
+    table.items-tbl tbody td:last-child { border-right: 0; }
+    .product-code { margin-top: 10px; font-size: 11px; color: #77738b; }
 
-        .grandtotal {
-            margin-top: 12px;
-            background: #4b2d9f;
-            border-radius: 12px;
-            padding: 16px 20px;
-            color: #fff;
-        }
-        .grandtotal table { width: 100%; }
-        .grandtotal .gl { font-size: 14px; font-weight: 700; letter-spacing: 0.4px; }
-        .grandtotal .gv { text-align: right; font-size: 22px; font-weight: 700; }
+    /* ---- bottom ---- */
+    table.bottom { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    table.bottom > tbody > tr > td { vertical-align: top; }
+    .bottom .left { padding-right: 16px; }
+    .bottom .right { width: 51%; }
 
-        /* ---- footer (fijo al fondo de la hoja) ---- */
-        .footer-fixed { position: fixed; left: 0; right: 0; bottom: 0; }
-        .foot { padding: 0 34px 14px 34px; position: relative; }
-        .foot .watermark {
-            position: absolute;
-            right: 28px; bottom: 4px;
-            width: 92px;
-            opacity: 0.10;
-        }
-        .foot hr { border: none; border-top: 1px solid #ece9f6; margin-bottom: 14px; }
-        .foot table { width: 100%; border-collapse: collapse; }
-        .foot td { vertical-align: top; font-size: 11px; color: #5b5b67; }
-        .foot .ftitle { font-weight: 700; color: #4b2d9f; margin-bottom: 3px; }
+    .card { border: 1px solid #dedbea; border-radius: 10px; background: #fff; }
 
-        .footbar {
-            height: 34px;
-            background: #4b2d9f;
-            background: -webkit-linear-gradient(left, #4b2d9f 0%, #6a45c9 70%);
-            position: relative;
-            color: #fff;
-            text-align: center;
-            line-height: 34px;
-            font-weight: 700;
-            font-size: 12px;
-        }
-        .footbar .accent {
-            position: absolute;
-            top: 0; right: 0;
-            width: 90px; height: 34px;
-            background: #f5871f;
-            border-top-left-radius: 14px;
-        }
-    </style>
+    table.son { width: 100%; border-collapse: collapse; }
+    table.son td { vertical-align: top; padding: 15px 18px; }
+    table.son td.ic { width: 40px; }
+    .son .amount-label { font-weight: 700; font-size: 12.5px; margin-bottom: 8px; }
+    .son .amount-text { font-weight: 700; color: #16122f; font-size: 14px; line-height: 1.2; text-transform: uppercase; }
+
+    .extra { margin-top: 14px; padding: 15px 18px; }
+    .extra-title { color: #3d079d; font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; }
+    .extra-title .ic { display: inline-block; vertical-align: middle; margin-right: 7px; }
+    .extra-title .ic svg { width: 16px; height: 16px; }
+    .info-row { font-size: 12px; margin-bottom: 10px; line-height: 1.25; color: #2c2942; }
+    .info-row strong { color: #3d079d; display: block; margin-bottom: 2px; font-weight: 700; }
+
+    .totals { padding: 0; overflow: hidden; }
+    .totals-inner { padding: 16px 20px; }
+    table.trow { width: 100%; border-collapse: collapse; }
+    table.trow td { font-size: 14px; padding-bottom: 14px; color: #2c2942; }
+    table.trow td.amt { text-align: right; }
+    .tdivider { border-top: 1px solid #dedbea; margin: 6px 0 16px; }
+    table.sprice { width: 100%; border-collapse: collapse; }
+    table.sprice td { font-weight: 700; }
+    table.sprice td.lbl { font-size: 14px; text-transform: uppercase; }
+    table.sprice td.amt { text-align: right; font-size: 20px; color: #120b33; }
+    .pay-total { background: #3d079d; color: #fff; padding: 16px 22px; }
+    table.pay { width: 100%; border-collapse: collapse; }
+    table.pay td.label { font-size: 16px; font-weight: 700; text-transform: uppercase; }
+    table.pay td.value { text-align: right; font-size: 26px; font-weight: 700; white-space: nowrap; }
+
+    /* ---- footer ---- */
+    .footer {
+        position: absolute; left: 11mm; right: 11mm; bottom: 22mm;
+        border-top: 2px solid #3d079d; padding-top: 16px;
+    }
+    table.footgrid { width: 100%; border-collapse: collapse; }
+    table.footgrid > tbody > tr > td { vertical-align: top; }
+    .secure-col { width: 38%; padding-right: 20px; border-right: 1px solid #dedbea; }
+    .social-col { padding-left: 22px; }
+    .wm-col { width: 90px; text-align: right; }
+
+    table.secure { border-collapse: collapse; }
+    table.secure td { vertical-align: top; }
+    table.secure td.ic { width: 46px; }
+    table.secure td.ic svg { width: 38px; height: 38px; }
+    .secure-title { color: #3d079d; font-weight: 700; font-size: 13px; margin-bottom: 7px; }
+    .secure-text { font-size: 11.5px; line-height: 1.35; color: #2c2942; }
+
+    table.social { border-collapse: collapse; }
+    table.social td { vertical-align: middle; padding: 4px 0; font-size: 13px; color: #2c2942; }
+    table.social td.ic { width: 24px; }
+    table.social td.ic svg { width: 17px; height: 17px; }
+
+    .watermark { width: 76px; height: 76px; opacity: .12; }
+
+    .icp svg { fill: #3d079d; }
+    .icw svg { fill: #ffffff; }
+</style>
 </head>
-<body class="{{ ($pdfMode ?? false) ? '' : 'preview' }}">
-    <div class="topbar"><span class="accent"></span></div>
+<body>
+<div class="invoice">
+    <div class="topbar"><span class="orange"></span></div>
 
-    <div class="wrap">
-        <!-- HEADER -->
-        <table class="header">
+    <!-- HEADER -->
+    <table class="header">
+        <tr>
+            <td class="seller-col">
+                <table class="brand">
+                    <tr>
+                        <td><img class="logo-img" src="{{ $logo }}" alt="logo"></td>
+                        <td class="brand-name">Shiper<b>Sales</b></td>
+                    </tr>
+                </table>
+
+                <p class="seller-name">{{ $company->company ?? 'SHIPERSALES' }}</p>
+
+                <table class="seller-list">
+                    <tr>
+                        <td class="ic icp"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.8A2.8 2.8 0 1 1 12 6.2a2.8 2.8 0 0 1 0 5.6Z"/></svg></td>
+                        <td>{{ $company->address ?? '' }}<br>{{ trim(($company->city ?? '').', '.($company->country ?? ''), ', ') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="ic icp"><svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.5 3 3.6 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.3 1.2.4 2.4.6 3.7.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.7 21 3 13.3 3 3.8c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.7.1.4 0 .8-.3 1.1l-2.2 2.2Z"/></svg></td>
+                        <td>{{ $company->phone ?? '' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="ic icp"><svg viewBox="0 0 24 24"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm9 7.2L4.6 7H4v.8l8 5.6 8-5.6V7h-.6L12 12.2Z"/></svg></td>
+                        <td>{{ $company->email ?? '' }}</td>
+                    </tr>
+                </table>
+
+                <div class="ruc">RUC: {{ $company->ruc ?? '' }}</div>
+            </td>
+
+            <td class="doc-col">
+                <div class="doc-box">
+                    <div class="doc-title">Nota de venta</div>
+                    <div class="doc-number">{{ $sale->number }}</div>
+
+                    <table class="doc-info">
+                        <tr>
+                            <td>
+                                <table class="meta">
+                                    <tr>
+                                        <td class="ic icp"><svg viewBox="0 0 24 24"><path d="M7 2h2v3h6V2h2v3h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2V2Zm12 9H5v9h14v-9ZM5 7v2h14V7H5Z"/></svg></td>
+                                        <td>
+                                            <div class="meta-label">Fecha de emisión</div>
+                                            <div class="meta-value">{{ \Carbon\Carbon::parse($sale->date)->locale('es')->isoFormat('D [de] MMMM [de] YYYY') }}</div>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <table class="meta">
+                                    <tr>
+                                        <td class="ic icp"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .01 0ZM13 17.5V19h-2v-1.5a4 4 0 0 1-3-2.2l1.8-.9A2.2 2.2 0 0 0 12 15.8c1 0 1.7-.5 1.7-1.2 0-.8-.6-1.1-2.2-1.6-1.8-.6-3.2-1.3-3.2-3.1 0-1.5 1.1-2.7 2.7-3.1V5h2v1.7a3.6 3.6 0 0 1 2.7 2l-1.7 1a2 2 0 0 0-1.9-1.2c-.9 0-1.5.5-1.5 1.2 0 .7.5 1 2.1 1.5 1.8.6 3.3 1.3 3.3 3.3 0 1.6-1.2 2.8-3 3Z"/></svg></td>
+                                        <td>
+                                            <div class="meta-label">Moneda</div>
+                                            <div class="meta-value">SOLES</div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td class="qr-col">
+                                <img class="qr" src="{{ $qr }}" alt="QR">
+                                <div class="qr-cap">Verifica tu<br>comprobante</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- CLIENT -->
+    <div class="client-wrap">
+        <table class="client-card">
             <tr>
-                <td style="width: 55%;">
-                    <div class="brand">
-                        <img src="{{ $logo }}" alt="logo">
-                        <span class="name"><span class="purple">Shiper</span><span class="orange">Sales</span></span>
-                    </div>
-                    <div class="emitter">
-                        <div class="company">{{ $company->company ?? 'SHIPERSALES' }}</div>
-                        <div class="line">
-                            <svg class="bdg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4b2d9f"/><path d="M12 6c-2.2 0-4 1.8-4 4 0 3 4 7 4 7s4-4 4-7c0-2.2-1.8-4-4-4zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" fill="#fff"/></svg>
-                            <span>{{ $company->address ?? '' }}</span>
-                        </div>
-                        <div class="line muted indent">{{ trim(($company->city ?? '').', '.($company->country ?? ''), ', ') }}</div>
-                        <div class="line">
-                            <svg class="bdg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4b2d9f"/><path d="M9.2 7c-.5 0-1 .4-1 1 0 4.5 3.3 7.8 7.8 7.8.6 0 1-.5 1-1v-1.8c0-.4-.3-.8-.7-.9l-1.9-.4c-.3-.1-.7 0-.9.3l-.5.6c-1.3-.7-2.4-1.8-3.1-3.1l.6-.5c.3-.2.4-.6.3-.9l-.5-1.9C10 7.3 9.6 7 9.2 7z" fill="#fff"/></svg>
-                            <span>{{ $company->phone ?? '' }}</span>
-                        </div>
-                        <div class="line">
-                            <svg class="bdg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4b2d9f"/><path d="M7 8.5h10v7H7z" fill="#4b2d9f"/><path d="M7 9l5 3.2L17 9" fill="none" stroke="#fff" stroke-width="1.3"/><rect x="7" y="8.6" width="10" height="6.8" fill="none" stroke="#fff" stroke-width="1.2"/></svg>
-                            <span>{{ $company->email ?? '' }}</span>
-                        </div>
-                        <div class="ruc">RUC: {{ $company->ruc ?? '' }}</div>
-                    </div>
+                <td class="round-icon-col">
+                    <div class="round-icon icw"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg></div>
                 </td>
-                <td style="width: 45%; padding-left: 18px;">
-                    <div class="voucher">
-                        <div class="vtitle">NOTA DE VENTA</div>
-                        <div class="vnumber">{{ $sale->number }}</div>
-                        <hr>
-                        <table class="vmeta">
-                            <tr>
-                                <td>
-                                    <div class="meta-label">
-                                        <svg class="ico-sm" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><path d="M3.5 9h17M8 3.5v3M16 3.5v3" stroke="#4b2d9f" stroke-width="1.6" fill="none"/></svg>
-                                        Fecha de emisión
-                                    </div>
-                                    <div class="meta-value">{{ \Carbon\Carbon::parse($sale->date)->locale('es')->isoFormat('D [de] MMMM [de] YYYY') }}</div>
-                                    <div class="meta-label">
-                                        <svg class="ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><path d="M12 7.5v9M14 9.8c0-1-.9-1.6-2-1.6s-2 .6-2 1.5c0 2 4 1.2 4 3.2 0 1-.9 1.6-2 1.6s-2-.6-2-1.6" fill="none" stroke="#4b2d9f" stroke-width="1.3"/></svg>
-                                        Moneda
-                                    </div>
-                                    <div class="meta-value">SOLES</div>
-                                </td>
-                                <td class="qrcell">
-                                    <img class="qr" src="{{ $qr }}" alt="QR">
-                                    <div class="qr-cap">Verifica tu comprobante</div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
+                <td>
+                    <div class="client-title">Datos del cliente</div>
+                    <table class="client-grid">
+                        <tr>
+                            <td class="cg-left">
+                                <div class="field-label">Razón Social / Nombres y Apellidos</div>
+                                <div class="field-value">{{ $sale->client->name }}</div>
+                                <div style="height:12px"></div>
+                                <div class="field-label">{{ $sale->client->document_type ?? 'Documento' }}</div>
+                                <div class="field-muted">{{ $sale->client->document_number }}</div>
+                            </td>
+                            <td class="cg-right">
+                                <table class="addr">
+                                    <tr>
+                                        <td class="ic icp"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.8A2.8 2.8 0 1 1 12 6.2a2.8 2.8 0 0 1 0 5.6Z"/></svg></td>
+                                        <td>
+                                            <div class="field-label">Dirección</div>
+                                            <div class="field-muted">{{ $sale->client->address ?: '—' }}</div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
         </table>
+    </div>
 
-        <!-- CLIENT -->
-        <div class="client">
-            <div class="ctitle">
-                <svg class="ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4b2d9f"/><circle cx="12" cy="9.5" r="3" fill="#fff"/><path d="M6 18c0-3.3 2.7-5 6-5s6 1.7 6 5z" fill="#fff"/></svg>
-                DATOS DEL CLIENTE
-            </div>
-            <table>
-                <tr>
-                    <td>
-                        <div class="lbl">Razón Social / Nombres y Apellidos</div>
-                        <div class="val">{{ $sale->client->name }}</div>
-                        <div class="lbl">{{ $sale->client->document_type ?? 'Documento' }}</div>
-                        <div class="val">{{ $sale->client->document_number }}</div>
-                    </td>
-                    <td class="divider">
-                        <div class="lbl">
-                            <svg class="ico-sm" viewBox="0 0 24 24"><path d="M12 3c-3 0-5.5 2.4-5.5 5.5C6.5 13 12 21 12 21s5.5-8 5.5-12.5C17.5 5.4 15 3 12 3z" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><circle cx="12" cy="8.5" r="2" fill="#4b2d9f"/></svg>
-                            Dirección
-                        </div>
-                        <div class="val">{{ $sale->client->address ?: '—' }}</div>
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <!-- ITEMS -->
-        <table class="items">
+    <!-- ITEMS -->
+    <div class="items">
+        <table class="items-tbl">
             <thead>
                 <tr>
-                    <th style="width: 6%;">#</th>
-                    <th class="desc">Descripción</th>
-                    <th style="width: 12%;">Cant.</th>
-                    <th style="width: 18%;">Precio Unitario</th>
-                    <th style="width: 18%;">Total</th>
+                    <th class="c1">#</th>
+                    <th>Descripción</th>
+                    <th class="c3">Cant.</th>
+                    <th class="c4">Precio unitario</th>
+                    <th class="c5">Total</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($sale->saleDetails as $i => $item)
                     <tr>
-                        <td>{{ $i + 1 }}</td>
-                        <td class="desc">
+                        <td class="center">{{ $i + 1 }}</td>
+                        <td>
                             {{ $item->article->title }}
                             @if($item->article->sku)
-                                <span class="code">Código: {{ $item->article->sku }}</span>
+                                <div class="product-code">Código: {{ $item->article->sku }}</div>
                             @endif
                         </td>
-                        <td>{{ number_format($item->quantity, 2) }}</td>
-                        <td>S/ {{ number_format($item->price, 2) }}</td>
-                        <td>S/ {{ number_format($item->price * $item->quantity, 2) }}</td>
+                        <td class="center">{{ number_format($item->quantity, 2) }}</td>
+                        <td class="center">S/ {{ number_format($item->price, 2) }}</td>
+                        <td class="center">S/ {{ number_format($item->price * $item->quantity, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+    </div>
 
-        <!-- BOTTOM -->
-        <table class="bottom">
-            <tr>
-                <td>
-                    <div class="son">
-                        <div class="lbl">
-                            <svg class="ico-sm" viewBox="0 0 24 24"><path d="M7 3.5h7l4 4v13H7z" fill="none" stroke="#4b2d9f" stroke-width="1.5"/><path d="M14 3.5v4h4M9.5 12h6M9.5 15h6" fill="none" stroke="#4b2d9f" stroke-width="1.3"/></svg>
-                            SON:
-                        </div>
-                        <div class="words">{{ $amountInWords }}</div>
-                    </div>
-                    <div class="addinfo">
-                        <div class="ctitle">
-                            <svg class="ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><circle cx="12" cy="8" r="1.2" fill="#4b2d9f"/><path d="M12 11v6" stroke="#4b2d9f" stroke-width="1.8"/></svg>
-                            INFORMACIÓN ADICIONAL
-                        </div>
-                        <div class="k">Condición de pago:</div>
-                        <div class="v">{{ $sale->paymentMethod->name ?? 'Efectivo' }}</div>
-                        <div class="k">Vendedor:</div>
-                        <div class="v">{{ $sale->user->name ?? '' }}</div>
-                        <div class="k">Representación impresa de la</div>
-                        <div class="v">NOTA DE VENTA</div>
-                    </div>
-                </td>
-                <td>
-                    <table class="totals">
+    <!-- BOTTOM -->
+    <table class="bottom">
+        <tr>
+            <td class="left">
+                <div class="card">
+                    <table class="son">
                         <tr>
-                            <td class="lbl">Op. Gravadas</td>
-                            <td class="amt">S/ {{ number_format($opGravadas, 2) }}</td>
-                        </tr>
-                        <tr>
-                            <td class="lbl">I.G.V. (18%)</td>
-                            <td class="amt">S/ {{ number_format($sale->tax, 2) }}</td>
-                        </tr>
-                        @if($sale->delivery == 1 && $sale->delivery_fee > 0)
-                        <tr>
-                            <td class="lbl">Delivery</td>
-                            <td class="amt">S/ {{ number_format($sale->delivery_fee, 2) }}</td>
-                        </tr>
-                        @endif
-                        <tr class="sep sale">
-                            <td class="lbl" style="padding-top:12px;">Precio de venta</td>
-                            <td class="amt" style="padding-top:12px;">S/ {{ number_format($grandTotal, 2) }}</td>
+                            <td class="ic icp" style="padding-right:0;"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V8h4.5L14 3.5ZM8 12h8v2H8v-2Zm0 4h8v2H8v-2Zm0-8h4v2H8V8Z"/></svg></td>
+                            <td>
+                                <div class="amount-label">SON:</div>
+                                <div class="amount-text">{{ $amountInWords }}</div>
+                            </td>
                         </tr>
                     </table>
-                    <div class="grandtotal">
-                        <table>
-                            <tr>
-                                <td class="gl">TOTAL A PAGAR</td>
-                                <td class="gv">S/ {{ number_format($grandTotal, 2) }}</td>
-                            </tr>
+                </div>
+
+                <div class="card extra">
+                    <div class="extra-title">
+                        <span class="ic icp"><svg viewBox="0 0 24 24"><path d="M11 17h2v-6h-2v6Zm0-8h2V7h-2v2Zm1 13A10 10 0 1 1 12 2a10 10 0 0 1 0 20Z"/></svg></span>Información adicional
+                    </div>
+                    <div class="info-row"><strong>Condición de pago:</strong>{{ $sale->paymentMethod->name ?? 'Efectivo' }}</div>
+                    <div class="info-row"><strong>Vendedor:</strong>{{ $sale->user->name ?? '' }}</div>
+                    <div class="info-row"><strong>Representación impresa de la</strong>NOTA DE VENTA</div>
+                </div>
+            </td>
+
+            <td class="right">
+                <div class="card totals">
+                    <div class="totals-inner">
+                        <table class="trow">
+                            <tr><td>Op. Gravadas</td><td class="amt">S/ {{ number_format($opGravadas, 2) }}</td></tr>
+                            <tr><td>I.G.V. (18%)</td><td class="amt">S/ {{ number_format($sale->tax, 2) }}</td></tr>
+                            @if($sale->delivery == 1 && $sale->delivery_fee > 0)
+                            <tr><td>Delivery</td><td class="amt">S/ {{ number_format($sale->delivery_fee, 2) }}</td></tr>
+                            @endif
+                        </table>
+                        <div class="tdivider"></div>
+                        <table class="sprice">
+                            <tr><td class="lbl">Precio de venta</td><td class="amt">S/ {{ number_format($grandTotal, 2) }}</td></tr>
                         </table>
                     </div>
-                </td>
-            </tr>
-        </table>
-    </div>
+                    <div class="pay-total">
+                        <table class="pay">
+                            <tr><td class="label">Total a pagar</td><td class="value">S/ {{ number_format($grandTotal, 2) }}</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
 
-    {{-- En PDF el footer se inyecta con wkhtmltopdf (--footer-html) para anclarlo al pie de pagina.
-         En el preview HTML lo mostramos fijo al fondo del viewport. --}}
-    @unless($pdfMode ?? false)
-    <div class="footer-fixed">
-        <div class="foot">
-            <img class="watermark" src="{{ $logo }}" alt="">
-            <hr>
-            <table>
-                <tr>
-                    <td style="width: 50%;">
-                        <div class="ftitle">Compra segura</div>
-                        Este comprobante ha sido emitido electrónicamente.
-                    </td>
-                    <td style="width: 50%;">
-                        <div>&#127760; www.shipersales.pe</div>
-                        <div>&#9993; {{ $company->email ?? '' }}</div>
-                        <div>&#9742; {{ $company->phone ?? '' }}</div>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        <div class="footbar">¡Gracias por tu compra!<span class="accent"></span></div>
-    </div>
-    @endunless
+</div>
 </body>
 </html>

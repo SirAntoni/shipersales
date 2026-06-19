@@ -96,9 +96,8 @@ class SaleController extends Controller implements hasMiddleware
             if (!is_file($path)) {
                 continue;
             }
-            $b64 = base64_encode(file_get_contents($path));
             $css .= "@font-face{font-family:'Poppins';font-style:normal;font-weight:{$weight};"
-                  . "src:url(data:font/truetype;base64,{$b64}) format('truetype');}";
+                  . "src:url('file://{$path}') format('truetype');}";
         }
         return $css;
     }
@@ -109,14 +108,17 @@ class SaleController extends Controller implements hasMiddleware
         $data = $this->invoiceV2Data($id);
         $data['pdfMode'] = true;
 
-        // El footer se inyecta con --footer-html para que wkhtmltopdf lo ancle al pie de cada pagina.
+        // El footer (compra segura + cintillo) se ancla al pie con --footer-html.
         $footerFile = storage_path('app/snappy-footer-' . $id . '-' . uniqid() . '.html');
         file_put_contents($footerFile, view('pdf.invoice-v2-footer', $data)->render());
 
         try {
             $output = SnappyPdf::loadView('pdf.invoice-v2', $data)
+                ->setOption('margin-top', 0)
+                ->setOption('margin-left', 0)
+                ->setOption('margin-right', 0)
+                ->setOption('margin-bottom', 40)   // mm: igual al height de la banda del footer
                 ->setOption('footer-html', $footerFile)
-                ->setOption('margin-bottom', 30)   // mm: debe coincidir con height del footer (30mm)
                 ->setOption('footer-spacing', 0)
                 ->output();
         } finally {
