@@ -108,23 +108,17 @@ class SaleController extends Controller implements hasMiddleware
         $data = $this->invoiceV2Data($id);
         $data['pdfMode'] = true;
 
-        // El footer (compra segura + cintillo) se ancla al pie con --footer-html.
-        $footerFile = storage_path('app/snappy-footer-' . $id . '-' . uniqid() . '.html');
-        file_put_contents($footerFile, view('pdf.invoice-v2-footer', $data)->render());
-
-        try {
-            $output = SnappyPdf::loadView('pdf.invoice-v2', $data)
-                ->setOption('margin-top', 0)
-                ->setOption('margin-left', 0)
-                ->setOption('margin-right', 0)
-                ->setOption('margin-bottom', 40)   // mm: igual al height de la banda del footer
-                ->setOption('dpi', 96)             // evita el escalado que deja margen blanco a la derecha
-                ->setOption('footer-html', $footerFile)
-                ->setOption('footer-spacing', 0)
-                ->output();
-        } finally {
-            @unlink($footerFile);
-        }
+        // Pagina A4 unica con el footer integrado (posicion absoluta).
+        // disable-smart-shrinking + dpi 96 => ocupa todo el ancho a escala real.
+        $output = SnappyPdf::loadView('pdf.invoice-v2', $data)
+            ->setOption('page-size', 'A4')
+            ->setOption('margin-top', 0)
+            ->setOption('margin-bottom', 0)
+            ->setOption('margin-left', 0)
+            ->setOption('margin-right', 0)
+            ->setOption('dpi', 96)
+            ->setOption('disable-smart-shrinking', true)
+            ->output();
 
         return response($output, 200, [
             'Content-Type'        => 'application/pdf',
