@@ -34,7 +34,7 @@
             border-bottom-left-radius: 14px;
         }
 
-        .wrap { padding: 28px 34px 0 34px; }
+        .wrap { padding: 28px 34px 150px 34px; }
 
         /* ---- header ---- */
         table.header { width: 100%; border-collapse: collapse; }
@@ -150,15 +150,21 @@
         .grandtotal .gl { font-size: 14px; font-weight: 700; letter-spacing: 0.4px; }
         .grandtotal .gv { text-align: right; font-size: 22px; font-weight: 700; }
 
-        /* ---- footer ---- */
-        .foot { margin-top: 26px; padding: 0 34px; }
+        /* ---- footer (fijo al fondo de la hoja) ---- */
+        .footer-fixed { position: fixed; left: 0; right: 0; bottom: 0; }
+        .foot { padding: 0 34px 14px 34px; position: relative; }
+        .foot .watermark {
+            position: absolute;
+            right: 28px; bottom: 4px;
+            width: 92px;
+            opacity: 0.10;
+        }
         .foot hr { border: none; border-top: 1px solid #ece9f6; margin-bottom: 14px; }
         .foot table { width: 100%; border-collapse: collapse; }
         .foot td { vertical-align: top; font-size: 11px; color: #5b5b67; }
         .foot .ftitle { font-weight: 700; color: #4b2d9f; margin-bottom: 3px; }
 
         .footbar {
-            margin-top: 18px;
             height: 34px;
             background: #4b2d9f;
             background: -webkit-linear-gradient(left, #4b2d9f 0%, #6a45c9 70%);
@@ -313,23 +319,26 @@
         </table>
     </div>
 
-    <!-- FOOTER -->
-    <div class="foot">
-        <hr>
-        <table>
-            <tr>
-                <td style="width: 50%;">
-                    <div class="ftitle">Compra segura</div>
-                    Este comprobante ha sido emitido electrónicamente.
-                </td>
-                <td style="width: 50%;">
-                    <div>&#127760; www.shipersales.pe</div>
-                    <div>&#9993; {{ $company->email ?? '' }}</div>
-                    <div>&#9742; {{ $company->phone ?? '' }}</div>
-                </td>
-            </tr>
-        </table>
+    <!-- FOOTER (fijo al fondo de la hoja) -->
+    <div class="footer-fixed">
+        <div class="foot">
+            <img class="watermark" src="{{ $logo }}" alt="">
+            <hr>
+            <table>
+                <tr>
+                    <td style="width: 50%;">
+                        <div class="ftitle">Compra segura</div>
+                        Este comprobante ha sido emitido electrónicamente.
+                    </td>
+                    <td style="width: 50%;">
+                        <div>&#127760; www.shipersales.pe</div>
+                        <div>&#9993; {{ $company->email ?? '' }}</div>
+                        <div>&#9742; {{ $company->phone ?? '' }}</div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="footbar">¡Gracias por tu compra!<span class="accent"></span></div>
     </div>
-    <div class="footbar">¡Gracias por tu compra!<span class="accent"></span></div>
 </body>
 </html>
