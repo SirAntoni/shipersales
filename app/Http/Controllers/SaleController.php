@@ -71,7 +71,7 @@ class SaleController extends Controller implements hasMiddleware
         try {
             $output = SnappyPdf::loadView('pdf.invoice-v2', $data)
                 ->setOption('footer-html', $footerFile)
-                ->setOption('margin-bottom', 36)   // mm: reserva espacio para el footer
+                ->setOption('margin-bottom', 30)   // mm: debe coincidir con height del footer (30mm)
                 ->setOption('footer-spacing', 0)
                 ->output();
         } finally {
