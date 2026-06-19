@@ -33,10 +33,9 @@ class SaleController extends Controller implements hasMiddleware
     {
         return view('sales.show',compact('id'));
     }
+    /** Ver PDF de la venta (nuevo diseno con wkhtmltopdf). */
     public function pdf($id){
-        $sale = Sale::find($id);
-        $pdf = Pdf::loadView('pdf.invoice',compact('sale'))->setPaper('A4', 'portrait')->setOption('defaultFont', 'DejaVu Sans');
-        return $pdf->stream('invoice-' . sprintf('%06d', $id) .'.pdf');
+        return $this->pdfV2($id);
     }
 
     /**
@@ -81,6 +80,8 @@ class SaleController extends Controller implements hasMiddleware
         return response($output, 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="nota-venta-' . $data['sale']->number . '.pdf"',
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma'              => 'no-cache',
         ]);
     }
 
