@@ -53,9 +53,12 @@
 
         .emitter { margin-top: 16px; }
         .emitter .company { font-size: 14px; font-weight: 700; color: #2b2b3a; margin-bottom: 8px; }
-        .emitter .line { margin-bottom: 4px; color: #5b5b67; }
+        .emitter .line { margin-bottom: 6px; color: #5b5b67; }
+        .emitter .line span { vertical-align: middle; }
+        .emitter .line.indent { padding-left: 23px; margin-top: -3px; }
         .emitter .ruc { margin-top: 8px; font-size: 13px; font-weight: 700; color: #4b2d9f; }
-        .ico { color: #4b2d9f; font-weight: 700; }
+        .bdg { width: 16px; height: 16px; vertical-align: middle; margin-right: 7px; }
+        .ico-sm { width: 14px; height: 14px; vertical-align: middle; margin-right: 6px; }
 
         /* ---- voucher card ---- */
         .voucher {
@@ -199,10 +202,19 @@
                     </div>
                     <div class="emitter">
                         <div class="company">{{ $company->company ?? 'SHIPERSALES' }}</div>
-                        <div class="line"><span class="ico">&#9679;</span> {{ $company->address ?? '' }}</div>
-                        <div class="line muted">{{ trim(($company->city ?? '').', '.($company->country ?? ''), ', ') }}</div>
-                        <div class="line"><span class="ico">&#9742;</span> {{ $company->phone ?? '' }}</div>
-                        <div class="line"><span class="ico">&#9993;</span> {{ $company->email ?? '' }}</div>
+                        <div class="line">
+                            <svg class="bdg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4b2d9f"/><path d="M12 6c-2.2 0-4 1.8-4 4 0 3 4 7 4 7s4-4 4-7c0-2.2-1.8-4-4-4zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" fill="#fff"/></svg>
+                            <span>{{ $company->address ?? '' }}</span>
+                        </div>
+                        <div class="line muted indent">{{ trim(($company->city ?? '').', '.($company->country ?? ''), ', ') }}</div>
+                        <div class="line">
+                            <svg class="bdg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4b2d9f"/><path d="M9.2 7c-.5 0-1 .4-1 1 0 4.5 3.3 7.8 7.8 7.8.6 0 1-.5 1-1v-1.8c0-.4-.3-.8-.7-.9l-1.9-.4c-.3-.1-.7 0-.9.3l-.5.6c-1.3-.7-2.4-1.8-3.1-3.1l.6-.5c.3-.2.4-.6.3-.9l-.5-1.9C10 7.3 9.6 7 9.2 7z" fill="#fff"/></svg>
+                            <span>{{ $company->phone ?? '' }}</span>
+                        </div>
+                        <div class="line">
+                            <svg class="bdg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4b2d9f"/><path d="M7 8.5h10v7H7z" fill="#4b2d9f"/><path d="M7 9l5 3.2L17 9" fill="none" stroke="#fff" stroke-width="1.3"/><rect x="7" y="8.6" width="10" height="6.8" fill="none" stroke="#fff" stroke-width="1.2"/></svg>
+                            <span>{{ $company->email ?? '' }}</span>
+                        </div>
                         <div class="ruc">RUC: {{ $company->ruc ?? '' }}</div>
                     </div>
                 </td>
@@ -211,9 +223,15 @@
                         <div class="vtitle">NOTA DE VENTA</div>
                         <div class="vnumber">{{ $sale->number }}</div>
                         <hr>
-                        <div class="meta-label">Fecha de emisión</div>
+                        <div class="meta-label">
+                            <svg class="ico-sm" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><path d="M3.5 9h17M8 3.5v3M16 3.5v3" stroke="#4b2d9f" stroke-width="1.6" fill="none"/></svg>
+                            Fecha de emisión
+                        </div>
                         <div class="meta-value">{{ \Carbon\Carbon::parse($sale->date)->locale('es')->isoFormat('D [de] MMMM [de] YYYY') }}</div>
-                        <div class="meta-label">Moneda</div>
+                        <div class="meta-label">
+                            <svg class="ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><path d="M12 7.5v9M14 9.8c0-1-.9-1.6-2-1.6s-2 .6-2 1.5c0 2 4 1.2 4 3.2 0 1-.9 1.6-2 1.6s-2-.6-2-1.6" fill="none" stroke="#4b2d9f" stroke-width="1.3"/></svg>
+                            Moneda
+                        </div>
                         <div class="meta-value">SOLES</div>
                     </div>
                 </td>
@@ -222,7 +240,10 @@
 
         <!-- CLIENT -->
         <div class="client">
-            <div class="ctitle">DATOS DEL CLIENTE</div>
+            <div class="ctitle">
+                <svg class="ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#4b2d9f"/><circle cx="12" cy="9.5" r="3" fill="#fff"/><path d="M6 18c0-3.3 2.7-5 6-5s6 1.7 6 5z" fill="#fff"/></svg>
+                DATOS DEL CLIENTE
+            </div>
             <table>
                 <tr>
                     <td>
@@ -232,7 +253,10 @@
                         <div class="val">{{ $sale->client->document_number }}</div>
                     </td>
                     <td>
-                        <div class="lbl">Dirección</div>
+                        <div class="lbl">
+                            <svg class="ico-sm" viewBox="0 0 24 24"><path d="M12 3c-3 0-5.5 2.4-5.5 5.5C6.5 13 12 21 12 21s5.5-8 5.5-12.5C17.5 5.4 15 3 12 3z" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><circle cx="12" cy="8.5" r="2" fill="#4b2d9f"/></svg>
+                            Dirección
+                        </div>
                         <div class="val">{{ $sale->client->address ?: '—' }}</div>
                     </td>
                 </tr>
@@ -273,11 +297,17 @@
             <tr>
                 <td>
                     <div class="son">
-                        <div class="lbl">SON:</div>
+                        <div class="lbl">
+                            <svg class="ico-sm" viewBox="0 0 24 24"><path d="M7 3.5h7l4 4v13H7z" fill="none" stroke="#4b2d9f" stroke-width="1.5"/><path d="M14 3.5v4h4M9.5 12h6M9.5 15h6" fill="none" stroke="#4b2d9f" stroke-width="1.3"/></svg>
+                            SON:
+                        </div>
                         <div class="words">{{ $amountInWords }}</div>
                     </div>
                     <div class="addinfo">
-                        <div class="ctitle">INFORMACIÓN ADICIONAL</div>
+                        <div class="ctitle">
+                            <svg class="ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><circle cx="12" cy="8" r="1.2" fill="#4b2d9f"/><path d="M12 11v6" stroke="#4b2d9f" stroke-width="1.8"/></svg>
+                            INFORMACIÓN ADICIONAL
+                        </div>
                         <div class="k">Condición de pago:</div>
                         <div class="v">{{ $sale->paymentMethod->name ?? 'Efectivo' }}</div>
                         <div class="k">Vendedor:</div>
