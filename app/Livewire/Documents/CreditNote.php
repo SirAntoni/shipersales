@@ -194,7 +194,7 @@ class CreditNote extends Component
         }
 
         $document = Document::create([
-            'estado' => "enviado",
+            'status' => "enviado",
             'document_type' => $this->documentType,
             'serie' => $this->serie,
             'correlative' => $this->correlative,

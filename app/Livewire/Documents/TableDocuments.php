@@ -95,7 +95,7 @@ class TableDocuments extends Component
         Document::find($document->id)->update([
             'status' => "anulado",
             'status_sunat' => ($sunatResponse['status'] == "1") ? "anulado" : "aceptado",
-            'xml_path_anulled' => '/xml_path/' . $voided->getName() . '.xml',
+            'xml_path_anulled' => '/xml_path_anulled/' . $voided->getName() . '.xml',
             'cdr_path_anulled' => $sunatResponse['cdr'] ?? '',
             'pdf_path_anulled' => $pdf_path,
         ]);

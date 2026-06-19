@@ -197,7 +197,7 @@ class PendingDocumentsService
         $pdfPath = $this->sunat->generatePdf($invoice);
 
         $document->update([
-            'estado'       => 'enviado',
+            'status'       => 'enviado',
             'status_sunat' => 'aceptado',
             'xml_path'     => $xmlPath,
             'cdr_path'     => $sunatResponse['cdr'] ?? '',
