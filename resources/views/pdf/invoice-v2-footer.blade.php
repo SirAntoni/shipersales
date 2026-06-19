@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <style>
+        {!! $fontFace ?? '' !!}
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         /* La altura del body coincide con el margin-bottom (30mm) reservado en wkhtmltopdf,
@@ -10,7 +12,7 @@
         html, body {
             width: 100%;
             height: 30mm;
-            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            font-family: 'Poppins', 'Helvetica Neue', 'Arial', sans-serif;
         }
         body { position: relative; }
 

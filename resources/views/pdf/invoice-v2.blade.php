@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <title>Nota de venta - {{ $sale->number }}</title>
     <style>
+        {!! $fontFace ?? '' !!}
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        :root {}
-
         body {
-            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            font-family: 'Poppins', 'Helvetica Neue', 'Arial', sans-serif;
             color: #2b2b3a;
             font-size: 12px;
             background: #ffffff;
@@ -29,7 +29,7 @@
         .topbar .accent {
             position: absolute;
             top: 0; right: 0;
-            width: 90px; height: 14px;
+            width: 120px; height: 14px;
             background: #f5871f;
             border-bottom-left-radius: 14px;
         }
@@ -45,11 +45,12 @@
         .brand .name {
             display: inline-block;
             vertical-align: middle;
-            margin-left: 10px;
+            margin-left: 8px;
             font-size: 26px;
             font-weight: 700;
-            letter-spacing: -0.5px;
+            letter-spacing: -1px;
         }
+        .brand .name .orange { margin-left: -2px; }
 
         .emitter { margin-top: 16px; }
         .emitter .company { font-size: 14px; font-weight: 700; color: #2b2b3a; margin-bottom: 8px; }
@@ -67,11 +68,16 @@
             padding: 18px 20px;
             box-shadow: 0 2px 10px rgba(75,45,159,0.06);
         }
-        .voucher .vtitle { font-size: 16px; font-weight: 700; color: #4b2d9f; letter-spacing: 0.5px; }
-        .voucher .vnumber { font-size: 30px; font-weight: 700; color: #2b2b3a; line-height: 1.1; margin-top: 2px; }
-        .voucher hr { border: none; border-top: 2px solid #ece9f6; margin: 12px 0; }
-        .voucher .meta-label { font-size: 11px; font-weight: 700; color: #4b2d9f; }
+        .voucher .vtitle { font-size: 17px; font-weight: 700; color: #4b2d9f; letter-spacing: 0.5px; }
+        .voucher .vnumber { font-size: 32px; font-weight: 700; color: #2b2b3a; line-height: 1.1; margin-top: 2px; }
+        .voucher hr { border: none; border-top: 2px solid #6a45c9; margin: 12px 0; }
+        .voucher .vmeta { width: 100%; border-collapse: collapse; }
+        .voucher .vmeta td { vertical-align: top; }
+        .voucher .meta-label { font-size: 11px; font-weight: 600; color: #4b2d9f; }
         .voucher .meta-value { color: #5b5b67; margin-bottom: 10px; }
+        .voucher .qrcell { width: 104px; text-align: center; vertical-align: middle; }
+        .voucher .qr { width: 96px; height: 96px; }
+        .voucher .qr-cap { font-size: 8px; color: #8a8a98; margin-top: 2px; }
 
         /* ---- client box ---- */
         .client {
@@ -81,11 +87,13 @@
             border-radius: 12px;
             padding: 16px 20px;
         }
-        .client .ctitle { font-size: 13px; font-weight: 700; color: #4b2d9f; letter-spacing: 0.5px; margin-bottom: 12px; }
+        .client .ctitle { font-size: 14px; font-weight: 700; color: #4b2d9f; letter-spacing: 0.5px; margin-bottom: 14px; }
+        .client .ctitle svg { width: 26px; height: 26px; margin-right: 9px; }
         .client table { width: 100%; border-collapse: collapse; }
-        .client td { vertical-align: top; width: 50%; }
-        .client .lbl { font-size: 11px; font-weight: 700; color: #6b6b78; }
-        .client .val { font-weight: 700; color: #2b2b3a; margin-bottom: 8px; }
+        .client td { vertical-align: top; width: 50%; padding-right: 18px; }
+        .client td.divider { border-left: 1px solid #e3def2; padding-left: 22px; }
+        .client .lbl { font-size: 11px; font-weight: 500; color: #8a8a98; }
+        .client .val { font-weight: 600; color: #2b2b3a; margin-bottom: 8px; }
 
         /* ---- items ---- */
         table.items { width: 100%; border-collapse: collapse; margin-top: 22px; border-radius: 10px; overflow: hidden; }
@@ -101,7 +109,7 @@
         }
         table.items thead th.desc { text-align: left; }
         table.items tbody td {
-            padding: 12px;
+            padding: 15px 12px;
             border-bottom: 1px solid #eee;
             font-size: 12px;
             text-align: center;
@@ -223,16 +231,26 @@
                         <div class="vtitle">NOTA DE VENTA</div>
                         <div class="vnumber">{{ $sale->number }}</div>
                         <hr>
-                        <div class="meta-label">
-                            <svg class="ico-sm" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><path d="M3.5 9h17M8 3.5v3M16 3.5v3" stroke="#4b2d9f" stroke-width="1.6" fill="none"/></svg>
-                            Fecha de emisión
-                        </div>
-                        <div class="meta-value">{{ \Carbon\Carbon::parse($sale->date)->locale('es')->isoFormat('D [de] MMMM [de] YYYY') }}</div>
-                        <div class="meta-label">
-                            <svg class="ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><path d="M12 7.5v9M14 9.8c0-1-.9-1.6-2-1.6s-2 .6-2 1.5c0 2 4 1.2 4 3.2 0 1-.9 1.6-2 1.6s-2-.6-2-1.6" fill="none" stroke="#4b2d9f" stroke-width="1.3"/></svg>
-                            Moneda
-                        </div>
-                        <div class="meta-value">SOLES</div>
+                        <table class="vmeta">
+                            <tr>
+                                <td>
+                                    <div class="meta-label">
+                                        <svg class="ico-sm" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><path d="M3.5 9h17M8 3.5v3M16 3.5v3" stroke="#4b2d9f" stroke-width="1.6" fill="none"/></svg>
+                                        Fecha de emisión
+                                    </div>
+                                    <div class="meta-value">{{ \Carbon\Carbon::parse($sale->date)->locale('es')->isoFormat('D [de] MMMM [de] YYYY') }}</div>
+                                    <div class="meta-label">
+                                        <svg class="ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><path d="M12 7.5v9M14 9.8c0-1-.9-1.6-2-1.6s-2 .6-2 1.5c0 2 4 1.2 4 3.2 0 1-.9 1.6-2 1.6s-2-.6-2-1.6" fill="none" stroke="#4b2d9f" stroke-width="1.3"/></svg>
+                                        Moneda
+                                    </div>
+                                    <div class="meta-value">SOLES</div>
+                                </td>
+                                <td class="qrcell">
+                                    <img class="qr" src="{{ $qr }}" alt="QR">
+                                    <div class="qr-cap">Verifica tu comprobante</div>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
                 </td>
             </tr>
@@ -252,7 +270,7 @@
                         <div class="lbl">{{ $sale->client->document_type ?? 'Documento' }}</div>
                         <div class="val">{{ $sale->client->document_number }}</div>
                     </td>
-                    <td>
+                    <td class="divider">
                         <div class="lbl">
                             <svg class="ico-sm" viewBox="0 0 24 24"><path d="M12 3c-3 0-5.5 2.4-5.5 5.5C6.5 13 12 21 12 21s5.5-8 5.5-12.5C17.5 5.4 15 3 12 3z" fill="none" stroke="#4b2d9f" stroke-width="1.6"/><circle cx="12" cy="8.5" r="2" fill="#4b2d9f"/></svg>
                             Dirección
