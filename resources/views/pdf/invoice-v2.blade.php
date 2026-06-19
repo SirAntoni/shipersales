@@ -19,7 +19,7 @@
     .invoice {
         position: relative;
         width: 210mm;
-        height: 296mm;
+        height: 297mm;
         background: #fff;
         padding: 14mm 9mm 0;
         overflow: hidden;
@@ -245,7 +245,7 @@
     table.social td { vertical-align: middle; padding: 2.5px 0; font-size: 11.5px; color: #2c2942; }
     table.social td.ic { width: 22px; }
     table.social td.ic svg { width: 15px; height: 15px; }
-    .watermark { width: 60px; height: 60px; opacity: .12; }
+    .watermark { width: 60px; height: 60px; opacity: .07; }
 
     .footbar {
         position: absolute;
