@@ -11,7 +11,7 @@
     body {
         font-family: 'Poppins', Arial, Helvetica, sans-serif;
         color: #11102a;
-        font-size: 12px;
+        font-size: 11px;
         background: #ffffff;
         -webkit-print-color-adjust: exact;
     }
@@ -21,7 +21,7 @@
         width: 210mm;
         height: 296mm;
         background: #fff;
-        padding: 20mm 6mm 0;
+        padding: 16mm 9mm 0;
         overflow: hidden;
     }
 
@@ -64,135 +64,135 @@
     /* ---- header ---- */
     table.header { width: 100%; border-collapse: collapse; }
     table.header > tbody > tr > td { vertical-align: top; }
-    .seller-col { padding-right: 12mm; }
-    .doc-col { width: 105mm; }
+    .seller-col { padding-right: 10mm; }
+    .doc-col { width: 100mm; }
 
     .brand td { vertical-align: middle; }
-    .brand .logo-img { width: 58px; height: 58px; }
+    .brand .logo-img { width: 46px; height: 46px; }
     .brand-name {
-        padding-left: 10px;
-        font-size: 30px;
+        padding-left: 9px;
+        font-size: 24px;
         font-weight: 700;
-        letter-spacing: -1.5px;
+        letter-spacing: -1.2px;
         color: #3d079d;
         white-space: nowrap;
     }
     .brand-name b { color: #ff7900; font-weight: 700; }
 
-    .seller-name { font-weight: 700; font-size: 15px; margin: 16px 0 12px; color: #11102a; }
+    .seller-name { font-weight: 700; font-size: 13px; margin: 12px 0 9px; color: #11102a; }
 
     table.seller-list { border-collapse: collapse; }
-    table.seller-list td { vertical-align: top; padding: 5px 0; font-size: 13px; color: #2c2942; line-height: 1.3; }
-    table.seller-list td.ic { width: 26px; }
-    .ic svg { width: 18px; height: 18px; }
+    table.seller-list td { vertical-align: top; padding: 3.5px 0; font-size: 11.5px; color: #2c2942; line-height: 1.3; }
+    table.seller-list td.ic { width: 24px; }
+    .ic svg { width: 16px; height: 16px; }
 
-    .ruc { margin-top: 18px; color: #3d079d; font-weight: 700; font-size: 15px; }
+    .ruc { margin-top: 13px; color: #3d079d; font-weight: 700; font-size: 13px; }
 
     /* ---- doc box ---- */
-    .doc-box { border: 1px solid #dedbea; border-radius: 16px; padding: 20px 22px; }
-    .doc-title { color: #3d079d; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+    .doc-box { border: 1px solid #dedbea; border-radius: 14px; padding: 16px 18px; }
+    .doc-title { color: #3d079d; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
     .doc-number {
-        color: #3d079d; font-size: 30px; font-weight: 700; line-height: 1.05;
-        margin: 4px 0 14px; padding-bottom: 14px;
+        color: #3d079d; font-size: 25px; font-weight: 700; line-height: 1.05;
+        margin: 3px 0 11px; padding-bottom: 11px;
         border-bottom: 2px solid #3d079d;
         word-break: break-all;
     }
     table.doc-info { width: 100%; border-collapse: collapse; }
     table.doc-info > tbody > tr > td { vertical-align: top; }
-    .qr-col { width: 104px; text-align: center; }
-    .qr-col .qr { width: 92px; height: 92px; }
-    .qr-col .qr-cap { font-size: 9px; color: #3d079d; line-height: 1.25; margin-top: 5px; }
+    .qr-col { width: 92px; text-align: center; }
+    .qr-col .qr { width: 80px; height: 80px; }
+    .qr-col .qr-cap { font-size: 8px; color: #3d079d; line-height: 1.25; margin-top: 4px; }
 
-    table.meta { border-collapse: collapse; margin-bottom: 16px; }
+    table.meta { border-collapse: collapse; margin-bottom: 13px; }
     table.meta td { vertical-align: top; }
-    table.meta td.ic { width: 25px; }
-    .meta-label { color: #3d079d; font-weight: 700; font-size: 12.5px; margin-bottom: 2px; }
-    .meta-value { font-size: 13px; color: #2c2942; }
+    table.meta td.ic { width: 23px; }
+    .meta-label { color: #3d079d; font-weight: 700; font-size: 11.5px; margin-bottom: 2px; }
+    .meta-value { font-size: 12px; color: #2c2942; }
 
     /* ---- client ---- */
     table.client-card {
-        width: 100%; border-collapse: collapse; margin-top: 16px;
+        width: 100%; border-collapse: collapse; margin-top: 12px;
     }
     .client-wrap {
-        border: 1px solid #dedbea; border-radius: 16px;
+        border: 1px solid #dedbea; border-radius: 14px;
         background: #fbfaff;
-        padding: 20px 24px;
+        padding: 15px 20px;
     }
     .client-card td { vertical-align: top; }
-    .round-icon-col { width: 52px; }
+    .round-icon-col { width: 46px; }
     .round-icon {
-        width: 38px; height: 38px; background: #3d079d; border-radius: 50%;
-        text-align: center; line-height: 38px;
+        width: 32px; height: 32px; background: #3d079d; border-radius: 50%;
+        text-align: center; line-height: 32px;
     }
-    .round-icon svg { width: 22px; height: 22px; vertical-align: middle; }
-    .client-title { color: #3d079d; font-weight: 700; font-size: 16px; text-transform: uppercase; margin-bottom: 16px; letter-spacing: .3px; }
+    .round-icon svg { width: 18px; height: 18px; vertical-align: middle; }
+    .client-title { color: #3d079d; font-weight: 700; font-size: 14px; text-transform: uppercase; margin-bottom: 12px; letter-spacing: .3px; }
 
     table.client-grid { width: 100%; border-collapse: collapse; }
     table.client-grid > tbody > tr > td { vertical-align: top; width: 50%; }
-    .cg-left { padding-right: 26px; }
-    .cg-right { border-left: 1px solid #dedbea; padding-left: 26px; }
-    .field-label { font-size: 12px; font-weight: 700; color: #24203d; margin-bottom: 5px; }
-    .field-value { font-size: 13.5px; font-weight: 700; line-height: 1.35; color: #11102a; }
-    .field-muted { font-size: 13px; font-weight: 400; color: #11102a; }
+    .cg-left { padding-right: 22px; }
+    .cg-right { border-left: 1px solid #dedbea; padding-left: 22px; }
+    .field-label { font-size: 11px; font-weight: 700; color: #24203d; margin-bottom: 4px; }
+    .field-value { font-size: 12.5px; font-weight: 700; line-height: 1.35; color: #11102a; }
+    .field-muted { font-size: 12px; font-weight: 400; color: #11102a; }
     table.addr { border-collapse: collapse; }
     table.addr td { vertical-align: top; }
-    table.addr td.ic { width: 25px; }
+    table.addr td.ic { width: 23px; }
 
     /* ---- items ---- */
-    .items { margin-top: 16px; border: 1px solid #dedbea; border-radius: 10px; overflow: hidden; }
+    .items { margin-top: 12px; border: 1px solid #dedbea; border-radius: 10px; overflow: hidden; }
     table.items-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
     table.items-tbl thead th {
-        background: #3d079d; color: #fff; padding: 14px 12px;
-        font-size: 11.5px; text-transform: uppercase; letter-spacing: .3px;
+        background: #3d079d; color: #fff; padding: 11px 11px;
+        font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px;
         border-right: 1px solid rgba(255,255,255,.25); font-weight: 600;
     }
-    table.items-tbl thead th.c1 { width: 50px; }
-    table.items-tbl thead th.c3 { width: 80px; }
-    table.items-tbl thead th.c4 { width: 120px; }
-    table.items-tbl thead th.c5 { width: 120px; border-right: 0; }
+    table.items-tbl thead th.c1 { width: 44px; }
+    table.items-tbl thead th.c3 { width: 72px; }
+    table.items-tbl thead th.c4 { width: 110px; }
+    table.items-tbl thead th.c5 { width: 110px; border-right: 0; }
     table.items-tbl tbody td {
-        padding: 14px 16px 16px; vertical-align: top; font-size: 13px;
+        padding: 11px 14px 13px; vertical-align: top; font-size: 12px;
         border-right: 1px solid #dedbea; border-top: 1px solid #dedbea; color: #2c2942;
     }
     table.items-tbl tbody td.center { text-align: center; white-space: nowrap; }
     table.items-tbl tbody td:last-child { border-right: 0; }
-    .product-code { margin-top: 10px; font-size: 11px; color: #77738b; }
+    .product-code { margin-top: 8px; font-size: 10px; color: #77738b; }
 
     /* ---- bottom ---- */
     table.bottom { width: 100%; border-collapse: collapse; margin-top: 11px; }
     table.bottom > tbody > tr > td { vertical-align: top; }
-    .bottom .left { padding-right: 16px; }
+    .bottom .left { padding-right: 14px; }
     .bottom .right { width: 51%; }
 
     .card { border: 1px solid #dedbea; border-radius: 10px; background: #fff; }
 
     table.son { width: 100%; border-collapse: collapse; }
-    table.son td { vertical-align: top; padding: 15px 18px; }
-    table.son td.ic { width: 40px; }
-    .son .amount-label { font-weight: 700; font-size: 12.5px; margin-bottom: 8px; }
-    .son .amount-text { font-weight: 700; color: #16122f; font-size: 14px; line-height: 1.2; text-transform: uppercase; }
+    table.son td { vertical-align: top; padding: 12px 16px; }
+    table.son td.ic { width: 36px; }
+    .son .amount-label { font-weight: 700; font-size: 11px; margin-bottom: 6px; }
+    .son .amount-text { font-weight: 700; color: #16122f; font-size: 12.5px; line-height: 1.2; text-transform: uppercase; }
 
-    .extra { margin-top: 11px; padding: 13px 18px; }
-    .extra-title { color: #3d079d; font-size: 13px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; }
+    .extra { margin-top: 11px; padding: 12px 16px; }
+    .extra-title { color: #3d079d; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
     .extra-title .ic { display: inline-block; vertical-align: middle; margin-right: 7px; }
-    .extra-title .ic svg { width: 16px; height: 16px; }
-    .info-row { font-size: 12px; margin-bottom: 10px; line-height: 1.25; color: #2c2942; }
+    .extra-title .ic svg { width: 15px; height: 15px; }
+    .info-row { font-size: 11px; margin-bottom: 8px; line-height: 1.25; color: #2c2942; }
     .info-row strong { color: #3d079d; display: block; margin-bottom: 2px; font-weight: 700; }
 
     .totals { padding: 0; overflow: hidden; }
-    .totals-inner { padding: 16px 20px; }
+    .totals-inner { padding: 13px 18px; }
     table.trow { width: 100%; border-collapse: collapse; }
-    table.trow td { font-size: 14px; padding-bottom: 14px; color: #2c2942; }
+    table.trow td { font-size: 12.5px; padding-bottom: 11px; color: #2c2942; }
     table.trow td.amt { text-align: right; }
-    .tdivider { border-top: 1px solid #dedbea; margin: 6px 0 16px; }
+    .tdivider { border-top: 1px solid #dedbea; margin: 5px 0 13px; }
     table.sprice { width: 100%; border-collapse: collapse; }
     table.sprice td { font-weight: 700; }
-    table.sprice td.lbl { font-size: 14px; text-transform: uppercase; }
-    table.sprice td.amt { text-align: right; font-size: 20px; color: #120b33; }
-    .pay-total { background: #3d079d; color: #fff; padding: 16px 22px; }
+    table.sprice td.lbl { font-size: 12.5px; text-transform: uppercase; }
+    table.sprice td.amt { text-align: right; font-size: 17px; color: #120b33; }
+    .pay-total { background: #3d079d; color: #fff; padding: 13px 18px; }
     table.pay { width: 100%; border-collapse: collapse; }
-    table.pay td.label { font-size: 16px; font-weight: 700; text-transform: uppercase; }
-    table.pay td.value { text-align: right; font-size: 26px; font-weight: 700; white-space: nowrap; }
+    table.pay td.label { font-size: 14px; font-weight: 700; text-transform: uppercase; }
+    table.pay td.value { text-align: right; font-size: 22px; font-weight: 700; white-space: nowrap; }
 
     /* ---- footer ---- */
     .footer {
@@ -225,44 +225,44 @@
     /* ---- footer (absoluto dentro de la pagina) ---- */
     .footer {
         position: absolute;
-        left: 6mm; right: 6mm;
-        bottom: 12mm;
+        left: 9mm; right: 9mm;
+        bottom: 11mm;
         border-top: 2px solid #3d079d;
-        padding-top: 13px;
+        padding-top: 11px;
     }
     table.footgrid { width: 100%; border-collapse: collapse; }
     table.footgrid > tbody > tr > td { vertical-align: top; }
-    .secure-col { width: 38%; padding-right: 20px; border-right: 1px solid #dedbea; }
-    .social-col { padding-left: 22px; }
-    .wm-col { width: 84px; text-align: right; }
+    .secure-col { width: 38%; padding-right: 18px; border-right: 1px solid #dedbea; }
+    .social-col { padding-left: 20px; }
+    .wm-col { width: 72px; text-align: right; }
     table.secure { border-collapse: collapse; }
     table.secure td { vertical-align: top; }
-    table.secure td.ic { width: 46px; }
-    table.secure td.ic svg { width: 36px; height: 36px; }
-    .secure-title { color: #3d079d; font-weight: 700; font-size: 13px; margin-bottom: 6px; }
-    .secure-text { font-size: 11px; line-height: 1.35; color: #2c2942; }
+    table.secure td.ic { width: 40px; }
+    table.secure td.ic svg { width: 30px; height: 30px; }
+    .secure-title { color: #3d079d; font-weight: 700; font-size: 12px; margin-bottom: 5px; }
+    .secure-text { font-size: 10px; line-height: 1.35; color: #2c2942; }
     table.social { border-collapse: collapse; }
-    table.social td { vertical-align: middle; padding: 3px 0; font-size: 12.5px; color: #2c2942; }
-    table.social td.ic { width: 24px; }
-    table.social td.ic svg { width: 16px; height: 16px; }
-    .watermark { width: 70px; height: 70px; opacity: .12; }
+    table.social td { vertical-align: middle; padding: 2.5px 0; font-size: 11.5px; color: #2c2942; }
+    table.social td.ic { width: 22px; }
+    table.social td.ic svg { width: 15px; height: 15px; }
+    .watermark { width: 60px; height: 60px; opacity: .12; }
 
     .footbar {
         position: absolute;
         left: 0; right: 0; bottom: 0;
-        height: 9mm;
+        height: 8mm;
         background: #3d079d;
         color: #fff;
         text-align: center;
-        line-height: 9mm;
+        line-height: 8mm;
         font-weight: 700;
-        font-size: 13px;
+        font-size: 12px;
         border-top-left-radius: 14px;
         border-top-right-radius: 14px;
     }
     .footbar .orange {
         position: absolute; top: 0; right: 0;
-        width: 13%; height: 9mm;
+        width: 13%; height: 8mm;
         background: #ff7900;
         border-top-right-radius: 14px;
     }
