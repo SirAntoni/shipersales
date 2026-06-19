@@ -34,7 +34,8 @@
             border-bottom-left-radius: 14px;
         }
 
-        .wrap { padding: 28px 34px 150px 34px; }
+        .wrap { padding: 28px 34px 24px 34px; }
+        body.preview .wrap { padding-bottom: 150px; }
 
         /* ---- header ---- */
         table.header { width: 100%; border-collapse: collapse; }
@@ -184,7 +185,7 @@
         }
     </style>
 </head>
-<body>
+<body class="{{ ($pdfMode ?? false) ? '' : 'preview' }}">
     <div class="topbar"><span class="accent"></span></div>
 
     <div class="wrap">
@@ -319,7 +320,9 @@
         </table>
     </div>
 
-    <!-- FOOTER (fijo al fondo de la hoja) -->
+    {{-- En PDF el footer se inyecta con wkhtmltopdf (--footer-html) para anclarlo al pie de pagina.
+         En el preview HTML lo mostramos fijo al fondo del viewport. --}}
+    @unless($pdfMode ?? false)
     <div class="footer-fixed">
         <div class="foot">
             <img class="watermark" src="{{ $logo }}" alt="">
@@ -340,5 +343,6 @@
         </div>
         <div class="footbar">¡Gracias por tu compra!<span class="accent"></span></div>
     </div>
+    @endunless
 </body>
 </html>

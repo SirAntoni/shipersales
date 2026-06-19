@@ -62,14 +62,34 @@ class SaleController extends Controller implements hasMiddleware
     public function pdfV2($id)
     {
         $data = $this->invoiceV2Data($id);
-        $pdf = SnappyPdf::loadView('pdf.invoice-v2', $data);
-        return $pdf->stream('nota-venta-' . $data['sale']->number . '.pdf');
+        $data['pdfMode'] = true;
+
+        // El footer se inyecta con --footer-html para que wkhtmltopdf lo ancle al pie de cada pagina.
+        $footerFile = storage_path('app/snappy-footer-' . $id . '-' . uniqid() . '.html');
+        file_put_contents($footerFile, view('pdf.invoice-v2-footer', $data)->render());
+
+        try {
+            $output = SnappyPdf::loadView('pdf.invoice-v2', $data)
+                ->setOption('footer-html', $footerFile)
+                ->setOption('margin-bottom', 36)   // mm: reserva espacio para el footer
+                ->setOption('footer-spacing', 0)
+                ->output();
+        } finally {
+            @unlink($footerFile);
+        }
+
+        return response($output, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="nota-venta-' . $data['sale']->number . '.pdf"',
+        ]);
     }
 
     /** Preview HTML de la nueva plantilla (para iterar el diseño sin generar PDF). */
     public function pdfV2Preview($id)
     {
-        return view('pdf.invoice-v2', $this->invoiceV2Data($id));
+        $data = $this->invoiceV2Data($id);
+        $data['pdfMode'] = false;
+        return view('pdf.invoice-v2', $data);
     }
 
     public function commissions()
