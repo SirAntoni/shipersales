@@ -270,7 +270,7 @@ class NewSale extends Component
             'districtSelect'   => 'distrito'
         ]);
 
-        Client::create([
+        $client = Client::create([
             'name'          => $this->name,
             'document_number' => $this->document_number,
             'document_type' => $this->document_type,
@@ -287,6 +287,7 @@ class NewSale extends Component
         $this->email = 'info@shipersales.pe';
         $this->render();
         $this->dispatch('close-client-modal');
+        $this->dispatch('clientCreated', value: $client->id, text: $client->name.' - '.$client->document_number);
         $this->dispatch('successNotRoute', ['label' => 'Se agrego el cliente con éxito.']);
     }
 

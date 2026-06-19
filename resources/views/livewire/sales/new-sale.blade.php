@@ -764,6 +764,14 @@
             @this.set('client', null);
         });
 
+        window.addEventListener('clientCreated', event => {
+            const data = event.detail;
+            if (!data || !data.value) return;
+            tomClients.addOption({ value: data.value, text: data.text });
+            tomClients.refreshOptions(false);
+            tomClients.addItem(data.value);
+        });
+
         // Barcode scanner listener
         let barcodeBuffer = '';
         let barcodeTimer = null;
