@@ -336,7 +336,7 @@
                                                     @endcan
                                                     <x-base.tippy
                                                         as="x-base.button-sm"
-                                                        variant="dark"
+                                                        variant="{{ !is_null($sale->document?->id) ? 'success' : 'dark' }}"
                                                         size="sm"
                                                         class="mr-2"
                                                         content="Ver PDF"
