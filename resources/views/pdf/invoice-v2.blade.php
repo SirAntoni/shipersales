@@ -111,9 +111,10 @@
 
     /* ---- client ---- */
     table.client-card {
-        width: 100%; border-collapse: collapse; margin-top: 30px;
+        width: 100%; border-collapse: collapse;
     }
     .client-wrap {
+        margin-top: 22px;
         border: 1px solid #dedbea; border-radius: 13px;
         background: #fbfaff;
         padding: 13px 18px;
