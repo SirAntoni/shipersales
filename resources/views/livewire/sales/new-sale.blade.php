@@ -626,6 +626,32 @@
 
                     <!-- Footer -->
                     <div class="flex justify-end px-5 py-3 border-t border-slate-200/60 dark:border-darkmode-400">
+                        <div x-data="{ copied: false }" class="mr-2">
+                            <x-base.button
+                                type="button"
+                                variant="outline-secondary"
+                                x-on:click="
+                                    const value = document.getElementById('document_number').value;
+                                    if (!value) return;
+                                    const done = () => { copied = true; setTimeout(() => copied = false, 1500); };
+                                    if (navigator.clipboard && window.isSecureContext) {
+                                        navigator.clipboard.writeText(value).then(done).catch(() => {});
+                                    } else {
+                                        const ta = document.createElement('textarea');
+                                        ta.value = value;
+                                        ta.style.position = 'fixed';
+                                        ta.style.opacity = '0';
+                                        document.body.appendChild(ta);
+                                        ta.focus(); ta.select();
+                                        try { document.execCommand('copy'); done(); } catch (e) {}
+                                        document.body.removeChild(ta);
+                                    }
+                                "
+                            >
+                                <i class="fa-solid mr-2" :class="copied ? 'fa-check text-success' : 'fa-copy'"></i>
+                                <span x-text="copied ? 'Copiado' : 'Copiar DNI'"></span>
+                            </x-base.button>
+                        </div>
                         <x-base.button variant="outline-secondary" class="mr-2" x-on:click="open = false">
                             Cancelar
                         </x-base.button>
