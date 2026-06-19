@@ -182,7 +182,10 @@ class CreditNote extends Component
 
         $pdf_path = "";
         if($sunatResponse['status'] == 1){
-            $pdf_path = $sunat->generatePDF($invoice);
+            $pdf_path = $sunat->generatePDF($invoice, 'invoice', [
+                'affected' => $this->affected_document,
+                'reason'   => 'Anulación de la operación',
+            ]);
         }
 
         if($sunatResponse['status'] != 1){

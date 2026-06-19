@@ -16,6 +16,7 @@ use Greenter\Model\Voided\VoidedDetail;
 use Greenter\Report\HtmlReport;
 use Greenter\Report\PdfReport;
 use Greenter\Report\Resolver\DefaultTemplateResolver;
+use Greenter\Report\XmlUtils;
 use Greenter\See;
 use Greenter\Ws\Services\ConsultCdrService;
 use Greenter\Ws\Services\SoapClient;
@@ -23,6 +24,10 @@ use Greenter\Ws\Services\SunatEndpoints;
 use Greenter\XMLSecLibs\Certificate\X509Certificate;
 use Greenter\XMLSecLibs\Certificate\X509ContentType;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\Snappy\Facades\SnappyPdf;
+use Luecano\NumeroALetras\NumeroALetras;
+use App\Models\Setting;
+use App\Models\Client as ClientModel;
 
 class SunatService
 {
@@ -302,46 +307,230 @@ class SunatService
         return $consulta->getStatusCdr(config('sunat.ruc'), $tipoDoc, $serie, $correlativo);
     }
 
-    public function generatePdf($invoice, $type = 'invoice')
+    /**
+     * Genera el PDF del comprobante con la matriz de diseno (SnappyPdf + blade).
+     * Mantiene la firma usada por todos los call sites: generatePdf($invoice, $type).
+     *
+     * @param mixed  $invoice  Objeto Greenter (Invoice/Note) o Voided.
+     * @param string $type     'invoice' (factura/boleta/nota de credito) o 'voided'.
+     * @param array  $extra    Datos opcionales (p.ej. para nota de credito: affected, reason).
+     */
+    public function generatePdf($invoice, $type = 'invoice', array $extra = [])
+    {
+        if ($type === 'voided') {
+            return $this->renderVoidedLegacy($invoice);
+        }
+
+        $data = $this->buildComprobanteData($invoice, $extra);
+        $html = view('pdf.sunat-document', $data)->render();
+
+        $output = SnappyPdf::loadHTML($html)
+            ->setOption('page-size', 'A4')
+            ->setOption('margin-top', 0)
+            ->setOption('margin-bottom', 0)
+            ->setOption('margin-left', 0)
+            ->setOption('margin-right', 0)
+            ->setOption('dpi', 96)
+            ->setOption('disable-smart-shrinking', true)
+            ->output();
+
+        $path = '/pdf_path/' . $invoice->getName() . '.pdf';
+        file_put_contents(storage_path($path), $output);
+
+        return $path;
+    }
+
+    /** Construye el array normalizado para la plantilla a partir del objeto Greenter. */
+    private function buildComprobanteData($invoice, array $extra = []): array
+    {
+        $serie       = $invoice->getSerie();
+        $correlativo = $invoice->getCorrelativo();
+        $tipoDoc     = $invoice->getTipoDoc();
+        $gCompany    = $invoice->getCompany();
+        $gClient     = $invoice->getClient();
+
+        // Titulo segun tipo (FC/BC = nota de credito)
+        $isNote = str_starts_with($serie, 'FC') || str_starts_with($serie, 'BC');
+        if ($isNote) {
+            $title   = 'Nota de crédito electrónica';
+            $repText = 'NOTA DE CRÉDITO ELECTRÓNICA';
+        } elseif ($tipoDoc === '01') {
+            $title   = 'Factura electrónica';
+            $repText = 'FACTURA ELECTRÓNICA';
+        } else {
+            $title   = 'Boleta de venta electrónica';
+            $repText = 'BOLETA DE VENTA ELECTRÓNICA';
+        }
+
+        $number    = $serie . '-' . str_pad((string) $correlativo, 8, '0', STR_PAD_LEFT);
+        $fecha     = $invoice->getFechaEmision();
+        $fechaYmd  = $fecha->format('Y-m-d');
+        $fechaTxt  = \Carbon\Carbon::parse($fechaYmd)->locale('es')->isoFormat('D [de] MMMM [de] YYYY');
+
+        // Totales
+        $opGravadas = (float) $invoice->getMtoOperGravadas();
+        $igv        = (float) $invoice->getMtoIGV();
+        $total      = (float) $invoice->getMtoImpVenta();
+
+        // Items
+        $items = [];
+        foreach ($invoice->getDetails() as $det) {
+            $items[] = [
+                'desc'  => $det->getDescripcion(),
+                'code'  => $det->getCodProducto(),
+                'qty'   => (float) $det->getCantidad(),
+                'price' => (float) $det->getMtoValorUnitario(),
+                'total' => (float) $det->getMtoValorVenta(),
+            ];
+        }
+
+        // Monto en letras (desde legend de Greenter o recalculado)
+        $legends = $invoice->getLegends();
+        $words   = (is_array($legends) && count($legends) && $legends[0]->getValue())
+            ? $legends[0]->getValue()
+            : (new NumeroALetras())->toInvoice($total, 2, 'SOLES');
+
+        // Hash real del XML firmado (para el QR SUNAT)
+        $xmlPath = storage_path('/xml_path/' . $invoice->getName() . '.xml');
+        $hash    = is_file($xmlPath) ? (new XmlUtils())->getHashSignFromFile($xmlPath) : '';
+
+        // QR formato SUNAT: RUC|tipoDoc|serie|correlativo|IGV|Total|fecha|tipoDocCli|numDocCli|hash
+        $qrString = implode('|', [
+            $gCompany->getRuc(),
+            $tipoDoc,
+            $serie,
+            $correlativo,
+            number_format($igv, 2, '.', ''),
+            number_format($total, 2, '.', ''),
+            $fechaYmd,
+            $gClient->getTipoDoc(),
+            $gClient->getNumDoc(),
+            $hash,
+        ]);
+
+        // Empresa: RUC/razon social/direccion del comprobante; contacto desde Setting
+        $setting = Setting::first();
+        $addr    = $gCompany->getAddress();
+        $company = [
+            'name'    => $gCompany->getRazonSocial(),
+            'ruc'     => $gCompany->getRuc(),
+            'address' => $addr ? $addr->getDireccion() : ($setting->address ?? ''),
+            'city'    => $addr ? $addr->getDistrito() : ($setting->city ?? ''),
+            'country' => 'Perú',
+            'phone'   => $setting->phone ?? '',
+            'email'   => $setting->email ?? '',
+        ];
+
+        // Cliente: direccion desde el modelo (el objeto Greenter no la trae)
+        $clientModel = ClientModel::where('document_number', $gClient->getNumDoc())->first();
+        $client = [
+            'name'         => $gClient->getRznSocial(),
+            'docTypeLabel' => $this->docTypeLabel($gClient->getTipoDoc()),
+            'docNumber'    => $gClient->getNumDoc(),
+            'address'      => $clientModel->address ?? '',
+        ];
+
+        return [
+            'logo'          => $this->pdfLogo(),
+            'fontFace'      => $this->pdfFontFace(),
+            'qr'            => $this->qrDataUri($qrString),
+            'title'         => $title,
+            'repText'       => $repText,
+            'number'        => $number,
+            'fechaTexto'    => $fechaTxt,
+            'currencyLabel' => 'SOLES',
+            'c'             => $company,
+            'client'        => $client,
+            'items'         => $items,
+            'opGravadas'    => $opGravadas,
+            'igv'           => $igv,
+            'total'         => $total,
+            'amountInWords' => $words,
+            'payCondition'  => 'Contado',
+            'affected'      => $extra['affected'] ?? null,
+            'reason'        => $extra['reason'] ?? null,
+        ];
+    }
+
+    private function docTypeLabel(?string $code): string
+    {
+        return [
+            '1' => 'DNI',
+            '6' => 'RUC',
+            '4' => 'Carnet de extranjería',
+            '7' => 'Pasaporte',
+            '0' => 'Doc. no domiciliado',
+        ][$code] ?? 'Documento';
+    }
+
+    /** Logo embebido (data URI). */
+    private function pdfLogo(): string
+    {
+        return 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/logo.png')));
+    }
+
+    /** QR (SVG) embebible con bacon/bacon-qr-code. */
+    private function qrDataUri(string $content): string
+    {
+        $renderer = new \BaconQrCode\Renderer\ImageRenderer(
+            new \BaconQrCode\Renderer\RendererStyle\RendererStyle(220, 1),
+            new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+        );
+        $svg = (new \BaconQrCode\Writer($renderer))->writeString($content);
+
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
+    }
+
+    /** @font-face Poppins por file:// (igual que la nota de venta). */
+    private function pdfFontFace(): string
+    {
+        $dir = resource_path('fonts/pdf');
+        $faces = [
+            [400, 'Poppins-Regular.ttf'],
+            [500, 'Poppins-Medium.ttf'],
+            [600, 'Poppins-SemiBold.ttf'],
+            [700, 'Poppins-Bold.ttf'],
+        ];
+        $css = '';
+        foreach ($faces as [$weight, $file]) {
+            $path = $dir . '/' . $file;
+            if (!is_file($path)) {
+                continue;
+            }
+            $css .= "@font-face{font-family:'Poppins';font-style:normal;font-weight:{$weight};"
+                  . "src:url('file://{$path}') format('truetype');}";
+        }
+        return $css;
+    }
+
+    /** Render legacy (Greenter) para comunicacion de baja, mientras se migra. */
+    private function renderVoidedLegacy($invoice): string
     {
         $htmlReport = new HtmlReport();
-
-        $resolver = new DefaultTemplateResolver();
+        $resolver   = new DefaultTemplateResolver();
         $htmlReport->setTemplate($resolver->getTemplate($invoice));
 
         $report = new PdfReport($htmlReport);
-
         $report->setOptions([
             'no-outline',
             'viewport-size' => '1280x1024',
             'page-width'    => '21cm',
             'page-height'   => '29.7cm',
         ]);
-
         $report->setBinPath(config('wkhtmltopdf.bin_path'));
 
         $params = [
             'system' => [
                 'logo' => file_get_contents(public_path('/images/logo_invoice.png')),
-                'hash' => 'qqnr2dN4p/HmaEA/CJuVGo7dv5g=', // demo
+                'hash' => 'qqnr2dN4p/HmaEA/CJuVGo7dv5g=',
             ],
-            'user' => [
-                'header' => 'Telf: <b>+51959140757</b>',
-                'extras' => [
-                    ['name' => 'CONDICION DE PAGO', 'value' => 'Efectivo'],
-                    ['name' => 'VENDEDOR', 'value' => 'LOPEZ VERASTEGUI RAUL EDUARDO'],
-                ],
-            ],
+            'user' => ['header' => 'Telf: <b>+51959140757</b>'],
         ];
 
-        $pdf = $report->render($invoice, $params);
+        $pdf  = $report->render($invoice, $params);
+        $path = '/pdf_path_anulled/' . $invoice->getName() . '.pdf';
+        file_put_contents(storage_path($path), $pdf);
 
-        if ($type === "invoice") {
-            file_put_contents(storage_path('/pdf_path/' . $invoice->getName() . '.pdf'), $pdf);
-            return '/pdf_path/' . $invoice->getName() . '.pdf';
-        } else {
-            file_put_contents(storage_path('/pdf_path_anulled/' . $invoice->getName() . '.pdf'), $pdf);
-            return '/pdf_path_anulled/' . $invoice->getName() . '.pdf';
-        }
+        return $path;
     }
 }
