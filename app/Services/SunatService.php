@@ -13,9 +13,6 @@ use Greenter\Model\Sale\Legend;
 use Greenter\Model\Sale\SaleDetail;
 use Greenter\Model\Voided\Voided;
 use Greenter\Model\Voided\VoidedDetail;
-use Greenter\Report\HtmlReport;
-use Greenter\Report\PdfReport;
-use Greenter\Report\Resolver\DefaultTemplateResolver;
 use Greenter\Report\XmlUtils;
 use Greenter\See;
 use Greenter\Ws\Services\ConsultCdrService;
@@ -318,7 +315,7 @@ class SunatService
     public function generatePdf($invoice, $type = 'invoice', array $extra = [])
     {
         if ($type === 'voided') {
-            return $this->renderVoidedLegacy($invoice);
+            return $this->renderVoidedPdf($invoice);
         }
 
         $data = $this->buildComprobanteData($invoice, $extra);
@@ -503,33 +500,56 @@ class SunatService
         return $css;
     }
 
-    /** Render legacy (Greenter) para comunicacion de baja, mientras se migra. */
-    private function renderVoidedLegacy($invoice): string
+    /** Comunicacion de baja renderizada con la matriz de diseno. */
+    private function renderVoidedPdf($voided): string
     {
-        $htmlReport = new HtmlReport();
-        $resolver   = new DefaultTemplateResolver();
-        $htmlReport->setTemplate($resolver->getTemplate($invoice));
+        $gCompany = $voided->getCompany();
+        $setting  = Setting::first();
+        $addr     = $gCompany->getAddress();
 
-        $report = new PdfReport($htmlReport);
-        $report->setOptions([
-            'no-outline',
-            'viewport-size' => '1280x1024',
-            'page-width'    => '21cm',
-            'page-height'   => '29.7cm',
-        ]);
-        $report->setBinPath(config('wkhtmltopdf.bin_path'));
+        $details = [];
+        foreach ($voided->getDetails() as $det) {
+            $tipo = $det->getTipoDoc() === '01' ? 'Factura' : ($det->getTipoDoc() === '03' ? 'Boleta' : $det->getTipoDoc());
+            $details[] = [
+                'tipo'      => $tipo,
+                'documento' => $det->getSerie() . '-' . str_pad((string) $det->getCorrelativo(), 8, '0', STR_PAD_LEFT),
+                'motivo'    => $det->getDesMotivoBaja(),
+            ];
+        }
 
-        $params = [
-            'system' => [
-                'logo' => file_get_contents(public_path('/images/logo_invoice.png')),
-                'hash' => 'qqnr2dN4p/HmaEA/CJuVGo7dv5g=',
+        $data = [
+            'logo'     => $this->pdfLogo(),
+            'fontFace' => $this->pdfFontFace(),
+            'title'    => 'Comunicación de baja',
+            'number'   => $voided->getName(),
+            'fechaGen' => \Carbon\Carbon::parse($voided->getFecGeneracion()->format('Y-m-d'))->locale('es')->isoFormat('D [de] MMMM [de] YYYY'),
+            'fechaCom' => \Carbon\Carbon::parse($voided->getFecComunicacion()->format('Y-m-d'))->locale('es')->isoFormat('D [de] MMMM [de] YYYY'),
+            'c'        => [
+                'name'    => $gCompany->getRazonSocial(),
+                'ruc'     => $gCompany->getRuc(),
+                'address' => $addr ? $addr->getDireccion() : ($setting->address ?? ''),
+                'city'    => $addr ? $addr->getDistrito() : ($setting->city ?? ''),
+                'country' => 'Perú',
+                'phone'   => $setting->phone ?? '',
+                'email'   => $setting->email ?? '',
             ],
-            'user' => ['header' => 'Telf: <b>+51959140757</b>'],
+            'details'  => $details,
         ];
 
-        $pdf  = $report->render($invoice, $params);
-        $path = '/pdf_path_anulled/' . $invoice->getName() . '.pdf';
-        file_put_contents(storage_path($path), $pdf);
+        $html = view('pdf.sunat-voided', $data)->render();
+
+        $output = SnappyPdf::loadHTML($html)
+            ->setOption('page-size', 'A4')
+            ->setOption('margin-top', 0)
+            ->setOption('margin-bottom', 0)
+            ->setOption('margin-left', 0)
+            ->setOption('margin-right', 0)
+            ->setOption('dpi', 96)
+            ->setOption('disable-smart-shrinking', true)
+            ->output();
+
+        $path = '/pdf_path_anulled/' . $voided->getName() . '.pdf';
+        file_put_contents(storage_path($path), $output);
 
         return $path;
     }
