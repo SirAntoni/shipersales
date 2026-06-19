@@ -11,7 +11,7 @@
     body {
         font-family: 'Poppins', Arial, Helvetica, sans-serif;
         color: #11102a;
-        font-size: 11px;
+        font-size: 10.5px;
         background: #ffffff;
         -webkit-print-color-adjust: exact;
     }
@@ -21,7 +21,7 @@
         width: 210mm;
         height: 296mm;
         background: #fff;
-        padding: 16mm 9mm 0;
+        padding: 14mm 9mm 0;
         overflow: hidden;
     }
 
@@ -68,40 +68,40 @@
     .doc-col { width: 100mm; }
 
     .brand td { vertical-align: middle; }
-    .brand .logo-img { width: 46px; height: 46px; }
+    .brand .logo-img { width: 42px; height: 42px; }
     .brand-name {
-        padding-left: 9px;
-        font-size: 24px;
+        padding-left: 8px;
+        font-size: 22px;
         font-weight: 700;
-        letter-spacing: -1.2px;
+        letter-spacing: -1.1px;
         color: #3d079d;
         white-space: nowrap;
     }
     .brand-name b { color: #ff7900; font-weight: 700; }
 
-    .seller-name { font-weight: 700; font-size: 13px; margin: 12px 0 9px; color: #11102a; }
+    .seller-name { font-weight: 700; font-size: 12px; margin: 10px 0 8px; color: #11102a; }
 
     table.seller-list { border-collapse: collapse; }
-    table.seller-list td { vertical-align: top; padding: 3.5px 0; font-size: 11.5px; color: #2c2942; line-height: 1.3; }
-    table.seller-list td.ic { width: 24px; }
-    .ic svg { width: 16px; height: 16px; }
+    table.seller-list td { vertical-align: top; padding: 3px 0; font-size: 11px; color: #2c2942; line-height: 1.3; }
+    table.seller-list td.ic { width: 22px; }
+    .ic svg { width: 15px; height: 15px; }
 
-    .ruc { margin-top: 13px; color: #3d079d; font-weight: 700; font-size: 13px; }
+    .ruc { margin-top: 11px; color: #3d079d; font-weight: 700; font-size: 12px; }
 
     /* ---- doc box ---- */
-    .doc-box { border: 1px solid #dedbea; border-radius: 14px; padding: 16px 18px; }
-    .doc-title { color: #3d079d; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+    .doc-box { border: 1px solid #dedbea; border-radius: 13px; padding: 14px 16px; }
+    .doc-title { color: #3d079d; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
     .doc-number {
-        color: #3d079d; font-size: 25px; font-weight: 700; line-height: 1.05;
-        margin: 3px 0 11px; padding-bottom: 11px;
+        color: #3d079d; font-size: 22px; font-weight: 700; line-height: 1.05;
+        margin: 3px 0 10px; padding-bottom: 10px;
         border-bottom: 2px solid #3d079d;
         word-break: break-all;
     }
     table.doc-info { width: 100%; border-collapse: collapse; }
     table.doc-info > tbody > tr > td { vertical-align: top; }
-    .qr-col { width: 92px; text-align: center; }
-    .qr-col .qr { width: 80px; height: 80px; }
-    .qr-col .qr-cap { font-size: 8px; color: #3d079d; line-height: 1.25; margin-top: 4px; }
+    .qr-col { width: 84px; text-align: center; }
+    .qr-col .qr { width: 72px; height: 72px; }
+    .qr-col .qr-cap { font-size: 7.5px; color: #3d079d; line-height: 1.25; margin-top: 4px; }
 
     table.meta { border-collapse: collapse; margin-bottom: 13px; }
     table.meta td { vertical-align: top; }
@@ -114,18 +114,18 @@
         width: 100%; border-collapse: collapse; margin-top: 12px;
     }
     .client-wrap {
-        border: 1px solid #dedbea; border-radius: 14px;
+        border: 1px solid #dedbea; border-radius: 13px;
         background: #fbfaff;
-        padding: 15px 20px;
+        padding: 13px 18px;
     }
     .client-card td { vertical-align: top; }
-    .round-icon-col { width: 46px; }
+    .round-icon-col { width: 42px; }
     .round-icon {
-        width: 32px; height: 32px; background: #3d079d; border-radius: 50%;
-        text-align: center; line-height: 32px;
+        width: 29px; height: 29px; background: #3d079d; border-radius: 50%;
+        text-align: center; line-height: 29px;
     }
-    .round-icon svg { width: 18px; height: 18px; vertical-align: middle; }
-    .client-title { color: #3d079d; font-weight: 700; font-size: 14px; text-transform: uppercase; margin-bottom: 12px; letter-spacing: .3px; }
+    .round-icon svg { width: 16px; height: 16px; vertical-align: middle; }
+    .client-title { color: #3d079d; font-weight: 700; font-size: 13px; text-transform: uppercase; margin-bottom: 10px; letter-spacing: .3px; }
 
     table.client-grid { width: 100%; border-collapse: collapse; }
     table.client-grid > tbody > tr > td { vertical-align: top; width: 50%; }
@@ -142,21 +142,21 @@
     .items { margin-top: 12px; border: 1px solid #dedbea; border-radius: 10px; overflow: hidden; }
     table.items-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
     table.items-tbl thead th {
-        background: #3d079d; color: #fff; padding: 11px 11px;
-        font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px;
+        background: #3d079d; color: #fff; padding: 9px 11px;
+        font-size: 10px; text-transform: uppercase; letter-spacing: .3px;
         border-right: 1px solid rgba(255,255,255,.25); font-weight: 600;
     }
-    table.items-tbl thead th.c1 { width: 44px; }
-    table.items-tbl thead th.c3 { width: 72px; }
-    table.items-tbl thead th.c4 { width: 110px; }
-    table.items-tbl thead th.c5 { width: 110px; border-right: 0; }
+    table.items-tbl thead th.c1 { width: 40px; }
+    table.items-tbl thead th.c3 { width: 68px; }
+    table.items-tbl thead th.c4 { width: 104px; }
+    table.items-tbl thead th.c5 { width: 104px; border-right: 0; }
     table.items-tbl tbody td {
-        padding: 11px 14px 13px; vertical-align: top; font-size: 12px;
+        padding: 10px 13px 12px; vertical-align: top; font-size: 11.5px;
         border-right: 1px solid #dedbea; border-top: 1px solid #dedbea; color: #2c2942;
     }
     table.items-tbl tbody td.center { text-align: center; white-space: nowrap; }
     table.items-tbl tbody td:last-child { border-right: 0; }
-    .product-code { margin-top: 8px; font-size: 10px; color: #77738b; }
+    .product-code { margin-top: 7px; font-size: 9.5px; color: #77738b; }
 
     /* ---- bottom ---- */
     table.bottom { width: 100%; border-collapse: collapse; margin-top: 11px; }
@@ -167,32 +167,32 @@
     .card { border: 1px solid #dedbea; border-radius: 10px; background: #fff; }
 
     table.son { width: 100%; border-collapse: collapse; }
-    table.son td { vertical-align: top; padding: 12px 16px; }
-    table.son td.ic { width: 36px; }
-    .son .amount-label { font-weight: 700; font-size: 11px; margin-bottom: 6px; }
-    .son .amount-text { font-weight: 700; color: #16122f; font-size: 12.5px; line-height: 1.2; text-transform: uppercase; }
+    table.son td { vertical-align: top; padding: 11px 15px; }
+    table.son td.ic { width: 33px; }
+    .son .amount-label { font-weight: 700; font-size: 10.5px; margin-bottom: 5px; }
+    .son .amount-text { font-weight: 700; color: #16122f; font-size: 11.5px; line-height: 1.2; text-transform: uppercase; }
 
-    .extra { margin-top: 11px; padding: 12px 16px; }
-    .extra-title { color: #3d079d; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
-    .extra-title .ic { display: inline-block; vertical-align: middle; margin-right: 7px; }
-    .extra-title .ic svg { width: 15px; height: 15px; }
-    .info-row { font-size: 11px; margin-bottom: 8px; line-height: 1.25; color: #2c2942; }
+    .extra { margin-top: 10px; padding: 11px 15px; }
+    .extra-title { color: #3d079d; font-size: 11.5px; font-weight: 700; text-transform: uppercase; margin-bottom: 9px; }
+    .extra-title .ic { display: inline-block; vertical-align: middle; margin-right: 6px; }
+    .extra-title .ic svg { width: 14px; height: 14px; }
+    .info-row { font-size: 10.5px; margin-bottom: 7px; line-height: 1.25; color: #2c2942; }
     .info-row strong { color: #3d079d; display: block; margin-bottom: 2px; font-weight: 700; }
 
     .totals { padding: 0; overflow: hidden; }
-    .totals-inner { padding: 13px 18px; }
+    .totals-inner { padding: 12px 16px; }
     table.trow { width: 100%; border-collapse: collapse; }
-    table.trow td { font-size: 12.5px; padding-bottom: 11px; color: #2c2942; }
+    table.trow td { font-size: 11.5px; padding-bottom: 10px; color: #2c2942; }
     table.trow td.amt { text-align: right; }
-    .tdivider { border-top: 1px solid #dedbea; margin: 5px 0 13px; }
+    .tdivider { border-top: 1px solid #dedbea; margin: 4px 0 11px; }
     table.sprice { width: 100%; border-collapse: collapse; }
     table.sprice td { font-weight: 700; }
-    table.sprice td.lbl { font-size: 12.5px; text-transform: uppercase; }
-    table.sprice td.amt { text-align: right; font-size: 17px; color: #120b33; }
-    .pay-total { background: #3d079d; color: #fff; padding: 13px 18px; }
+    table.sprice td.lbl { font-size: 11.5px; text-transform: uppercase; }
+    table.sprice td.amt { text-align: right; font-size: 15px; color: #120b33; }
+    .pay-total { background: #3d079d; color: #fff; padding: 12px 16px; }
     table.pay { width: 100%; border-collapse: collapse; }
-    table.pay td.label { font-size: 14px; font-weight: 700; text-transform: uppercase; }
-    table.pay td.value { text-align: right; font-size: 22px; font-weight: 700; white-space: nowrap; }
+    table.pay td.label { font-size: 13px; font-weight: 700; text-transform: uppercase; }
+    table.pay td.value { text-align: right; font-size: 20px; font-weight: 700; white-space: nowrap; }
 
     /* ---- footer ---- */
     .footer {
