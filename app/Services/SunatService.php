@@ -505,7 +505,7 @@ class SunatService
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
-    /** @font-face Poppins por file:// (igual que la nota de venta). */
+    /** @font-face Poppins embebido en base64 (no depende de acceso a archivos file://). */
     private function pdfFontFace(): string
     {
         $dir = resource_path('fonts/pdf');
@@ -521,8 +521,9 @@ class SunatService
             if (!is_file($path)) {
                 continue;
             }
+            $b64 = base64_encode(file_get_contents($path));
             $css .= "@font-face{font-family:'Poppins';font-style:normal;font-weight:{$weight};"
-                  . "src:url('file://{$path}') format('truetype');}";
+                  . "src:url(data:font/truetype;base64,{$b64}) format('truetype');}";
         }
         return $css;
     }
