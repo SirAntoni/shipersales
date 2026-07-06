@@ -165,6 +165,8 @@ class SaleController extends Controller implements hasMiddleware
             'logo'       => $logo,
             'qr'         => $qr,
             'fontFace'   => $this->fontFace(),
+            'reference'  => request('reference') ?: $sale->observations,
+            'comment'    => request('comment'),
         ]);
     }
 

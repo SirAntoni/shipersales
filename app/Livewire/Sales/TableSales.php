@@ -166,6 +166,16 @@ class TableSales extends Component
         return redirect()->route('documents.show', $id);
     }
 
+    public function generateLabel($id)
+    {
+        $sale = Sale::find($id);
+
+        $this->dispatch('questionLabel', [
+            'url'       => route('sales.label', $id),
+            'reference' => $sale->observations ?? '',
+        ]);
+    }
+
     #[On('destroy')]
     public function destroy($id)
     {

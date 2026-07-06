@@ -284,4 +284,108 @@
     window.addEventListener('abrir-nueva-pestania', event => {
         window.open(event.detail[0]['url'], '_blank');
     });
+
+    window.addEventListener('questionLabel', event => {
+        Swal.fire({
+            html: `
+                <style>
+                    .swl-popup { border-radius: 18px !important; padding: 26px 26px 24px !important; }
+                    .swl-hero {
+                        width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 16px;
+                        background: linear-gradient(135deg, #3d079d 0%, #7c3aed 100%);
+                        display: flex; align-items: center; justify-content: center;
+                        box-shadow: 0 10px 22px rgba(61, 7, 157, .35);
+                    }
+                    .swl-hero i { color: #fff; font-size: 23px; }
+                    .swl-title { font-size: 18px; font-weight: 700; color: #0f172a; letter-spacing: -.2px; }
+                    .swl-sub { font-size: 12.5px; color: #94a3b8; margin-top: 5px; line-height: 1.45; }
+                    .swl-field { position: relative; margin-top: 15px; text-align: left; }
+                    .swl-field label {
+                        display: block; font-size: 12.5px; font-weight: 600; color: #475569;
+                        margin: 0 2px 6px; text-transform: uppercase; letter-spacing: .4px; font-size: 11px;
+                    }
+                    .swl-field .swl-ic {
+                        position: absolute; left: 13px; bottom: 13px;
+                        color: #a5a1b8; font-size: 14px; pointer-events: none; transition: color .15s;
+                    }
+                    .swl-field input {
+                        width: 100%; box-sizing: border-box;
+                        border: 1.5px solid #e2e8f0; border-radius: 11px;
+                        padding: 11px 13px 11px 38px;
+                        font-size: 13.5px; color: #1e293b; background: #f8fafc;
+                        outline: none; transition: border-color .15s, box-shadow .15s, background .15s;
+                    }
+                    .swl-field input::placeholder { color: #b6bcc9; }
+                    .swl-field input:focus {
+                        border-color: #3d079d; background: #fff;
+                        box-shadow: 0 0 0 3.5px rgba(61, 7, 157, .12);
+                    }
+                    .swl-field input:focus ~ .swl-ic, .swl-field:focus-within .swl-ic { color: #3d079d; }
+                    .swl-actions { display: flex !important; width: 100%; gap: 10px; margin-top: 20px !important; padding: 0 !important; }
+                    .swl-btn-cancel {
+                        flex: 1; background: #fff; color: #475569;
+                        border: 1.5px solid #e2e8f0; border-radius: 11px;
+                        padding: 12px 14px; font-weight: 600; font-size: 13.5px; cursor: pointer;
+                        transition: background .12s;
+                    }
+                    .swl-btn-cancel:hover { background: #f1f5f9; }
+                    .swl-btn-confirm {
+                        flex: 1.4; background: linear-gradient(135deg, #3d079d 0%, #5b21b6 100%); color: #fff;
+                        border: 0; border-radius: 11px;
+                        padding: 12px 14px; font-weight: 600; font-size: 13.5px; cursor: pointer;
+                        box-shadow: 0 8px 16px rgba(61, 7, 157, .3);
+                        transition: transform .12s, box-shadow .12s;
+                    }
+                    .swl-btn-confirm:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(61, 7, 157, .38); }
+                    .swl-btn-confirm:active { transform: translateY(0); }
+                </style>
+                <div class="swl-hero"><i class="fa-solid fa-tag"></i></div>
+                <div class="swl-title">Generar etiqueta de despacho</div>
+                <div class="swl-sub">Estos datos se imprimirán en la etiqueta de la caja.<br>Ambos campos son opcionales.</div>
+
+                <div class="swl-field">
+                    <label for="swal-label-reference">Referencia</label>
+                    <input id="swal-label-reference" placeholder="Ej. Edificio Gran Parque, dpto 709" autocomplete="off">
+                    <i class="fa-solid fa-location-dot swl-ic"></i>
+                </div>
+                <div class="swl-field">
+                    <label for="swal-label-comment">Comentario</label>
+                    <input id="swal-label-comment" placeholder="Ej. Frágil, entregar en recepción" autocomplete="off">
+                    <i class="fa-solid fa-comment-dots swl-ic"></i>
+                </div>
+            `,
+            width: '26.5rem',
+            focusConfirm: false,
+            buttonsStyling: false,
+            reverseButtons: true,
+            showCancelButton: true,
+            confirmButtonText: '<i class="fa-solid fa-print" style="margin-right:7px"></i>Generar etiqueta',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                popup: 'swl-popup',
+                actions: 'swl-actions',
+                confirmButton: 'swl-btn-confirm',
+                cancelButton: 'swl-btn-cancel',
+            },
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                const ref = document.getElementById('swal-label-reference');
+                ref.value = event.detail[0]['reference'] || '';
+                ref.focus();
+            },
+            preConfirm: () => ({
+                reference: document.getElementById('swal-label-reference').value.trim(),
+                comment: document.getElementById('swal-label-comment').value.trim(),
+            })
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const params = new URLSearchParams();
+                if (result.value.reference) params.set('reference', result.value.reference);
+                if (result.value.comment) params.set('comment', result.value.comment);
+                const qs = params.toString();
+                window.open(event.detail[0]['url'] + (qs ? '?' + qs : ''), '_blank');
+            }
+        });
+    });
 </script>

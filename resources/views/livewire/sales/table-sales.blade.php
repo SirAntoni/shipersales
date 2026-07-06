@@ -344,15 +344,15 @@
                                                         <i class="text-white fa-solid fa-file-pdf"></i>
                                                     </x-base.tippy>
 
-                                                    <a href="{{ route('sales.label', $sale->id) }}" target="_blank" class="mr-2">
-                                                        <x-base.tippy
-                                                            as="x-base.button-sm"
-                                                            variant="warning"
-                                                            size="sm"
-                                                            content="Generar etiqueta de despacho">
-                                                            <i class="text-white fa-solid fa-tag"></i>
-                                                        </x-base.tippy>
-                                                    </a>
+                                                    <x-base.tippy
+                                                        as="x-base.button-sm"
+                                                        variant="warning"
+                                                        size="sm"
+                                                        class="mr-2"
+                                                        content="Generar etiqueta de despacho"
+                                                        wire:click="generateLabel({{$sale->id}})">
+                                                        <i class="text-white fa-solid fa-tag"></i>
+                                                    </x-base.tippy>
 
                                                     @php
                                                         $canInlineEdit = $sale->status !== \App\Models\Sale::SALE_CANCELED

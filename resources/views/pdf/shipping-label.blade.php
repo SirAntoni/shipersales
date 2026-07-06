@@ -144,9 +144,12 @@
 
     <div class="details">
         <div class="row"><b>Direccion:</b> {{ $sale->client->address ?: '—' }}</div>
-        <div class="row"><b>Referencia:</b> {{ $sale->observations ?: '—' }}</div>
+        <div class="row"><b>Referencia:</b> {{ $reference ?: '—' }}</div>
         <div class="row"><b>Distrito:</b> {{ $district ?? '—' }}</div>
         <div class="row"><b>Destinatario:</b> {{ $sale->client->name }} @if($sale->client->phone)({{ $sale->client->phone }})@endif</div>
+        @if(!empty($comment))
+            <div class="row"><b>Comentario:</b> {{ $comment }}</div>
+        @endif
     </div>
 </div>
 
