@@ -60,6 +60,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('usa-purchases', [PurchaseController::class, 'usa'])->name('usa_purchases')->middleware('can:purchases');
     Route::get('canceled_purchases', [CanceledController::class,'purchases'])->name('canceled_purchases')->middleware('can:purchases','can:canceled_purchases');
     Route::resource('sales', SaleController::class)->middleware('can:sales');
+    Route::get('sales/{id}/label', [SaleController::class,'label'])->name('sales.label')->middleware('can:sales');
+    Route::resource('quotations', \App\Http\Controllers\QuotationController::class)->only(['index','create'])->middleware('can:sales');
+    Route::get('quotations/{id}/pdf', [\App\Http\Controllers\QuotationController::class,'pdf'])->name('quotations.pdf')->middleware('can:sales');
+    Route::get('quotations/{id}/pdf/preview', [\App\Http\Controllers\QuotationController::class,'pdfPreview'])->name('quotations.pdf.preview')->middleware('can:sales');
     Route::get('commissions',[SaleController::class,'commissions'])->name('commissions')->middleware('can:commissions');
     Route::resource('documents', DocumentController::class)->middleware('can:documents');
     Route::get('canceled', [CanceledController::class,'index'])->name('canceled')->middleware('can:canceled');

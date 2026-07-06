@@ -137,6 +137,13 @@ class SideMenu
                         'permission' => 'clients',
                     ],
                     [
+                        'icon' => "FileText",
+                        'route_name' => "quotations.index",
+                        'params' => [],
+                        'title' => "Cotizaciones",
+                        'permission' => 'sales',
+                    ],
+                    [
                         'icon' => "RotateCcw",
                         'route_name' => "returns",
                         'params' => [],

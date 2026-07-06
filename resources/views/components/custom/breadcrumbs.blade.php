@@ -72,6 +72,14 @@
             ['title' => 'Ventas','route' => 'sales.index'],
             ['title' => 'Anuladas', 'active' => true]
         ],
+        'quotations.index' => [
+            ['title' => 'Cotizaciones','route' => 'quotations.index'],
+            ['title' => 'Listar', 'active' => true]
+        ],
+        'quotations.create' => [
+            ['title' => 'Cotizaciones','route' => 'quotations.index'],
+            ['title' => 'Crear', 'active' => true]
+        ],
         'commissions' => [
             ['title' => 'Ventas','route' => 'sales.index'],
             ['title' => 'Comisiones', 'active' => true]
