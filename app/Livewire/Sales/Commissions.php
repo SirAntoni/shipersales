@@ -69,21 +69,28 @@ class Commissions extends Component
 
         $sale = Sale::find($id);
 
-        DB::transaction(function () use ($sale) {
-            $articleIds = $sale->saleDetails->pluck('article_id')->unique();
+        // Si el comprobante ya tiene nota de crédito, la NC ya repuso el stock
+        $stockYaRepuesto = \App\Models\Document::where('sale_id', $sale->id)
+            ->where('status', 'nota_credito')
+            ->exists();
 
-            $articles = Article::whereIn('id', $articleIds)->get()->keyBy('id');
+        if (!$stockYaRepuesto) {
+            DB::transaction(function () use ($sale) {
+                $articleIds = $sale->saleDetails->pluck('article_id')->unique();
 
-            foreach ($sale->saleDetails as $item) {
-                if (isset($articles[$item->article_id])) {
-                    $article = $articles[$item->article_id];
-                    $article->stock += $item->quantity;
-                    $article->save();
-                } else {
-                    throw new \Exception("Artículo no encontrado: {$item->article_id}");
+                $articles = Article::whereIn('id', $articleIds)->get()->keyBy('id');
+
+                foreach ($sale->saleDetails as $item) {
+                    if (isset($articles[$item->article_id])) {
+                        $article = $articles[$item->article_id];
+                        $article->stock += $item->quantity;
+                        $article->save();
+                    } else {
+                        throw new \Exception("Artículo no encontrado: {$item->article_id}");
+                    }
                 }
-            }
-        });
+            });
+        }
 
         $sale->update(['status' => Sale::SALE_CANCELED, 'updated_at' => now()]);
         $this->render();

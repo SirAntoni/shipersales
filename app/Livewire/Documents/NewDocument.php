@@ -74,7 +74,7 @@ class NewDocument extends Component
 
     public function mount()
     {
-        $sale              = Sale::find($this->id);
+        $sale              = Sale::findOrFail($this->id);
         $this->token       = env('MIGO_API_TOKEN');
         $this->serie       = '-';
         $this->correlative = '-';
@@ -117,6 +117,42 @@ class NewDocument extends Component
 
         $this->validate();
 
+        // La venta no debe tener ya un comprobante vigente (evita doble emisión)
+        $existente = Document::where('sale_id', $this->id)
+            ->whereNull('affected_document_id')
+            ->where('status', '!=', 'anulado')
+            ->where('status_sunat', '!=', 'rechazado')
+            ->first();
+
+        if ($existente) {
+            $this->dispatch('error', ['label' => "Esta venta ya tiene el comprobante {$existente->serie}-{$existente->correlative} (estado SUNAT: {$existente->status_sunat}). Anúlelo antes de emitir uno nuevo."]);
+            return;
+        }
+
+        $client = Client::find($this->client);
+
+        if (!$client) {
+            $this->dispatch('error', ['label' => 'El cliente seleccionado no existe. Vuelva a seleccionarlo.']);
+            return;
+        }
+
+        // Factura solo a clientes con RUC (validar antes de llamar servicios externos)
+        if ($this->documentType == '1' && $client->document_type != 'RUC') {
+            $this->dispatch('error', ['label' => 'No puede emitir una factura a un cliente con un documento diferente a RUC.']);
+            return;
+        }
+
+        // Serie y correlativo según el tipo seleccionado (por si el form quedó desfasado)
+        if (empty($this->serie) || $this->serie === '-' || empty($this->correlative) || $this->correlative === '-') {
+            $this->serie       = Voucher::serie($this->documentType);
+            $this->correlative = Voucher::nextCorrelativeById($this->documentType);
+        }
+
+        if (empty($this->serie) || $this->serie === '-') {
+            $this->dispatch('error', ['label' => 'No se pudo determinar la serie del comprobante. Seleccione nuevamente el tipo de documento.']);
+            return;
+        }
+
         $items = collect($this->articlesSelected);
 
         $tiposIdentidad = [
@@ -129,39 +165,31 @@ class NewDocument extends Component
 
         $inverseTipos = array_flip($tiposIdentidad);
 
-        $client = Client::find($this->client);
-
         $textoDoc = $client->document_type;
-        $tipoDoc  = $inverseTipos[$textoDoc] ?? null;
+        $tipoDoc  = $inverseTipos[$textoDoc] ?? '0';
 
-        $responseMigoApi = null;
+        // Validar identidad contra MIGO solo para DNI/RUC; si MIGO falla,
+        // se usa el nombre registrado del cliente en lugar de abortar la emisión.
+        $clientName = $client->name;
+        $config     = $this->docConfig[$textoDoc] ?? null;
 
-        Log::info("documento creado: " . $textoDoc);
+        if ($config !== null) {
+            try {
+                $responseMigoApi = $api->post(strtolower($textoDoc), [
+                    $config['field'] => $client->document_number,
+                    'token'          => $this->token,
+                ]);
 
-        if ($textoDoc != 'CE') {
-            $config = $this->docConfig[$textoDoc];
-
-            $payload = [
-                $config['field'] => $client->document_number,
-                'token'          => $this->token,
-            ];
-
-            $responseMigoApi = $api->post(
-                strtolower($client->document_type),
-                $payload
-            );
-        }
-
-        // Validación: factura solo a RUC
-        if ($this->documentType == '1' && $client->document_type != 'RUC') {
-            $this->dispatch('error', ['label' => 'No puede emitir una factura a un cliente con un documento diferente a RUC.']);
-            return;
+                $clientName = $responseMigoApi[$config['responseKey']] ?? $client->name;
+            } catch (\Throwable $e) {
+                Log::warning("MIGO no disponible al emitir comprobante, se usa el nombre registrado del cliente: {$e->getMessage()}");
+            }
         }
 
         $data = [
             "serie"       => $this->serie,
             "correlative" => $this->correlative,
-            "date"        => $this->date ?? "2005-01-01",
+            "date"        => $this->date,
             "tipoDoc"     => ($this->documentType == '1') ? '01' : '03',
             "subtotal"    => $this->granSubtotal,
             "igv"         => $this->granTax,
@@ -169,9 +197,7 @@ class NewDocument extends Component
             "client"      => [
                 "tipoDoc" => $tipoDoc,
                 "numDoc"  => $client->document_number,
-                "name"    => ($responseMigoApi === null)
-                    ? $client->name
-                    : ($responseMigoApi[$config['responseKey']] ?? ''),
+                "name"    => $clientName,
                 "address" => $client->address,
             ],
             "items"  => $items,
@@ -180,37 +206,46 @@ class NewDocument extends Component
 
         Log::info("data: " . json_encode($data));
 
-        $sunat = new SunatService();
+        try {
+            $sunat = new SunatService();
 
-        $see     = $sunat->getSee();
-        $invoice = $sunat->getInvoice($data);
-
-        Log::info("invoice: " . json_encode($data));
-
-        $result   = $see->send($invoice);
-        $lastXml  = $see->getFactory()->getLastXml();
-        $xmlPath  = '/xml_path/' . $invoice->getName() . '.xml';
-        file_put_contents(storage_path($xmlPath), $lastXml);
-
-        $sunatResponse = $sunat->sunatResponse($invoice, $result);
-
-        // === 1) Manejo de error 1032: correlativo ya usado ===
-        if ($sunatResponse['status'] != 1 && (string)($sunatResponse['code'] ?? '') === '1032') {
-            Log::warning("SUNAT 1032: Correlativo ya existe. Reintentando con nuevo correlativo.");
-
-            // Nuevo correlativo
-            $this->correlative   = Voucher::nextCorrelativeById($this->documentType);
-            $data['correlative'] = $this->correlative;
-
-            // Regenerar invoice con nuevo correlativo
+            $see     = $sunat->getSee();
             $invoice = $sunat->getInvoice($data);
-            $result  = $see->send($invoice);
 
-            $lastXml = $see->getFactory()->getLastXml();
-            $xmlPath = '/xml_path/' . $invoice->getName() . '.xml';
+            $result   = $see->send($invoice);
+            $lastXml  = $see->getFactory()->getLastXml();
+            $xmlPath  = '/xml_path/' . $invoice->getName() . '.xml';
             file_put_contents(storage_path($xmlPath), $lastXml);
 
             $sunatResponse = $sunat->sunatResponse($invoice, $result);
+
+            // === 1) Manejo de error 1032: correlativo ya usado ===
+            if ($sunatResponse['status'] != 1 && (string)($sunatResponse['code'] ?? '') === '1032') {
+                Log::warning("SUNAT 1032: Correlativo ya existe. Reintentando con nuevo correlativo.");
+
+                // Nuevo correlativo
+                $this->correlative   = Voucher::nextCorrelativeById($this->documentType);
+                $data['correlative'] = $this->correlative;
+
+                // Regenerar invoice con nuevo correlativo
+                $invoice = $sunat->getInvoice($data);
+                $result  = $see->send($invoice);
+
+                $lastXml = $see->getFactory()->getLastXml();
+                $xmlPath = '/xml_path/' . $invoice->getName() . '.xml';
+                file_put_contents(storage_path($xmlPath), $lastXml);
+
+                $sunatResponse = $sunat->sunatResponse($invoice, $result);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error inesperado emitiendo comprobante', [
+                'sale_id' => $this->id,
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
+
+            $this->dispatch('error', ['label' => 'Ocurrió un error inesperado al emitir el comprobante. Inténtelo nuevamente; si persiste, revise los logs.']);
+            return;
         }
 
         // === 2) Si sigue fallando, controlar caso HTTP vs otros ===
@@ -241,7 +276,7 @@ class NewDocument extends Component
                     'notes'         => $sunatResponse['notes'] ?? [],
                     'sale_id'       => $this->id,
                     'client_id'     => $this->client,
-                    'user_id'       => auth()->id(),
+                    'user_id'       => auth()->id() ?? Sale::find($this->id)?->user_id,
                 ]);
 
                 // Guardar detalles también para pendientes
@@ -288,34 +323,54 @@ class NewDocument extends Component
         }
 
         // === 3) Caso OK (status == 1) ===
-        $pdf_path = $sunat->generatePdf($invoice);
+        // El comprobante ya fue ACEPTADO por SUNAT: registrarlo primero en la BD
+        // y recién después generar el PDF, para que un fallo del PDF no deje
+        // un comprobante aceptado sin registrar (riesgo de doble emisión).
+        try {
+            $document = Document::create([
+                'status'        => "enviado",
+                'document_type' => $this->documentType,
+                'serie'         => $this->serie,
+                'correlative'   => $this->correlative,
+                'date'          => $this->date,
+                'currency'      => 'PEN',
+                'payment_method'=> 'CONTADO',
+                'subtotal'      => $this->granSubtotal,
+                'tax'           => $this->granTax,
+                'total'         => $this->granTotal,
+                'xml_path'      => $xmlPath,
+                'cdr_path'      => $sunatResponse['cdr'] ?? '',
+                'pdf_path'      => null,
+                'status_sunat'  => "aceptado",
+                'notes'         => $sunatResponse['notes'] ?? [],
+                'sale_id'       => $this->id,
+                'client_id'     => $this->client,
+                'user_id'       => auth()->id() ?? Sale::find($this->id)?->user_id,
+            ]);
 
-        $document = Document::create([
-            'status'        => "enviado",
-            'document_type' => $this->documentType,
-            'serie'         => $this->serie,
-            'correlative'   => $this->correlative,
-            'date'          => $this->date,
-            'currency'      => 'PEN',
-            'payment_method'=> 'CONTADO',
-            'subtotal'      => $this->granSubtotal,
-            'tax'           => $this->granTax,
-            'total'         => $this->granTotal,
-            'xml_path'      => $xmlPath,
-            'cdr_path'      => $sunatResponse['cdr'] ?? '',
-            'pdf_path'      => $pdf_path,
-            'status_sunat'  => $sunatResponse['status'] === 1 ? "aceptado" : "rechazado",
-            'notes'         => $sunatResponse['notes'] ?? [],
-            'sale_id'       => $this->id,
-            'client_id'     => $this->client,
-            'user_id'       => auth()->id(),
-        ]);
+            // Detalle del documento (enviados)
+            $this->persistDocumentDetails($document);
+        } catch (\Throwable $e) {
+            Log::error('Comprobante ACEPTADO por SUNAT pero falló el registro en BD', [
+                'sale_id'     => $this->id,
+                'comprobante' => "{$this->serie}-{$this->correlative}",
+                'message'     => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
+            ]);
 
-        // Detalle del documento (enviados)
-        $this->persistDocumentDetails($document);
+            $this->dispatch('error', ['label' => "El comprobante {$this->serie}-{$this->correlative} fue ACEPTADO por SUNAT pero ocurrió un error interno al registrarlo. NO lo vuelva a emitir: contacte al administrador."]);
+            return;
+        }
+
+        try {
+            $document->update(['pdf_path' => $sunat->generatePdf($invoice)]);
+        } catch (\Throwable $e) {
+            // El PDF puede regenerarse después; no invalida la emisión
+            Log::error("Comprobante {$this->serie}-{$this->correlative} aceptado, pero falló la generación del PDF: {$e->getMessage()}");
+        }
 
         $this->dispatch('success', [
-            'label' => 'La documento fue registrada con éxito.',
+            'label' => "El comprobante {$this->serie}-{$this->correlative} fue emitido y aceptado por SUNAT.",
             'btn'   => 'Ir a documentos',
             'route' => route('documents.index'),
         ]);

@@ -3,14 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
-use App\Services\MigoApiService;
-use App\Services\SunatService;
-use Greenter\Model\Sale\Invoice;
-use Greenter\Report\HtmlReport;
 use Illuminate\Http\Request;
-use Greenter\Report\PdfReport;
 use Illuminate\Support\Facades\Log;
-use Luecano\NumeroALetras\NumeroALetras;
 
 class DocumentController extends Controller
 {
@@ -36,92 +30,39 @@ class DocumentController extends Controller
         return response()->download($fullPath);
     }
 
-    public function retry(Document  $document,MigoApiService $api)
+    /**
+     * Reintenta el envío a SUNAT de un documento pendiente.
+     * Delegado a PendingDocumentsService, que maneja 1032, consulta de CDR y
+     * actualización del documento (el flujo completo del reenvío masivo).
+     */
+    public function retry(Document $document, \App\Services\PendingDocumentsService $service)
     {
-        $docConfig = [
-            'DNI' => [
-                'size'        => 8,
-                'field'       => 'dni',
-                'responseKey' => 'nombre',
-            ],
-            'RUC' => [
-                'size'        => 11,
-                'field'       => 'ruc',
-                'responseKey' => 'nombre_o_razon_social',
-            ],
-        ];
-
-        $tiposIdentidad = [
-            '0' => 'NO DOMICILIADO',
-            '1' => 'DNI',
-            '4' => 'CE',
-            '6' => 'RUC',
-            '7' => 'PASAPORTE',
-        ];
-
-        $inverseTipos = array_flip($tiposIdentidad);
-
-        $textoDoc = $document->client->document_type;
-        $tipoDoc  = $inverseTipos[$textoDoc] ?? null;
-
-        $config = $docConfig[$textoDoc];
-
-        $payload = [
-            $config['field'] => $document->client->document_number,
-            'token'          => env('MIGO_API_TOKEN')
-        ];
-
-        $responseMigoApi = $api->post(
-            strtolower($document->client->document_type),
-            $payload
-        );
-
-        $formatter = new NumeroALetras();
-
-        $legends = $formatter->toInvoice($document->total, 2, 'SOLES');
-
-        $sunat = new SunatService();
-
-        $data = [
-            "serie" => $document->serie,
-            "correlative" => $document->correlative,
-            "date" => $document->date ?? "2005-01-01",
-            "tipoDoc" => ($document->document_type == '1') ? '01' : '03',
-            "subtotal" => number_format((float)$document->subtotal, 2, '.', ''),
-            "igv"=> number_format((float)$document->tax, 2, '.', ''),
-            "total" => number_format((float)$document->total, 2, '.', ''),
-            "client" => [
-                "tipoDoc" => $tipoDoc,
-                "numDoc" => $document->client->document_number,
-                "name" => $responseMigoApi[$config['responseKey']] ?? '',
-                "address" => $document->client->address,
-            ],
-            "items"=> $document->documentDetails,
-            "legend"=> $legends,
-        ];
-
-        $see = $sunat->getSee();
-
-        $invoice = $sunat->getInvoice($data);
-
-        Log::info("invoice: " . json_encode($data));;
-
-        $result = $see->send($invoice);
-
-        file_put_contents(storage_path('/xml_path/'.$invoice->getName().'.xml'),$see->getFactory()->getLastXml());
-
-        $sunatResponse = $sunat->sunatResponse($invoice,$result);
-
-        $pdf_path = "";
-        if($sunatResponse['status'] == 1){
-            $pdf_path = $sunat->generatePDF($invoice);
+        if ($document->status_sunat !== 'pendiente') {
+            return response()->json([
+                'status'  => 'ignorado',
+                'message' => "El documento {$document->serie}-{$document->correlative} no está pendiente (estado: {$document->status_sunat}).",
+            ], 422);
         }
 
-        if($sunatResponse['status'] != 1){
-            return response()->json(['no enviado']);
+        try {
+            $service->resend($document);
+        } catch (\Throwable $e) {
+            Log::error("Error en retry del documento ID {$document->id}: {$e->getMessage()}", [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Ocurrió un error reenviando el documento a SUNAT.',
+            ], 500);
         }
 
-        return response()->json(['success']);
+        $document->refresh();
+
+        return response()->json([
+            'status'      => $document->status_sunat,
+            'comprobante' => "{$document->serie}-{$document->correlative}",
+        ]);
     }
 
     /**

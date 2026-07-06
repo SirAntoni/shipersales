@@ -159,6 +159,29 @@
         });
     });
 
+    window.addEventListener('questionReturnWithDocument', event => {
+        Swal.fire({
+            title: 'Venta con comprobante electrónico',
+            text: event.detail[0]['label'],
+            icon: 'warning',
+            confirmButtonText: 'Emitir nota de crédito',
+            confirmButtonColor: "#3085d6",
+            showDenyButton: true,
+            denyButtonText: 'Anular sin nota de crédito',
+            denyButtonColor: "#e74c3c",
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if(result.isConfirmed){
+                window.location.href = event.detail[0]['ncUrl'];
+            } else if(result.isDenied){
+                Livewire.dispatch('processReturn',{id:event.detail[0]['id']})
+            }
+        });
+    });
+
     window.addEventListener('questionConfirmReturn', event => {
         Swal.fire({
             title: 'Confirmar devolución',
@@ -232,22 +255,28 @@
 
     window.addEventListener('document_delete', event => {
         Swal.fire({
-            title: 'Alerta',
+            title: 'Anular comprobante',
             text: event.detail[0]['label'],
             icon: 'warning',
+            input: 'text',
+            inputLabel: 'Motivo de la anulación',
+            inputValue: 'ERROR EN LA EMISIÓN',
+            inputValidator: (value) => {
+                if (!value || !value.trim()) {
+                    return 'Debe indicar el motivo de la anulación.';
+                }
+            },
             confirmButtonText: "Anular comprobante",
             confirmButtonColor: "red",
             showCancelButton: true,
+            cancelButtonText: 'Cancelar',
             allowOutsideClick: false,
             allowEscapeKey: false
         }).then((result) => {
             if(result.isConfirmed){
-                Swal.fire({
-                    title: "Documento Anulado!",
-                    text: "El documento fue anulado con éxito!.",
-                    icon: "success"
-                });
-                Livewire.dispatch('document_destroy', {document:event.detail[0]['id']})
+                // El resultado (éxito o error) lo confirma el backend con
+                // los eventos 'successNotRoute' / 'error' tras responder SUNAT.
+                Livewire.dispatch('document_destroy', {document:event.detail[0]['id'], motive: result.value})
             }
         });
     });

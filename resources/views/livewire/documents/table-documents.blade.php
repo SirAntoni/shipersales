@@ -143,36 +143,60 @@
 
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
-                                                @if(!empty($document->pdf_path))
-                                                    <a href="{{ route('documents.download', ['path' => ltrim($document->pdf_path, '/')]) }}">
-                                                        <img src="{{ asset('images/pdf.svg') }}" width="35px" alt="Descargar PDF">
-                                                    </a>
-                                                @else
-                                                    {{-- Sin PDF (pendiente o no generado) --}}
-                                                    <img src="{{ asset('images/reload.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="PDF no disponible">
-                                                @endif
+                                                <div class="flex items-center gap-1">
+                                                    @if(!empty($document->pdf_path))
+                                                        <a href="{{ route('documents.download', ['path' => ltrim($document->pdf_path, '/')]) }}" title="PDF del comprobante">
+                                                            <img src="{{ asset('images/pdf.svg') }}" width="35px" alt="Descargar PDF">
+                                                        </a>
+                                                    @else
+                                                        {{-- Sin PDF (pendiente o no generado) --}}
+                                                        <img src="{{ asset('images/reload.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="PDF no disponible">
+                                                    @endif
+                                                    @if($document->status == 'anulado' && !empty($document->pdf_path_anulled))
+                                                        <a href="{{ route('documents.download', ['path' => ltrim($document->pdf_path_anulled, '/')]) }}" title="Constancia de anulación (PDF)" class="relative">
+                                                            <img src="{{ asset('images/pdf.svg') }}" width="24px" class="opacity-70" alt="Constancia de anulación">
+                                                            <span class="absolute -top-1 -right-1 text-[9px] font-bold text-danger">B</span>
+                                                        </a>
+                                                    @endif
+                                                </div>
                                             </x-base.table.td>
 
                                             <x-base.table.td class="text-center border-dashed dark:bg-darkmode-600">
-                                                @if(!empty($document->xml_path))
-                                                    <a href="{{ route('documents.download', ['path' => ltrim($document->xml_path, '/')]) }}">
-                                                        <img src="{{ asset('images/xml.svg') }}" width="35px" alt="Descargar XML">
-                                                    </a>
-                                                @else
-                                                    {{-- Muy raro, pero por si hay registros viejos sin XML --}}
-                                                    <img src="{{ asset('images/reload.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="XML no disponible">
-                                                @endif
+                                                <div class="flex items-center gap-1">
+                                                    @if(!empty($document->xml_path))
+                                                        <a href="{{ route('documents.download', ['path' => ltrim($document->xml_path, '/')]) }}" title="XML del comprobante">
+                                                            <img src="{{ asset('images/xml.svg') }}" width="35px" alt="Descargar XML">
+                                                        </a>
+                                                    @else
+                                                        {{-- Muy raro, pero por si hay registros viejos sin XML --}}
+                                                        <img src="{{ asset('images/reload.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="XML no disponible">
+                                                    @endif
+                                                    @if($document->status == 'anulado' && !empty($document->xml_path_anulled))
+                                                        <a href="{{ route('documents.download', ['path' => ltrim($document->xml_path_anulled, '/')]) }}" title="XML de la anulación" class="relative">
+                                                            <img src="{{ asset('images/xml.svg') }}" width="24px" class="opacity-70" alt="XML de la anulación">
+                                                            <span class="absolute -top-1 -right-1 text-[9px] font-bold text-danger">B</span>
+                                                        </a>
+                                                    @endif
+                                                </div>
                                             </x-base.table.td>
 
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
-                                                @if (!empty($document->cdr_path))
-                                                    <a href="{{ route('documents.download', ['path' => ltrim($document->cdr_path, '/')]) }}">
-                                                        <img src="{{ asset('images/cdr.png') }}" width="35px" alt="Descargar CDR">
-                                                    </a>
-                                                @else
-                                                    {{-- Sin CDR: aún pendiente o error --}}
-                                                    <img src="{{ asset('images/reload.svg') }}" width="35px" alt="CDR pendiente">
-                                                @endif
+                                                <div class="flex items-center gap-1">
+                                                    @if (!empty($document->cdr_path))
+                                                        <a href="{{ route('documents.download', ['path' => ltrim($document->cdr_path, '/')]) }}" title="CDR del comprobante">
+                                                            <img src="{{ asset('images/cdr.png') }}" width="35px" alt="Descargar CDR">
+                                                        </a>
+                                                    @else
+                                                        {{-- Sin CDR: aún pendiente o error --}}
+                                                        <img src="{{ asset('images/reload.svg') }}" width="35px" alt="CDR pendiente">
+                                                    @endif
+                                                    @if($document->status == 'anulado' && !empty($document->cdr_path_anulled))
+                                                        <a href="{{ route('documents.download', ['path' => ltrim($document->cdr_path_anulled, '/')]) }}" title="CDR de la anulación" class="relative">
+                                                            <img src="{{ asset('images/cdr.png') }}" width="24px" class="opacity-70" alt="CDR de la anulación">
+                                                            <span class="absolute -top-1 -right-1 text-[9px] font-bold text-danger">B</span>
+                                                        </a>
+                                                    @endif
+                                                </div>
                                             </x-base.table.td>
 
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
@@ -187,8 +211,14 @@
                                                 @endif
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
+                                                @php
+                                                    $esNotaCredito = str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC');
+                                                @endphp
                                                 <div class="flex items-center justify-center">
-                                                    @if($document->status != "anulado")
+                                                    @if($document->status == "nota_credito")
+                                                        <span class="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-amber-900 dark:text-amber-300">Con NC</span>
+                                                    @elseif($document->status != "anulado" && $document->status_sunat != "pendiente")
+                                                        @if($document->status_sunat == "aceptado" && !$esNotaCredito)
                                                         <x-base.tippy
                                                             as="x-base.button-sm"
                                                             variant="success"
@@ -198,6 +228,7 @@
                                                             wire:click="creditNote({{$document->id}})">
                                                             <i class="text-white fa-solid fa-file-invoice"></i>
                                                         </x-base.tippy>
+                                                        @endif
 
 {{--                                                        <x-base.tippy--}}
 {{--                                                            as="x-base.button-sm"--}}

@@ -7,14 +7,10 @@ use App\Models\Client;
 use App\Models\Document;
 use App\Services\MigoApiService;
 use App\Services\SunatService;
-use App\Models\Sale;
-use App\Models\SaleDetail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
-use App\Models\Voucher;
 use Luecano\NumeroALetras\NumeroALetras;
-use App\Models\Setting;
 
 class CreditNote extends Component
 {
@@ -58,10 +54,10 @@ class CreditNote extends Component
     ];
 
     public function mount(){
-        $document = Document::find($this->id);
+        $document = Document::findOrFail($this->id);
         $this->token = env('MIGO_API_TOKEN');
         $this->serie = ($document->document_type == '1') ? "FC01" : "BC01";
-        $this->correlative = $document->correlative;
+        $this->correlative = $this->nextCorrelativeForSerie($this->serie);
 
 
         //Inicio Client
@@ -71,15 +67,36 @@ class CreditNote extends Component
 
         $this->affected_document = $document->serie . '-' . $document->correlative;
 
-        $this->date = $document->date;
+        // Fecha de emisión de la nota de crédito (no la del documento afectado)
+        $this->date = Carbon::now()->format('Y-m-d');
         $this->defaultClient = $document->client->id;
-        $this->granSubtotal = $document->total;
         $this->documentType = $document->document_type;
 
-
-        foreach ($document->documentDetails as $detail) {
-            $this->addToArticleSale($detail->id);
+        // Precarga con los items del documento afectado (DocumentDetail, no SaleDetail)
+        foreach ($document->documentDetails()->with('article')->get() as $detail) {
+            $this->articlesSelected[] = [
+                'id'       => $detail->article_id,
+                'category' => $detail->category_id,
+                'sku'      => $detail->article->sku ?? '',
+                'brand'    => $detail->brand_id,
+                'title'    => $detail->article->title ?? '',
+                'price'    => $detail->price,
+                'quantity' => $detail->quantity,
+                'total'    => (float) $detail->price * (int) $detail->quantity,
+            ];
         }
+
+        $this->calculateTotals();
+    }
+
+    /** Siguiente correlativo para la serie de nota de crédito (FC01/BC01). */
+    private function nextCorrelativeForSerie(string $serie): int
+    {
+        $max = Document::where('serie', $serie)
+            ->selectRaw('MAX(CAST(correlative AS UNSIGNED)) as max_correlative')
+            ->value('max_correlative');
+
+        return ((int) $max) + 1;
     }
 
     protected $rules = [
@@ -105,11 +122,32 @@ class CreditNote extends Component
     public function save(MigoApiService $api)
     {
 
-        Log::info("inicio de emisión de comprobante");
-
-
+        Log::info("inicio de emisión de nota de crédito");
 
         $this->validate();
+
+        // El documento afectado debe estar vigente y aceptado por SUNAT
+        $affectedDoc = Document::find($this->id);
+
+        if (!$affectedDoc) {
+            $this->dispatch('error', ['label' => 'No se encontró el documento afectado.']);
+            return;
+        }
+
+        if ($affectedDoc->status == 'nota_credito') {
+            $this->dispatch('error', ['label' => "El comprobante {$affectedDoc->serie}-{$affectedDoc->correlative} ya tiene una nota de crédito emitida."]);
+            return;
+        }
+
+        if ($affectedDoc->status == 'anulado') {
+            $this->dispatch('error', ['label' => "El comprobante {$affectedDoc->serie}-{$affectedDoc->correlative} está anulado: no puede recibir una nota de crédito."]);
+            return;
+        }
+
+        if ($affectedDoc->status_sunat != 'aceptado') {
+            $this->dispatch('error', ['label' => "El comprobante {$affectedDoc->serie}-{$affectedDoc->correlative} no está aceptado por SUNAT (estado: {$affectedDoc->status_sunat})."]);
+            return;
+        }
 
         $items = collect($this->articlesSelected);
 
@@ -130,17 +168,22 @@ class CreditNote extends Component
         $textoDoc = $client->document_type;
         $tipoDoc  = $inverseTipos[$textoDoc] ?? null;
 
-        $config = $this->docConfig[$textoDoc];
+        // Solo DNI/RUC se validan contra MIGO (igual que NewDocument);
+        // CE, pasaporte, etc. usan el nombre registrado del cliente.
+        // Si MIGO falla, se usa el nombre registrado en lugar de abortar.
+        $responseMigoApi = null;
+        $config = $this->docConfig[$textoDoc] ?? null;
 
-        $payload = [
-            $config['field'] => $client->document_number,
-            'token'          => $this->token,
-        ];
-
-        $responseMigoApi = $api->post(
-            strtolower($client->document_type),
-            $payload
-        );
+        if ($config !== null) {
+            try {
+                $responseMigoApi = $api->post(strtolower($client->document_type), [
+                    $config['field'] => $client->document_number,
+                    'token'          => $this->token,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning("MIGO no disponible al emitir nota de crédito, se usa el nombre registrado del cliente: {$e->getMessage()}");
+            }
+        }
 
         if ($this->documentType == '1'
             && $client->document_type != 'RUC') {
@@ -164,76 +207,154 @@ class CreditNote extends Component
             "client" => [
                 "tipoDoc" => $tipoDoc,
                 "numDoc" => $client->document_number,
-                "name" => $responseMigoApi[$config['responseKey']] ?? '',
+                "name" => ($responseMigoApi === null)
+                    ? $client->name
+                    : ($responseMigoApi[$config['responseKey']] ?? $client->name),
                 "address" => $client->address,
             ],
             "items"=> $items,
             "legend"=> $this->legends,
         ];
 
-        $sunat = new SunatService();
+        try {
+            $sunat = new SunatService();
 
-        $see = $sunat->getSee();
+            $see = $sunat->getSee();
 
-        $invoice = $sunat->getNote($data);
+            $invoice = $sunat->getNote($data);
 
-        Log::info("invoice: " . json_encode($data));;
+            Log::info("nota de crédito data: " . json_encode($data));
 
-        $result = $see->send($invoice);
+            $result = $see->send($invoice);
 
-        file_put_contents(storage_path('/xml_path/'.$invoice->getName().'.xml'),$see->getFactory()->getLastXml());
+            file_put_contents(storage_path('/xml_path/'.$invoice->getName().'.xml'),$see->getFactory()->getLastXml());
 
-        $sunatResponse = $sunat->sunatResponse($invoice,$result);
+            $sunatResponse = $sunat->sunatResponse($invoice,$result);
 
-        $pdf_path = "";
-        if($sunatResponse['status'] == 1){
-            $pdf_path = $sunat->generatePDF($invoice, 'invoice', [
-                'affected' => $this->affected_document,
-                'reason'   => 'Anulación de la operación',
+            // Correlativo ya usado en SUNAT: reintentar una vez con el siguiente
+            if ($sunatResponse['status'] != 1 && (string)($sunatResponse['code'] ?? '') === '1032') {
+                Log::warning("SUNAT 1032 en nota de crédito: correlativo ya existe. Reintentando.");
+
+                $this->correlative = $this->nextCorrelativeForSerie($this->serie);
+                $data['correlative'] = $this->correlative;
+
+                $invoice = $sunat->getNote($data);
+                $result  = $see->send($invoice);
+
+                file_put_contents(storage_path('/xml_path/'.$invoice->getName().'.xml'), $see->getFactory()->getLastXml());
+
+                $sunatResponse = $sunat->sunatResponse($invoice, $result);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error inesperado emitiendo nota de crédito', [
+                'affected_document_id' => $this->id,
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
             ]);
-        }
 
-        if($sunatResponse['status'] != 1){
-            $this->dispatch('error', ['label' => 'No se puede emitir un comprobante en estos momentos por fallos con sunat, Intentarlo mas tarde.']);
+            $this->dispatch('error', ['label' => 'Ocurrió un error inesperado al emitir la nota de crédito. Inténtelo nuevamente; si persiste, revise los logs.']);
             return;
         }
 
-        $document = Document::create([
-            'status' => "enviado",
-            'document_type' => $this->documentType,
-            'serie' => $this->serie,
-            'correlative' => $this->correlative,
-            'date' => $this->date,
-            'currency' => 'PEN',
-            'payment_method' => 'CONTADO',
-            'subtotal' => $this->granSubtotal,
-            'tax' => $this->granTax,
-            'total' => $this->granTotal,
-            'xml_path' => '/xml_path/'.$invoice->getName().'.xml',
-            'cdr_path' => $sunatResponse['cdr'] ?? '',
-            'pdf_path' => $pdf_path,
-            'status_sunat'=> ($sunatResponse['status'] == "1") ? "aceptado" : "rechazado",
-            'notes'=> $sunatResponse['notes'],
-            'sale_id' => $this->id,
-            'client_id' => $this->client,
-            'user_id' => auth()->id()
-        ]);
+        if($sunatResponse['status'] != 1){
+            $rawNote = (string) ($sunatResponse['notes'][0] ?? '');
+            $rawNote = preg_replace('/ - Detalle:.*$/s', '', $rawNote);
+            $label   = $rawNote !== ''
+                ? "SUNAT rechazó la nota de crédito: {$rawNote}"
+                : 'No se puede emitir la nota de crédito en estos momentos por fallos con SUNAT. Inténtelo más tarde.';
 
-        foreach ($this->articlesSelected as $article) {
-            $art = Article::find($article['id']);
-            $document->documentDetails()->create([
-                'price' => $article['price'],
-                'quantity' => $article['quantity'],
-                'tax' => $article['total'] * 0.18,
-                'total' => $article['total'] + ($article['total'] * 0.18),
-                'article_id' => $article['id'],
-                'category_id' => $article['category'],
-                'brand_id' => $article['brand'],
-                'subtotal' => $article['total'],
+            $this->dispatch('error', ['label' => $label]);
+            return;
+        }
+
+        // La NC ya fue ACEPTADA por SUNAT: registrar primero en BD y recién
+        // después generar el PDF, para no perder una emisión aceptada.
+        try {
+            $sale = \App\Models\Sale::find($affectedDoc->sale_id);
+
+            // Si la venta ya fue anulada (anulación de venta o devolución confirmada),
+            // el stock ya se repuso por esa vía: la NC no debe reponerlo de nuevo.
+            $stockYaRepuesto = $sale && (int) $sale->status === \App\Models\Sale::SALE_CANCELED;
+
+            $document = Document::create([
+                'status' => "enviado",
+                'document_type' => $this->documentType,
+                'serie' => $this->serie,
+                'correlative' => $this->correlative,
+                'date' => $this->date,
+                'currency' => 'PEN',
+                'payment_method' => 'CONTADO',
+                'subtotal' => $this->granSubtotal,
+                'tax' => $this->granTax,
+                'total' => $this->granTotal,
+                'xml_path' => '/xml_path/'.$invoice->getName().'.xml',
+                'cdr_path' => $sunatResponse['cdr'] ?? '',
+                'pdf_path' => null,
+                'status_sunat'=> "aceptado",
+                'notes'=> $sunatResponse['notes'],
+                'sale_id' => $affectedDoc->sale_id,
+                'affected_document_id' => $affectedDoc->id,
+                'stock_restored' => !$stockYaRepuesto,
+                'client_id' => $this->client,
+                'user_id' => auth()->id() ?? $affectedDoc->user_id
             ]);
 
+            foreach ($this->articlesSelected as $article) {
+                $document->documentDetails()->create([
+                    'price' => $article['price'],
+                    'quantity' => $article['quantity'],
+                    'tax' => $article['total'] * 0.18,
+                    'total' => $article['total'] + ($article['total'] * 0.18),
+                    'article_id' => $article['id'],
+                    'category_id' => $article['category'],
+                    'brand_id' => $article['brand'],
+                    'subtotal' => $article['total'],
+                ]);
+
+                // La nota de crédito devuelve los productos al inventario
+                if (!$stockYaRepuesto) {
+                    Article::find($article['id'])?->increment('stock', (int) $article['quantity']);
+                }
+            }
+
+            // Marcar el documento afectado para bloquear nueva NC o anulación sobre él
+            $affectedDoc->update(['status' => 'nota_credito']);
+
+            // Si la venta estaba en devolución, la NC la cierra como anulada
+            if ($sale && (int) $sale->status === \App\Models\Sale::SALE_RETURN) {
+                $sale->update([
+                    'status' => \App\Models\Sale::SALE_CANCELED,
+                    'deletion_date' => now(),
+                    'deletion_reason' => "Devolución con nota de crédito {$this->serie}-{$this->correlative}",
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Nota de crédito ACEPTADA por SUNAT pero falló el registro en BD', [
+                'comprobante' => "{$this->serie}-{$this->correlative}",
+                'affected_document_id' => $this->id,
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
+
+            $this->dispatch('error', ['label' => "La nota de crédito {$this->serie}-{$this->correlative} fue ACEPTADA por SUNAT pero ocurrió un error interno al registrarla. NO la vuelva a emitir: contacte al administrador."]);
+            return;
         }
-        $this->dispatch('success', ['label' => 'La documento fue registrada con éxito.', 'btn' => 'Ir a documentos', 'route' => route('documents.index')]);
+
+        try {
+            $document->update(['pdf_path' => $sunat->generatePDF($invoice, 'invoice', [
+                'affected' => $this->affected_document,
+                'reason'   => 'Anulación de la operación',
+            ])]);
+        } catch (\Throwable $e) {
+            // El PDF puede regenerarse después; no invalida la emisión
+            Log::error("Nota de crédito {$this->serie}-{$this->correlative} aceptada, pero falló la generación del PDF: {$e->getMessage()}");
+        }
+
+        $label = $stockYaRepuesto
+            ? "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito. El stock no se modificó porque ya había sido devuelto al anular la venta."
+            : "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito y el stock fue repuesto.";
+
+        $this->dispatch('success', ['label' => $label, 'btn' => 'Ir a documentos', 'route' => route('documents.index')]);
 
     }
 
@@ -248,11 +369,6 @@ class CreditNote extends Component
                 'text'  => $c->name,
             ])
             ->toArray();
-    }
-
-    public function updatedDocumentType(){
-        $this->serie = Voucher::serie($this->documentType);
-        $this->correlative = Voucher::nextCorrelativeById($this->documentType);
     }
 
     public function searchArticles($query)
@@ -297,81 +413,22 @@ class CreditNote extends Component
                 return $item['id'] == $article->id;
             });
 
+            // Una nota de crédito devuelve productos ya vendidos:
+            // el stock actual no limita qué puede incluirse.
             if ($index !== false) {
-
-                if ($this->articlesSelected[$index]['quantity'] < $article->stock) {
-                    $this->articlesSelected[$index]['quantity']++;
-                    $this->articlesSelected[$index]['total'] = $this->articlesSelected[$index]['quantity'] * $article->sale_price;
-                } else {
-                    $this->dispatch('error', ['label' => 'No hay stock disponible para ' . $article->title]);
-                }
-
+                $this->articlesSelected[$index]['quantity']++;
+                $this->articlesSelected[$index]['total'] = $this->articlesSelected[$index]['quantity'] * $article->sale_price;
             } else {
-
-                if ($article->stock > 0) {
-
-                    $this->articlesSelected[] = [
-                        'id' => $article->id,
-                        'category' => $article->category_id,
-                        'brand' => $article->brand_id,
-                        'title' => $article->title,
-                        'price' => $article->sale_price,
-                        'quantity' => 1,
-                        'total' => $article->sale_price
-                    ];
-
-
-
-                } else {
-                    $this->dispatch('error', ['label' => 'No hay stock disponible para ' . $article->title]);
-                }
-            }
-
-            $this->calculateTotals();
-        }
-    }
-
-    public function addToArticleSale($id)
-    {
-
-        $article = SaleDetail::with('article')->find($id);
-
-
-        if ($article) {
-
-            $index = collect($this->articlesSelected)->search(function ($item) use ($article) {
-                return $item['id'] == $article->id;
-            });
-
-            if ($index !== false) {
-
-                if ($this->articlesSelected[$index]['quantity'] < $article->stock) {
-                    $this->articlesSelected[$index]['quantity']++;
-                    $this->articlesSelected[$index]['total'] = $this->articlesSelected[$index]['quantity'] * $article->sale_price;
-                } else {
-                    $this->dispatch('error', ['label' => 'No hay stock disponible para ' . $article->title]);
-                }
-
-            } else {
-
-                if ($article->article->stock > 0) {
-
-                    $this->articlesSelected[] = [
-                        'id' => $article->article->id,
-                        'category' => $article->article->category_id,
-                        'sku' => $article->article->sku,
-                        'brand' => $article->brand_id,
-                        'title' => $article->article->title,
-                        'price' => $article->price,
-                        'quantity' => $article->quantity,
-                        'total' => $article->price * $article->quantity,
-                    ];
-
-
-
-                } else {
-                    $this->dispatch('error', ['label' => 'No hay stock disponible para ' . $article->title]);
-                }
+                $this->articlesSelected[] = [
+                    'id' => $article->id,
+                    'category' => $article->category_id,
+                    'sku' => $article->sku,
+                    'brand' => $article->brand_id,
+                    'title' => $article->title,
+                    'price' => $article->sale_price,
+                    'quantity' => 1,
+                    'total' => $article->sale_price
+                ];
             }
 
             $this->calculateTotals();
@@ -402,11 +459,6 @@ class CreditNote extends Component
         if (!$article) {
             $this->dispatch('error', ['label' => 'Artículo no encontrado']);
             return;
-        }
-
-        if ($article->stock < $selected['quantity']) {
-            $this->dispatch('error', ['label' => 'No hay stock disponible para ' . $article->title]);
-            $selected['quantity'] = $article->stock;
         }
 
         $selected['total'] = (float)$selected['price'] * (int)$selected['quantity'];

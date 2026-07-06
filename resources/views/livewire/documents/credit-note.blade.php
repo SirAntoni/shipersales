@@ -49,10 +49,12 @@
                                             <x-base.form-label for="documentType">
                                                 Tipo de documento
                                             </x-base.form-label>
+                                            {{-- Heredado del documento afectado: no editable --}}
                                             <x-base.form-select
                                                 aria-label=".form-select-lg"
                                                 id="documentType"
-                                                wire:model.live="documentType"
+                                                wire:model="documentType"
+                                                disabled
                                             >
 
                                                 <option value="">Seleccione tipo de documento.</option>
@@ -124,6 +126,7 @@
                                                 type="text"
                                                 placeholder="Documento afectado"
                                                 wire:model="affected_document"
+                                                disabled
                                             />
                                             @error('affected_document')
                                             <div class="p-1">
@@ -164,12 +167,14 @@
                                             <label>Cliente</label>
 
                                             <div class="mt-2 " wire:ignore>
+                                                {{-- Heredado del documento afectado: no editable --}}
                                                 <x-base.tom-select
                                                     id="tomClients"
                                                     wire:ignore
                                                     class="w-full"
                                                     data-placeholder="Selecciona un cliente"
                                                     wire:model="client"
+                                                    disabled
                                                 >
 
                                                 </x-base.tom-select>

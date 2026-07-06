@@ -15,14 +15,17 @@ class PendingDocumentsService
 
     /**
      * Reenvía todos los documentos con status_sunat = 'pendiente'.
+     * Devuelve un resumen: total procesados, aceptados, rechazados y aún pendientes.
      */
-    public function resendAll(): void
+    public function resendAll(): array
     {
         $pending = Document::with(['client', 'documentDetails.article'])
             ->where('status_sunat', 'pendiente')
             ->get();
 
         Log::info("Reenvío SUNAT: encontrados {$pending->count()} documentos pendientes.");
+
+        $stats = ['total' => $pending->count(), 'aceptados' => 0, 'rechazados' => 0, 'pendientes' => 0];
 
         foreach ($pending as $document) {
             try {
@@ -32,7 +35,25 @@ class PendingDocumentsService
                     'trace' => $e->getTraceAsString(),
                 ]);
             }
+
+            $document->refresh();
+
+            match ($document->status_sunat) {
+                'aceptado'  => $stats['aceptados']++,
+                'rechazado' => $stats['rechazados']++,
+                default     => $stats['pendientes']++,
+            };
         }
+
+        return $stats;
+    }
+
+    /**
+     * Reenvía un documento puntual (entrada pública para el endpoint de retry).
+     */
+    public function resend(Document $document): void
+    {
+        $this->resendSingle($document);
     }
 
     /**

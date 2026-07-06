@@ -12,6 +12,9 @@ use Greenter\Model\Sale\Invoice;
 use Greenter\Model\Sale\Note;
 use Greenter\Model\Sale\Legend;
 use Greenter\Model\Sale\SaleDetail;
+use Greenter\Model\Sale\Document as DocumentRef;
+use Greenter\Model\Summary\Summary;
+use Greenter\Model\Summary\SummaryDetail;
 use Greenter\Model\Voided\Voided;
 use Greenter\Model\Voided\VoidedDetail;
 use Greenter\Report\XmlUtils;
@@ -118,6 +121,52 @@ class SunatService
                 ->setSerie($detail['serie'])
                 ->setCorrelativo($detail['correlative'])
                 ->setDesMotivoBaja($detail['motivoBaja']);
+        }
+
+        return $greenDetails;
+    }
+
+    /**
+     * Resumen diario (RC). Con estado 3 en los detalles sirve para
+     * anular boletas y sus notas de credito, que SUNAT no acepta
+     * en la comunicacion de baja (RA, solo facturas).
+     */
+    public function getSummary($data)
+    {
+        return (new Summary())
+            ->setCorrelativo($data['correlative'])
+            ->setFecGeneracion(new DateTime($data['date']))
+            ->setFecResumen(new DateTime())
+            ->setMoneda('PEN')
+            ->setCompany($this->getCompany())
+            ->setDetails($this->getSummaryDetails($data['details']));
+    }
+
+    public function getSummaryDetails($details = [])
+    {
+        $greenDetails = [];
+
+        foreach ($details as $detail) {
+            $greenDetail = (new SummaryDetail())
+                ->setTipoDoc($detail['tipoDoc'])
+                ->setSerieNro($detail['serie'] . '-' . $detail['correlative'])
+                ->setEstado($detail['estado'] ?? '3') // Catalog. 19: 3 = anulado
+                ->setClienteTipo($detail['clienteTipo'])
+                ->setClienteNro($detail['clienteNro'])
+                ->setTotal($detail['total'])
+                ->setMtoOperGravadas($detail['subtotal'])
+                ->setMtoIGV($detail['igv']);
+
+            // Las notas de credito (07/08) deben referenciar la boleta afectada
+            if (!empty($detail['docReferencia'])) {
+                $greenDetail->setDocReferencia(
+                    (new DocumentRef())
+                        ->setTipoDoc($detail['docReferencia']['tipoDoc'])
+                        ->setNroDoc($detail['docReferencia']['nroDoc'])
+                );
+            }
+
+            $greenDetails[] = $greenDetail;
         }
 
         return $greenDetails;
@@ -251,17 +300,11 @@ class SunatService
 
         $cdr = $result->getCdrResponse();
 
-        if ($type === "invoice") {
-            file_put_contents(
-                storage_path('/cdr_path/R-' . $invoice->getName() . '.zip'),
-                $result->getCdrZip()
-            );
-        } else {
-            file_put_contents(
-                storage_path('/cdr_path_anulled/R-' . $invoice->getName() . '.zip'),
-                $result->getCdrZip()
-            );
-        }
+        // Misma base para escribir el zip y para la ruta que se guarda en BD
+        $cdrBase = ($type === "invoice") ? '/cdr_path/' : '/cdr_path_anulled/';
+        $cdrPath = $cdrBase . 'R-' . $invoice->getName() . '.zip';
+
+        file_put_contents(storage_path($cdrPath), $result->getCdrZip());
 
         $code = (int)$cdr->getCode();
 
@@ -276,7 +319,7 @@ class SunatService
 
             $response['status'] = 1;
             $response['code']   = $code;
-            $response['cdr']    = '/cdr_path/R-' . $invoice->getName() . '.zip';
+            $response['cdr']    = $cdrPath;
             $response['notes']  = (count($cdr->getNotes()) > 0) ? $cdr->getNotes() : [];
 
             Log::info("--- START: Log comprobante 0 " . json_encode($response) . " ---");
@@ -288,7 +331,7 @@ class SunatService
 
             $response['status'] = 2;
             $response['code']   = $code;
-            $response['cdr']    = '/cdr_path/R-' . $invoice->getName() . '.zip';
+            $response['cdr']    = $cdrPath;
             $response['notes']  = (count($cdr->getNotes()) > 0) ? $cdr->getNotes() : [];
         } else {
             Log::info("--- START: Log comprobante ELSE " . $invoice->getName() . " ---");
@@ -298,7 +341,7 @@ class SunatService
 
             $response['status'] = 0;
             $response['code']   = $code;
-            $response['cdr']    = '/cdr_path/R-' . $invoice->getName() . '.zip';
+            $response['cdr']    = $cdrPath;
             $response['notes']  = (count($cdr->getNotes()) > 0) ? $cdr->getNotes() : [];
         }
 
@@ -340,8 +383,8 @@ class SunatService
      */
     public function generatePdf($invoice, $type = 'invoice', array $extra = [])
     {
-        if ($type === 'voided') {
-            return $this->renderVoidedPdf($invoice);
+        if ($type === 'voided' || $type === 'summary') {
+            return $this->renderVoidedPdf($invoice, $extra);
         }
 
         $data = $this->buildComprobanteData($invoice, $extra);
@@ -528,30 +571,48 @@ class SunatService
         return $css;
     }
 
-    /** Comunicacion de baja renderizada con la matriz de diseno. */
-    private function renderVoidedPdf($voided): string
+    /** Constancia de anulacion (Voided RA o Summary RC) renderizada con la matriz de diseno. */
+    private function renderVoidedPdf($voided, array $extra = []): string
     {
-        $gCompany = $voided->getCompany();
-        $setting  = Setting::first();
-        $addr     = $gCompany->getAddress();
+        $gCompany  = $voided->getCompany();
+        $setting   = Setting::first();
+        $addr      = $gCompany->getAddress();
+        $isSummary = $voided instanceof Summary;
+
+        $tipoLabel = fn (?string $tipoDoc) => [
+            '01' => 'Factura',
+            '03' => 'Boleta',
+            '07' => 'Nota de crédito',
+            '08' => 'Nota de débito',
+        ][$tipoDoc] ?? $tipoDoc;
 
         $details = [];
         foreach ($voided->getDetails() as $det) {
-            $tipo = $det->getTipoDoc() === '01' ? 'Factura' : ($det->getTipoDoc() === '03' ? 'Boleta' : $det->getTipoDoc());
-            $details[] = [
-                'tipo'      => $tipo,
-                'documento' => $det->getSerie() . '-' . str_pad((string) $det->getCorrelativo(), 8, '0', STR_PAD_LEFT),
-                'motivo'    => $det->getDesMotivoBaja(),
-            ];
+            if ($isSummary) {
+                $details[] = [
+                    'tipo'      => $tipoLabel($det->getTipoDoc()),
+                    'documento' => $det->getSerieNro(),
+                    'motivo'    => $extra['motivo'] ?? 'Anulación de la operación',
+                ];
+            } else {
+                $details[] = [
+                    'tipo'      => $tipoLabel($det->getTipoDoc()),
+                    'documento' => $det->getSerie() . '-' . str_pad((string) $det->getCorrelativo(), 8, '0', STR_PAD_LEFT),
+                    'motivo'    => $det->getDesMotivoBaja(),
+                ];
+            }
         }
+
+        $fechaCom = $isSummary ? $voided->getFecResumen() : $voided->getFecComunicacion();
 
         $data = [
             'logo'     => $this->pdfLogo(),
             'fontFace' => $this->pdfFontFace(),
-            'title'    => 'Comunicación de baja',
+            'title'    => $isSummary ? 'Resumen diario - Anulación' : 'Comunicación de baja',
+            'footer'   => $isSummary ? 'Resumen diario de anulación electrónico' : 'Comunicación de baja electrónica',
             'number'   => $voided->getName(),
             'fechaGen' => \Carbon\Carbon::parse($voided->getFecGeneracion()->format('Y-m-d'))->locale('es')->isoFormat('D [de] MMMM [de] YYYY'),
-            'fechaCom' => \Carbon\Carbon::parse($voided->getFecComunicacion()->format('Y-m-d'))->locale('es')->isoFormat('D [de] MMMM [de] YYYY'),
+            'fechaCom' => \Carbon\Carbon::parse($fechaCom->format('Y-m-d'))->locale('es')->isoFormat('D [de] MMMM [de] YYYY'),
             'c'        => [
                 'name'    => $gCompany->getRazonSocial(),
                 'ruc'     => $gCompany->getRuc(),

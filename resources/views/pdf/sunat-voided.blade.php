@@ -236,7 +236,7 @@
         </table>
     </div>
 
-    <div class="footbar">Comunicación de baja electrónica<span class="orange"></span></div>
+    <div class="footbar">{{ $footer ?? 'Comunicación de baja electrónica' }}<span class="orange"></span></div>
 </div>
 </body>
 </html>

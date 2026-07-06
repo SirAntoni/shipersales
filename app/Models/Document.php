@@ -38,12 +38,15 @@ class Document extends Model
         'code',
         'notes',
         'sale_id',
+        'affected_document_id',
+        'stock_restored',
         'client_id',
         'user_id'
     ];
 
     protected $casts = [
         'notes' => 'array',
+        'stock_restored' => 'boolean',
     ];
 
     public function documentDetails()
@@ -59,5 +62,10 @@ class Document extends Model
     public function sale()
     {
         return $this->belongsTo(Sale::class);
+    }
+
+    public function affectedDocument()
+    {
+        return $this->belongsTo(Document::class, 'affected_document_id');
     }
 }

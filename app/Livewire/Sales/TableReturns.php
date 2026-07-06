@@ -44,6 +44,27 @@ class TableReturns extends Component
 
     public function confirmCancel($id)
     {
+        // Comprobante original de la venta (las NC tienen affected_document_id)
+        $document = \App\Models\Document::where('sale_id', $id)
+            ->whereNull('affected_document_id')
+            ->orderBy('id')
+            ->first();
+
+        // Si hay comprobante electrónico vigente, lo correcto ante SUNAT es
+        // emitir una nota de crédito (que repone stock y cierra la venta).
+        if ($document
+            && $document->status_sunat == 'aceptado'
+            && !in_array($document->status, ['anulado', 'nota_credito'])) {
+
+            $this->dispatch('questionReturnWithDocument', [
+                'label' => "Esta venta tiene el comprobante {$document->serie}-{$document->correlative} emitido y aceptado por SUNAT. Lo correcto es emitir una nota de crédito: repone el stock y anula la venta.",
+                'id' => $id,
+                'ncUrl' => route('documents.credit-note.blade.php', $document->id),
+            ]);
+
+            return;
+        }
+
         $this->dispatch('questionConfirmReturn', [
             'label' => '¿Confirmar anulación por devolución? Se devolverá el stock.',
             'id' => $id
@@ -60,16 +81,23 @@ class TableReturns extends Component
             return;
         }
 
-        DB::transaction(function () use ($sale) {
-            $articleIds = $sale->saleDetails->pluck('article_id')->unique();
-            $articles = Article::whereIn('id', $articleIds)->get()->keyBy('id');
+        // Si el comprobante ya tiene nota de crédito, la NC ya repuso el stock
+        $stockYaRepuesto = \App\Models\Document::where('sale_id', $sale->id)
+            ->where('status', 'nota_credito')
+            ->exists();
 
-            foreach ($sale->saleDetails as $item) {
-                if (isset($articles[$item->article_id])) {
-                    $articles[$item->article_id]->increment('stock', $item->quantity);
+        if (!$stockYaRepuesto) {
+            DB::transaction(function () use ($sale) {
+                $articleIds = $sale->saleDetails->pluck('article_id')->unique();
+                $articles = Article::whereIn('id', $articleIds)->get()->keyBy('id');
+
+                foreach ($sale->saleDetails as $item) {
+                    if (isset($articles[$item->article_id])) {
+                        $articles[$item->article_id]->increment('stock', $item->quantity);
+                    }
                 }
-            }
-        });
+            });
+        }
 
         $sale->update([
             'status' => Sale::SALE_CANCELED,
@@ -77,7 +105,9 @@ class TableReturns extends Component
             'deletion_reason' => 'Devolución confirmada'
         ]);
 
-        $this->dispatch('successNotRoute', ['label' => 'Devolución procesada y stock devuelto.']);
+        $this->dispatch('successNotRoute', ['label' => $stockYaRepuesto
+            ? 'Devolución procesada. El stock ya había sido repuesto por la nota de crédito.'
+            : 'Devolución procesada y stock devuelto.']);
     }
 
     public function revertReturn($id)
