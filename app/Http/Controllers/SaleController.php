@@ -137,6 +137,37 @@ class SaleController extends Controller implements hasMiddleware
         return view('pdf.invoice-v2', $data);
     }
 
+    /**
+     * Etiqueta de despacho (100mm x 150mm) para pegar en la caja.
+     * Se renderiza como HTML con auto-impresión (window.print al cargar).
+     */
+    public function label($id)
+    {
+        $sale = Sale::with(['client', 'contact', 'user'])->findOrFail($id);
+
+        $company = Setting::first();
+
+        // Nombres de ubigeo del cliente (ids sueltos en la tabla clients)
+        $district   = $sale->client->district_id ? \DB::table('districts')->where('id', $sale->client->district_id)->value('name') : null;
+        $province   = $sale->client->province_id ? \DB::table('provinces')->where('id', $sale->client->province_id)->value('name') : null;
+        $department = $sale->client->department_id ? \DB::table('departments')->where('id', $sale->client->department_id)->value('name') : null;
+
+        $logo = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('images/logo.png')));
+
+        $qr = $this->qrDataUri('https://shiper.pe');
+
+        return view('pdf.shipping-label', [
+            'sale'       => $sale,
+            'company'    => $company,
+            'district'   => $district ? html_entity_decode($district) : null,
+            'province'   => $province ? html_entity_decode($province) : null,
+            'department' => $department ? html_entity_decode($department) : null,
+            'logo'       => $logo,
+            'qr'         => $qr,
+            'fontFace'   => $this->fontFace(),
+        ]);
+    }
+
     public function commissions()
     {
         return view('sales.commissions');
