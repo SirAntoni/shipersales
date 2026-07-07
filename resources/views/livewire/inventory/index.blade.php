@@ -146,13 +146,24 @@
 
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">{{ (int)$r->sold_today }}</x-base.table.td>
 
+                                        @php
+                                            $fisicoDifiere = $r->physical_saved !== null
+                                                && (int)$r->physical_saved !== (int)$r->warehouse_stock;
+                                        @endphp
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">
-                                            {{ $r->physical_saved !== null ? (int)$r->physical_saved : '—' }}
+                                            <span class="{{ $fisicoDifiere ? 'text-red-600 font-bold' : '' }}">
+                                                {{ $r->physical_saved !== null ? (int)$r->physical_saved : '—' }}
+                                            </span>
                                         </x-base.table.td>
 
+                                        @php
+                                            $inputVal = $physicalStocks[$r->article_id] ?? null;
+                                            $inputDifiere = $inputVal !== null && $inputVal !== ''
+                                                && (int)$inputVal !== (int)$r->warehouse_stock;
+                                        @endphp
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                             <x-base.form-input
-                                                class="rounded-[0.5rem] w-28 text-right"
+                                                class="rounded-[0.5rem] w-28 text-right {{ $inputDifiere ? '!text-red-600 !font-bold !border-red-400' : '' }}"
                                                 type="number" min="0" step="1"
                                                 wire:key="phys-{{ $r->article_id }}"
                                                 wire:model.live.debounce.300ms="physicalStocks.{{ $r->article_id }}"
