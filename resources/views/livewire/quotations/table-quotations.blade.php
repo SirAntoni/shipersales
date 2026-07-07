@@ -122,6 +122,18 @@
                                                         </x-base.tippy>
                                                     </a>
 
+                                                    @if($quotation->custom_pending_count > 0)
+                                                        <x-base.tippy
+                                                            as="x-base.button-sm"
+                                                            variant="pending"
+                                                            size="sm"
+                                                            class="mr-2"
+                                                            content="Guardar productos nuevos en el catálogo"
+                                                            wire:click="openCatalogModal({{ $quotation->id }})">
+                                                            <i class="text-white fa-solid fa-box-open"></i>
+                                                        </x-base.tippy>
+                                                    @endif
+
                                                     @if($quotation->status === 'pendiente')
                                                         <x-base.tippy
                                                             as="x-base.button-sm"
@@ -171,6 +183,104 @@
                     <div class="m-4">
                         {{ $quotations->links() }}
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Productos nuevos → catálogo (Alpine.js) -->
+    <div
+        x-data="{ open: false }"
+        x-on:open-catalog-modal.window="open = true"
+        x-on:close-catalog-modal.window="open = false"
+        x-on:keydown.escape.window="open = false"
+    >
+        <!-- Backdrop -->
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-[1050] bg-gradient-to-b from-theme-1/50 via-theme-2/50 to-black/50"
+            x-on:click="open = false"
+            style="display: none;"
+        ></div>
+
+        <!-- Panel -->
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 -translate-y-8"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-8"
+            class="fixed inset-0 z-[1051] overflow-y-auto"
+            style="display: none;"
+        >
+            <div class="flex min-h-full items-center justify-center p-4" x-on:click.self="open = false">
+                <div class="w-[90%] lg:w-[700px] bg-white rounded-md shadow-md dark:bg-darkmode-600" x-on:click.stop>
+
+                    <!-- Header -->
+                    <div class="flex items-center px-5 py-3 border-b border-slate-200/60 dark:border-darkmode-400">
+                        <h2 class="text-base font-medium mr-auto">
+                            Productos nuevos de la cotización {{ $catalogQuotationNumber }}
+                        </h2>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-5">
+                        <div class="mb-4 text-sm text-slate-500">
+                            Marca el check para registrar el producto en el catálogo (se crea con stock 0 y quedará
+                            disponible en almacén y para futuras cotizaciones).
+                        </div>
+
+                        @forelse($catalogItems as $item)
+                            <div class="flex items-center justify-between gap-3 rounded-[0.5rem] border border-slate-200/80 px-4 py-3 mb-2 dark:border-darkmode-400">
+                                <div>
+                                    <div class="font-medium">
+                                        {{ $item['title'] }}
+                                        @if($item['saved'])
+                                            <span class="bg-green-100 text-green-800 text-xs font-medium ml-1 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">en catálogo</span>
+                                        @endif
+                                    </div>
+                                    @if($item['detail'])
+                                        <div class="text-xs text-slate-500">{{ $item['detail'] }}</div>
+                                    @endif
+                                    <div class="text-xs text-slate-500">Precio cotizado: S/. {{ number_format($item['price'], 2) }}</div>
+                                </div>
+                                <div>
+                                    @if($item['saved'])
+                                        <i class="fa-solid fa-circle-check text-success text-lg"></i>
+                                    @else
+                                        <label class="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                                            <input
+                                                type="checkbox"
+                                                class="transition-all duration-100 ease-in-out"
+                                                wire:click="saveToCatalog({{ $item['detail_id'] }})"
+                                            >
+                                            <span class="text-sm">Guardar este producto en el catálogo</span>
+                                        </label>
+                                    @endif
+                                </div>
+                            </div>
+                        @empty
+                            <div class="text-center text-slate-500 py-6">
+                                Esta cotización no tiene productos nuevos pendientes.
+                            </div>
+                        @endforelse
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex justify-end px-5 py-3 border-t border-slate-200/60 dark:border-darkmode-400">
+                        <x-base.button variant="outline-secondary" x-on:click="open = false">
+                            Cerrar
+                        </x-base.button>
+                    </div>
+
                 </div>
             </div>
         </div>

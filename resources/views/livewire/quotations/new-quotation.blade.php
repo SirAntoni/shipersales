@@ -106,14 +106,40 @@
                                     <div class="col-span-12 sm:col-span-6 flex flex-col gap-3.5 px-5 py-2">
                                         <div>
                                             <label>Agregar Articulo</label>
-                                            <div class="mt-2" wire:ignore>
-                                                <x-base.tom-select
-                                                    id="tomArticles"
-                                                    class="w-full"
-                                                    data-placeholder="Busque y seleccione los articulos a agregar"
-                                                    wire:model.live="articleSelected"
-                                                >
-                                                </x-base.tom-select>
+
+                                            <div class="mt-2 flex items-center gap-5">
+                                                <label class="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        class="transition-all duration-100 ease-in-out"
+                                                        name="articleMode"
+                                                        value="search"
+                                                        wire:model.live="articleMode"
+                                                    >
+                                                    <span class="text-sm">Buscar producto existente</span>
+                                                </label>
+                                                <label class="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        class="transition-all duration-100 ease-in-out"
+                                                        name="articleMode"
+                                                        value="manual"
+                                                        wire:model.live="articleMode"
+                                                    >
+                                                    <span class="text-sm">Producto nuevo (manual)</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="mt-2 {{ $articleMode === 'search' ? '' : 'hidden' }}">
+                                                <div wire:ignore>
+                                                    <x-base.tom-select
+                                                        id="tomArticles"
+                                                        class="w-full"
+                                                        data-placeholder="Busque y seleccione los articulos a agregar"
+                                                        wire:model.live="articleSelected"
+                                                    >
+                                                    </x-base.tom-select>
+                                                </div>
                                             </div>
                                             @error('articlesSelected')
                                             <div class="p-1 text-red-600">{{ $message }}</div>
@@ -136,6 +162,110 @@
                                             </x-base.form-switch>
                                         </div>
                                     </div>
+
+                                    @if($articleMode === 'manual')
+                                        <div class="col-span-12 px-5 py-2">
+                                            <div class="rounded-[0.6rem] border border-dashed border-primary/40 bg-primary/[0.03] p-5">
+                                                <div class="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
+                                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                                    Producto nuevo (solo vivirá en esta cotización)
+                                                </div>
+                                                <div class="grid grid-cols-12 gap-4">
+                                                    <div class="col-span-12 sm:col-span-6">
+                                                        <x-base.form-label for="manualTitle">Título</x-base.form-label>
+                                                        <x-base.form-input
+                                                            id="manualTitle"
+                                                            type="text"
+                                                            placeholder="Nombre del producto"
+                                                            wire:model="manualTitle"
+                                                        />
+                                                        @error('manualTitle')
+                                                        <div class="p-1 text-red-600">{{ $message }}</div>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div class="col-span-12 sm:col-span-6">
+                                                        <x-base.form-label for="manualDetail">Detalle (opcional)</x-base.form-label>
+                                                        <x-base.form-input
+                                                            id="manualDetail"
+                                                            type="text"
+                                                            placeholder="Detalle corto del producto"
+                                                            wire:model="manualDetail"
+                                                        />
+                                                        @error('manualDetail')
+                                                        <div class="p-1 text-red-600">{{ $message }}</div>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div class="col-span-12 sm:col-span-3">
+                                                        <x-base.form-label for="manualBrand">Marca</x-base.form-label>
+                                                        <x-base.form-select id="manualBrand" wire:model="manualBrand">
+                                                            <option value="">Selecciona una opción</option>
+                                                            @foreach($brandsList as $brand)
+                                                                <option value="{{ $brand->id }}">{{ $brand->name }}</option>
+                                                            @endforeach
+                                                        </x-base.form-select>
+                                                        @error('manualBrand')
+                                                        <div class="p-1 text-red-600">{{ $message }}</div>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div class="col-span-12 sm:col-span-3">
+                                                        <x-base.form-label for="manualCategory">Categoría</x-base.form-label>
+                                                        <x-base.form-select id="manualCategory" wire:model="manualCategory">
+                                                            <option value="">Selecciona una opción</option>
+                                                            @foreach($categoriesList as $category)
+                                                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                                            @endforeach
+                                                        </x-base.form-select>
+                                                        @error('manualCategory')
+                                                        <div class="p-1 text-red-600">{{ $message }}</div>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div class="col-span-12 sm:col-span-3">
+                                                        <x-base.form-label for="manualPurchasePrice">Precio compra (opcional)</x-base.form-label>
+                                                        <x-base.form-input
+                                                            id="manualPurchasePrice"
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="0.00"
+                                                            wire:model="manualPurchasePrice"
+                                                        />
+                                                        @error('manualPurchasePrice')
+                                                        <div class="p-1 text-red-600">{{ $message }}</div>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div class="col-span-12 sm:col-span-3">
+                                                        <x-base.form-label for="manualSalePrice">Precio venta</x-base.form-label>
+                                                        <x-base.form-input
+                                                            id="manualSalePrice"
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="0.00"
+                                                            wire:model="manualSalePrice"
+                                                        />
+                                                        @error('manualSalePrice')
+                                                        <div class="p-1 text-red-600">{{ $message }}</div>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div class="col-span-12 flex justify-end">
+                                                        <x-base.button
+                                                            variant="primary"
+                                                            wire:click="addManualArticle"
+                                                        >
+                                                            <i class="fa-solid fa-plus mr-2"></i>
+                                                            Agregar a la cotización
+                                                        </x-base.button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
 
                                     <div class="col-span-12 flex flex-col gap-3.5 px-5 py-2 pb-5">
                                         <div>
@@ -201,6 +331,9 @@
                                                     <x-base.table.td class="border-dashed py-4 dark:bg-darkmode-600">
                                                         <div class="whitespace-nowrap">
                                                             {{$article['title']}}
+                                                            @if(!empty($article['custom']))
+                                                                <span class="bg-purple-100 text-purple-800 text-xs font-medium ml-1 px-2 py-0.5 rounded-full dark:bg-purple-900 dark:text-purple-300">nuevo</span>
+                                                            @endif
                                                         </div>
                                                     </x-base.table.td>
                                                     <x-base.table.td

@@ -45,6 +45,21 @@ class NewQuotation extends Component
     public $articleSelected;
     public array $articlesSelected = [];
 
+    /** Modo de agregado de artículos: search | manual */
+    public string $articleMode = 'search';
+
+    /** Campos del producto nuevo (manual) */
+    public $manualTitle;
+    public $manualDetail;
+    public $manualBrand;
+    public $manualCategory;
+    public $manualPurchasePrice;
+    public $manualSalePrice;
+
+    /** Catálogos para el formulario manual */
+    public $brandsList = [];
+    public $categoriesList = [];
+
     public function rules()
     {
         return [
@@ -67,6 +82,8 @@ class NewQuotation extends Component
         $this->date        = Carbon::now()->format('Y-m-d');
         $this->token       = env('MIGO_API_TOKEN');
         $this->departments = DB::table('departments')->get();
+        $this->brandsList     = DB::table('brands')->select('id', 'name')->orderBy('name')->get();
+        $this->categoriesList = DB::table('categories')->select('id', 'name')->orderBy('name')->get();
         $this->phone = '990062896';
         $this->email = 'info@shipersales.pe';
     }
@@ -193,12 +210,13 @@ class NewQuotation extends Component
                     $tax      = ($this->tax == 1) ? $subtotal * 0.18 : 0.0;
 
                     $quotation->quotationDetails()->create([
-                        'article_id' => (int) $item['id'],
-                        'price'      => (float) $item['price'],
-                        'quantity'   => (int) $item['quantity'],
-                        'subtotal'   => $subtotal,
-                        'tax'        => $tax,
-                        'total'      => $subtotal + $tax,
+                        'article_id'     => !empty($item['id']) ? (int) $item['id'] : null,
+                        'custom_product' => $item['custom'] ?? null,
+                        'price'          => (float) $item['price'],
+                        'quantity'       => (int) $item['quantity'],
+                        'subtotal'       => $subtotal,
+                        'tax'            => $tax,
+                        'total'          => $subtotal + $tax,
                     ]);
                 }
             });
@@ -252,6 +270,46 @@ class NewQuotation extends Component
             $this->addToArticle($id);
             $this->articleSelected = null;
         }
+    }
+
+    public function addManualArticle()
+    {
+        $this->validate([
+            'manualTitle'         => 'required|string|min:3|max:250',
+            'manualDetail'        => 'nullable|string|max:250',
+            'manualBrand'         => 'required|integer|exists:brands,id',
+            'manualCategory'      => 'required|integer|exists:categories,id',
+            'manualPurchasePrice' => 'nullable|numeric|min:0',
+            'manualSalePrice'     => 'required|numeric|min:0',
+        ], [], [
+            'manualTitle'         => 'título',
+            'manualDetail'        => 'detalle',
+            'manualBrand'         => 'marca',
+            'manualCategory'      => 'categoría',
+            'manualPurchasePrice' => 'precio de compra',
+            'manualSalePrice'     => 'precio de venta',
+        ]);
+
+        $price = (float) $this->manualSalePrice;
+
+        $this->articlesSelected[] = [
+            'id'       => null,
+            'title'    => $this->manualTitle,
+            'price'    => $price,
+            'quantity' => 1,
+            'total'    => $price,
+            'custom'   => [
+                'title'          => $this->manualTitle,
+                'detail'         => $this->manualDetail,
+                'brand_id'       => (int) $this->manualBrand,
+                'category_id'    => (int) $this->manualCategory,
+                'purchase_price' => $this->manualPurchasePrice !== null && $this->manualPurchasePrice !== ''
+                    ? (float) $this->manualPurchasePrice : null,
+            ],
+        ];
+
+        $this->reset(['manualTitle', 'manualDetail', 'manualBrand', 'manualCategory', 'manualPurchasePrice', 'manualSalePrice']);
+        $this->calculateTotals();
     }
 
     public function addToArticle($id)

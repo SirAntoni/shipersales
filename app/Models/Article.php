@@ -30,6 +30,11 @@ class Article extends Model
         'on_demand' => 'boolean',
     ];
 
+    public static function generateSku(): string
+    {
+        return 'A' . str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT) . now()->year . now()->format('m');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
