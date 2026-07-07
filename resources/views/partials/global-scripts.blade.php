@@ -159,6 +159,29 @@
         });
     });
 
+    window.addEventListener('questionDeleteWithDocument', event => {
+        Swal.fire({
+            title: 'Venta con comprobante electrónico',
+            text: event.detail[0]['label'],
+            icon: 'warning',
+            confirmButtonText: 'Emitir nota de crédito',
+            confirmButtonColor: "#3085d6",
+            showDenyButton: true,
+            denyButtonText: 'Anular sin nota de crédito',
+            denyButtonColor: "#e74c3c",
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if(result.isConfirmed){
+                window.location.href = event.detail[0]['ncUrl'];
+            } else if(result.isDenied){
+                Livewire.dispatch('openDeleteMotiveModal',{id:event.detail[0]['id']})
+            }
+        });
+    });
+
     window.addEventListener('questionReturnWithDocument', event => {
         Swal.fire({
             title: 'Venta con comprobante electrónico',

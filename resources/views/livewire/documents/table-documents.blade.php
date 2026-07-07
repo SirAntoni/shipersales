@@ -240,17 +240,25 @@
 {{--                                                            <i class="text-white fa-solid fa-envelope"></i>--}}
 {{--                                                        </x-base.tippy>--}}
 
-                                                        @can('delete')
-                                                            <x-base.tippy
-                                                                as="x-base.button-sm"
-                                                                variant="danger"
-                                                                size="sm"
-                                                                class="mr-2"
-                                                                content="Anular comprobante"
-                                                                wire:click="delete({{$document->id}})">
-                                                                <i class="text-white fa-solid fa-xmark"></i>
-                                                            </x-base.tippy>
-                                                        @endcan
+                                                        {{-- Anular NO disponible para notas de crédito (decisión 2026-07-07):
+                                                             anular una NC es un caso muy atípico y dejaba un estado inconsistente
+                                                             (stock re-descontado + venta anulada + comprobante afectado vigente).
+                                                             Si algún día se necesita, quitar el !$esNotaCredito de aquí y el guard
+                                                             en TableDocuments::document_destroy; la lógica de reversión de la NC
+                                                             sigue mapeada en TableDocuments::finishAnulacion (rama FC/BC). --}}
+                                                        @if(!$esNotaCredito)
+                                                            @can('delete')
+                                                                <x-base.tippy
+                                                                    as="x-base.button-sm"
+                                                                    variant="danger"
+                                                                    size="sm"
+                                                                    class="mr-2"
+                                                                    content="Anular comprobante"
+                                                                    wire:click="delete({{$document->id}})">
+                                                                    <i class="text-white fa-solid fa-xmark"></i>
+                                                                </x-base.tippy>
+                                                            @endcan
+                                                        @endif
                                                     @endif
 
                                                 </div>

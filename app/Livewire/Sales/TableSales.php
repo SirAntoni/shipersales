@@ -216,6 +216,33 @@ class TableSales extends Component
 
     public function delete($id)
     {
+        // Comprobante original de la venta (las NC tienen affected_document_id)
+        $document = \App\Models\Document::where('sale_id', $id)
+            ->whereNull('affected_document_id')
+            ->orderBy('id')
+            ->first();
+
+        // Si hay comprobante electrónico vigente, lo correcto ante SUNAT es
+        // emitir una nota de crédito (que repone stock y anula la venta).
+        if ($document
+            && $document->status_sunat == 'aceptado'
+            && !in_array($document->status, ['anulado', 'nota_credito'])) {
+
+            $this->dispatch('questionDeleteWithDocument', [
+                'label' => "Esta venta tiene el comprobante {$document->serie}-{$document->correlative} emitido y aceptado por SUNAT. Lo correcto es emitir una nota de crédito: repone el stock y anula la venta.",
+                'id'    => $id,
+                'ncUrl' => route('documents.credit-note.blade.php', $document->id),
+            ]);
+
+            return;
+        }
+
+        $this->openDeleteMotiveModal($id);
+    }
+
+    #[On('openDeleteMotiveModal')]
+    public function openDeleteMotiveModal($id)
+    {
         $this->saleDeleteSelect = $id;
         $this->sectionDelete = true;
         $this->dispatch('open-delete-modal');

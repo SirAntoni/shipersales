@@ -320,12 +320,17 @@ class CreditNote extends Component
             // Marcar el documento afectado para bloquear nueva NC o anulación sobre él
             $affectedDoc->update(['status' => 'nota_credito']);
 
-            // Si la venta estaba en devolución, la NC la cierra como anulada
-            if ($sale && (int) $sale->status === \App\Models\Sale::SALE_RETURN) {
+            // La NC revierte la operación completa: cierra la venta como anulada
+            // (venga de una devolución o de una venta aún activa).
+            if ($sale && (int) $sale->status !== \App\Models\Sale::SALE_CANCELED) {
+                $motivo = ((int) $sale->status === \App\Models\Sale::SALE_RETURN)
+                    ? "Devolución con nota de crédito {$this->serie}-{$this->correlative}"
+                    : "Nota de crédito {$this->serie}-{$this->correlative}";
+
                 $sale->update([
                     'status' => \App\Models\Sale::SALE_CANCELED,
                     'deletion_date' => now(),
-                    'deletion_reason' => "Devolución con nota de crédito {$this->serie}-{$this->correlative}",
+                    'deletion_reason' => $motivo,
                 ]);
             }
         } catch (\Throwable $e) {

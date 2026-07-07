@@ -4,9 +4,11 @@ namespace App\Livewire\Documents;
 
 use App\Models\Article;
 use App\Models\Document;
+use App\Models\Sale;
 use App\Services\PendingDocumentsService;
 use App\Services\SunatService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -39,6 +41,16 @@ class TableDocuments extends Component
             return;
         }
 
+        // Las notas de crédito NO se anulan (decisión 2026-07-07): es un caso muy
+        // atípico y dejaba estado inconsistente (stock re-descontado + venta anulada
+        // + comprobante afectado vigente). El botón está oculto en la vista; este
+        // guard cubre invocaciones directas. La lógica de reversión sigue mapeada
+        // en finishAnulacion (rama FC/BC) por si algún día se reactiva.
+        if (str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC')) {
+            $this->dispatch('error', ['label' => 'Las notas de crédito no se anulan desde el sistema. Si la NC fue emitida por error, contacte al administrador.']);
+            return;
+        }
+
         // Si ya tiene nota de crédito, la operación ya fue revertida
         if ($document->status == 'nota_credito') {
             $this->dispatch('error', ['label' => 'Este comprobante ya tiene una nota de crédito emitida: no corresponde darlo de baja.']);
@@ -58,7 +70,14 @@ class TableDocuments extends Component
                 'status_sunat' => 'anulado',
             ]);
 
-            $this->dispatch('successNotRoute', ['label' => 'El comprobante fue anulado. Como SUNAT no lo había aceptado, no fue necesario comunicar la baja.']);
+            $ventaAnulada = $this->anularVentaPorBaja($document);
+
+            $label = 'El comprobante fue anulado. Como SUNAT no lo había aceptado, no fue necesario comunicar la baja.';
+            if ($ventaAnulada) {
+                $label .= ' La venta asociada fue anulada y el stock repuesto.';
+            }
+
+            $this->dispatch('successNotRoute', ['label' => $label]);
             return;
         }
 
@@ -230,9 +249,59 @@ class TableDocuments extends Component
             Document::where('id', $document->affected_document_id)
                 ->where('status', 'nota_credito')
                 ->update(['status' => 'enviado']);
+
+            $this->dispatch('successNotRoute', ['label' => 'El comprobante fue anulado y la baja fue aceptada por SUNAT.']);
+            return;
         }
 
-        $this->dispatch('successNotRoute', ['label' => 'El comprobante fue anulado y la baja fue aceptada por SUNAT.']);
+        // Comprobante de venta dado de baja: anular también la venta y reponer stock
+        $ventaAnulada = $this->anularVentaPorBaja($document);
+
+        $label = 'El comprobante fue anulado y la baja fue aceptada por SUNAT.';
+        if ($ventaAnulada) {
+            $label .= ' La venta asociada fue anulada y el stock repuesto.';
+        }
+
+        $this->dispatch('successNotRoute', ['label' => $label]);
+    }
+
+    /**
+     * La baja de un comprobante de venta anula también la venta asociada y
+     * repone su stock, salvo que la venta ya esté anulada o una nota de
+     * crédito ya lo haya repuesto. Devuelve true si anuló la venta.
+     */
+    private function anularVentaPorBaja(Document $document): bool
+    {
+        // Las notas de crédito tienen su propia reversión en finishAnulacion
+        if (str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC')) {
+            return false;
+        }
+
+        $sale = Sale::with('saleDetails')->find($document->sale_id);
+
+        if (!$sale || (int) $sale->status === Sale::SALE_CANCELED) {
+            return false;
+        }
+
+        $stockYaRepuesto = Document::where('sale_id', $sale->id)
+            ->where('status', 'nota_credito')
+            ->exists();
+
+        DB::transaction(function () use ($sale, $document, $stockYaRepuesto) {
+            if (!$stockYaRepuesto) {
+                foreach ($sale->saleDetails as $item) {
+                    Article::find($item->article_id)?->increment('stock', (int) $item->quantity);
+                }
+            }
+
+            $sale->update([
+                'status'          => Sale::SALE_CANCELED,
+                'deletion_date'   => now(),
+                'deletion_reason' => "Baja del comprobante {$document->serie}-{$document->correlative}",
+            ]);
+        });
+
+        return true;
     }
 
     /**
