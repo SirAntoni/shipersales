@@ -64,6 +64,18 @@
         });
     });
 
+    window.addEventListener('toast', event => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: event.detail[0]['label'],
+            showConfirmButton: false,
+            timer: 2500,
+            timerProgressBar: true,
+        });
+    });
+
     window.addEventListener('notification', event => {
         Toastify({
             node: $("#success-notification-content")
@@ -155,6 +167,24 @@
         }).then((result) => {
             if(result.isConfirmed){
                 Livewire.dispatch('confirmBulkStatusUsa', {status: event.detail[0]['status']})
+            }
+        });
+    });
+
+    window.addEventListener('questionSaveToCatalog', event => {
+        Swal.fire({
+            title: 'Guardar en catálogo',
+            text: event.detail[0]['label'],
+            icon: 'question',
+            confirmButtonText: 'Sí, guardar',
+            confirmButtonColor: "#3085d6",
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if(result.isConfirmed){
+                Livewire.dispatch('processSaveToCatalog',{detailId:event.detail[0]['id']})
             }
         });
     });

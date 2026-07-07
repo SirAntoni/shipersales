@@ -21,6 +21,7 @@ class Quotation extends Model
         'total',
         'client_id',
         'user_id',
+        'sale_id',
     ];
 
     public function quotationDetails()
@@ -36,6 +37,12 @@ class Quotation extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** Venta generada al aceptar la cotización */
+    public function sale()
+    {
+        return $this->belongsTo(Sale::class);
     }
 
     /** Correlativo COT-000001 basado en el último número emitido. */

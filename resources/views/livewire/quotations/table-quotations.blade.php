@@ -140,7 +140,7 @@
                                                             variant="success"
                                                             size="sm"
                                                             class="mr-2"
-                                                            content="Marcar como aceptada"
+                                                            content="Aceptar y generar venta"
                                                             wire:click="changeStatus({{ $quotation->id }}, 'aceptada')">
                                                             <i class="text-white fa-solid fa-check"></i>
                                                         </x-base.tippy>
@@ -183,6 +183,137 @@
                     <div class="m-4">
                         {{ $quotations->links() }}
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Aceptar cotización → generar venta (Alpine.js) -->
+    <div
+        x-data="{ open: false }"
+        x-on:open-accept-modal.window="open = true"
+        x-on:close-accept-modal.window="open = false"
+        x-on:keydown.escape.window="open = false"
+    >
+        <!-- Backdrop -->
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-[1050] bg-gradient-to-b from-theme-1/50 via-theme-2/50 to-black/50"
+            x-on:click="open = false"
+            style="display: none;"
+        ></div>
+
+        <!-- Panel -->
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 -translate-y-8"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-8"
+            class="fixed inset-0 z-[1051] overflow-y-auto"
+            style="display: none;"
+        >
+            <div class="flex min-h-full items-center justify-center p-4" x-on:click.self="open = false">
+                <div class="w-[90%] lg:w-[600px] bg-white rounded-md shadow-md dark:bg-darkmode-600" x-on:click.stop>
+
+                    <!-- Header -->
+                    <div class="flex items-center px-5 py-3 border-b border-slate-200/60 dark:border-darkmode-400">
+                        <h2 class="text-base font-medium mr-auto">
+                            Generar venta — cotización {{ $acceptQuotationNumber }}
+                        </h2>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-5">
+                        <div class="mb-4 rounded-[0.5rem] border border-slate-200/80 px-4 py-3 text-sm dark:border-darkmode-400">
+                            <div><span class="text-slate-500">Cliente:</span> <span class="font-medium">{{ $acceptQuotationClient }}</span></div>
+                            <div><span class="text-slate-500">Total:</span> <span class="font-medium">S/. {{ number_format((float) $acceptQuotationTotal, 2) }}</span></div>
+                            <div class="mt-1 text-xs text-slate-500">La venta se creará con la fecha de hoy, los precios cotizados y descontará stock.</div>
+                        </div>
+
+                        <div class="grid grid-cols-12 gap-4">
+                            <div class="col-span-12 sm:col-span-6">
+                                <x-base.form-label for="acceptContact">Contacto</x-base.form-label>
+                                <x-base.form-select id="acceptContact" wire:model.live="acceptContact">
+                                    <option value="">Selecciona un contacto</option>
+                                    @foreach($contacts as $contact)
+                                        <option value="{{ $contact->id }}">{{ $contact->name }}</option>
+                                    @endforeach
+                                </x-base.form-select>
+                                @error('acceptContact')
+                                <div class="p-1 text-red-600">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-span-12 sm:col-span-6">
+                                <x-base.form-label for="acceptPaymentMethod">Método de pago</x-base.form-label>
+                                <x-base.form-select id="acceptPaymentMethod" wire:model="acceptPaymentMethod">
+                                    <option value="">Selecciona un método de pago</option>
+                                    @foreach($paymentMethods as $paymentMethod)
+                                        <option value="{{ $paymentMethod->id }}">{{ $paymentMethod->name }}</option>
+                                    @endforeach
+                                </x-base.form-select>
+                                @error('acceptPaymentMethod')
+                                <div class="p-1 text-red-600">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-span-12 sm:col-span-6">
+                                <x-base.form-label for="acceptNumber">Número de orden (opcional)</x-base.form-label>
+                                <x-base.form-input
+                                    id="acceptNumber"
+                                    type="text"
+                                    placeholder="Se genera automático si se deja vacío"
+                                    wire:model="acceptNumber"
+                                />
+                                @error('acceptNumber')
+                                <div class="p-1 text-red-600">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-span-12 sm:col-span-6">
+                                <x-base.form-label for="acceptDeliveryFee">Precio delivery (opcional)</x-base.form-label>
+                                <x-base.form-input
+                                    id="acceptDeliveryFee"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    wire:model="acceptDeliveryFee"
+                                />
+                                @error('acceptDeliveryFee')
+                                <div class="p-1 text-red-600">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex justify-end px-5 py-3 border-t border-slate-200/60 dark:border-darkmode-400">
+                        <x-base.button variant="outline-secondary" class="mr-2" x-on:click="open = false">
+                            Cancelar
+                        </x-base.button>
+                        <span wire:loading wire:target="generateSale">
+                            <x-base.button variant="primary" disabled="true">
+                                <i class="fas fa-spinner animate-spin mr-1"></i> Generando..
+                            </x-base.button>
+                        </span>
+                        <span wire:loading.remove wire:target="generateSale">
+                            <x-base.button variant="primary" wire:click="generateSale">
+                                <i class="fa-solid fa-cart-plus mr-2"></i>
+                                Generar venta
+                            </x-base.button>
+                        </span>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -257,10 +388,13 @@
                                         <i class="fa-solid fa-circle-check text-success text-lg"></i>
                                     @else
                                         <label class="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                                            {{-- preventDefault evita que el check se marque visualmente:
+                                                 solo se marca cuando el guardado se confirma y re-renderiza --}}
                                             <input
                                                 type="checkbox"
                                                 class="transition-all duration-100 ease-in-out"
-                                                wire:click="saveToCatalog({{ $item['detail_id'] }})"
+                                                onclick="event.preventDefault()"
+                                                wire:click="confirmSaveToCatalog({{ $item['detail_id'] }})"
                                             >
                                             <span class="text-sm">Guardar este producto en el catálogo</span>
                                         </label>

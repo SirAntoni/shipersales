@@ -308,8 +308,11 @@ class NewQuotation extends Component
             ],
         ];
 
+        $title = $this->manualTitle;
         $this->reset(['manualTitle', 'manualDetail', 'manualBrand', 'manualCategory', 'manualPurchasePrice', 'manualSalePrice']);
         $this->calculateTotals();
+
+        $this->dispatch('toast', ['label' => "«{$title}» se agregó a la cotización."]);
     }
 
     public function addToArticle($id)
