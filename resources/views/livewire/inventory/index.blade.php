@@ -129,7 +129,12 @@
                                     <x-base.table.tr class="[&_td]:last:border-b-0" wire:key="row-{{ $r->article_id }}">
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">{{ $r->sku }}</x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">{{ $r->title }}</x-base.table.td>
-                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">{{ (int)$r->warehouse_stock }}</x-base.table.td>
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">
+                                            {{ (int)$r->warehouse_stock }}
+                                            @if($r->is_snapshot)
+                                                <i class="fa-regular fa-clock text-slate-400 ml-1" title="Stock del día del conteo (histórico)"></i>
+                                            @endif
+                                        </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">{{ (int)$r->kardex_stock }}</x-base.table.td>
 
                                         @php $dk = (int)$r->diff_kardex_vs_warehouse; @endphp
@@ -207,7 +212,8 @@
             singleMode: true,
             numberOfColumns: 1,
             numberOfMonths: 1,
-            dropdowns: { minYear: 2020, maxYear: null, months: true, years: true },
+            minDate: '{{ \App\Livewire\Inventory\Index::MIN_DATE }}',
+            dropdowns: { minYear: 2026, maxYear: null, months: true, years: true },
         });
 
         pickerFilter.on('selected', (startDate) => {

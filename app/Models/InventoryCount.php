@@ -11,6 +11,8 @@ class InventoryCount extends Model
     protected $fillable = [
         'article_id',
         'counted_stock',
+        'warehouse_stock',
+        'kardex_stock',
         'counted_date',
         'counted_by',
         'note',

@@ -14,6 +14,9 @@ use Livewire\Component;
 
 class Index extends Component
 {
+    /** Fecha mínima consultable: el módulo tiene historial confiable desde aquí */
+    public const MIN_DATE = '2026-07-01';
+
     /** Fecha que define “ventas del día” (YYYY-mm-dd) */
     public string $date = '';
 
@@ -55,6 +58,12 @@ class Index extends Component
     {
         // si está en modo inventario, no permitir cambiar la fecha
         if ($this->editing) return;
+
+        // el calendario ya lo impide; esto cubre escrituras directas a la propiedad
+        if ($this->date < self::MIN_DATE) {
+            $this->date = self::MIN_DATE;
+        }
+
         $this->loadRows();
     }
 
@@ -125,10 +134,40 @@ class Index extends Component
                     ->limit(1),
                 'physical_saved'
             )
+            ->selectSub(
+                DB::table('inventory_counts as ic')
+                    ->select('ic.warehouse_stock')
+                    ->whereColumn('ic.article_id', 'a.id')
+                    ->whereDate('ic.counted_date', $day)
+                    ->orderByDesc('ic.id')
+                    ->limit(1),
+                'snap_warehouse'
+            )
+            ->selectSub(
+                DB::table('inventory_counts as ic')
+                    ->select('ic.kardex_stock')
+                    ->whereColumn('ic.article_id', 'a.id')
+                    ->whereDate('ic.counted_date', $day)
+                    ->orderByDesc('ic.id')
+                    ->limit(1),
+                'snap_kardex'
+            )
             ->orderBy('a.title')
             ->get();
 
-        $this->rows = collect($rows);
+        // Si el día ya tiene conteo guardado, mostrar la foto del stock de ese
+        // día en lugar del stock actual (el conteo congela los valores)
+        $this->rows = collect($rows)->map(function ($r) {
+            $r->is_snapshot = $r->snap_warehouse !== null;
+
+            if ($r->is_snapshot) {
+                $r->warehouse_stock = (int) $r->snap_warehouse;
+                $r->kardex_stock    = (int) ($r->snap_kardex ?? $r->kardex_stock);
+                $r->diff_kardex_vs_warehouse = $r->kardex_stock - $r->warehouse_stock;
+            }
+
+            return $r;
+        });
 
         $this->physicalStocks = [];
         foreach ($this->rows as $r) {
@@ -227,14 +266,28 @@ class Index extends Component
 
         try {
             DB::transaction(function () use ($day, $uid) {
+                // Foto del stock (almacén y kardex) al momento de guardar: se
+                // re-consulta en vivo porque pudo cambiar durante el conteo
+                $ids = $this->rows->pluck('article_id')->all();
+                $snapshots = DB::table('articles as a')
+                    ->leftJoin('v_kardex_stock as k', 'k.article_id', '=', 'a.id')
+                    ->whereIn('a.id', $ids)
+                    ->selectRaw('a.id, a.stock, COALESCE(k.kardex_stock, 0) as kardex_stock')
+                    ->get()
+                    ->keyBy('id');
+
                 foreach ($this->rows as $r) {
                     $physical = (int) $this->physicalStocks[$r->article_id];
+                    $snap     = $snapshots[$r->article_id] ?? null;
+
                     InventoryCount::create([
-                        'article_id'    => $r->article_id,
-                        'counted_stock' => $physical,
-                        'counted_date'  => $day,
-                        'counted_by'    => $uid,
-                        'note'          => $this->note,
+                        'article_id'      => $r->article_id,
+                        'counted_stock'   => $physical,
+                        'warehouse_stock' => $snap ? (int) $snap->stock : null,
+                        'kardex_stock'    => $snap ? (int) $snap->kardex_stock : null,
+                        'counted_date'    => $day,
+                        'counted_by'      => $uid,
+                        'note'            => $this->note,
                     ]);
                 }
 
