@@ -140,7 +140,7 @@
         </div>
     </div>
 
-    <div class="type-band">{{ $sale->delivery == 1 ? 'Delivery' : 'Recojo en tienda' }}</div>
+    <div class="type-band">Despacho a domicilio</div>
 
     <div class="details">
         <div class="row"><b>Direccion:</b> {{ $sale->client->address ?: '—' }}</div>
