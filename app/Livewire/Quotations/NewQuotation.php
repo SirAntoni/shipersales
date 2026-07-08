@@ -16,7 +16,7 @@ class NewQuotation extends Component
     public $date;
     public $validDays = 7;
     public $notes;
-    public $tax = true;
+    public $tax = false;
 
     public $name;
     public $document_number;
