@@ -247,19 +247,54 @@ class Index extends Component
     {
         if (!$this->editing || !$this->sessionId) {
             $this->flash = 'Inicia el inventario antes de guardar.';
+            $this->dispatch('error', ['label' => 'Inicia el inventario antes de guardar.']);
             return;
         }
 
-        // Exigir TODOS los campos: required|integer|min:0
+        $this->resetErrorBag();
+
+        // Ningún producto puede quedar sin stock físico
+        $missing = $this->rows->filter(function ($r) {
+            $v = $this->physicalStocks[$r->article_id] ?? null;
+            return $v === null || $v === '';
+        });
+
+        if ($missing->isNotEmpty()) {
+            foreach ($missing as $r) {
+                $this->addError("physicalStocks.{$r->article_id}", 'Falta completar este campo.');
+            }
+
+            $names = $missing->take(5)->pluck('title')->implode(', ');
+            if ($missing->count() > 5) {
+                $names .= ' y ' . ($missing->count() - 5) . ' más';
+            }
+
+            $this->dispatch('error', ['label' =>
+                "Faltan {$missing->count()} de {$this->totalRows} productos por contar. " .
+                "Completa el stock físico de: {$names}.",
+            ]);
+
+            return;
+        }
+
+        // Red de seguridad: formato de los valores ya presentes
         $rules = [];
         foreach ($this->rows as $r) {
             $rules["physicalStocks.{$r->article_id}"] = 'required|integer|min:0';
         }
-        $this->validate($rules, [
-            'required' => 'Completa todos los productos antes de guardar.',
-            'integer'  => 'Sólo números enteros.',
-            'min'      => 'No puede ser negativo.',
-        ]);
+
+        try {
+            $this->validate($rules, [
+                'required' => 'Completa todos los productos antes de guardar.',
+                'integer'  => 'Sólo números enteros.',
+                'min'      => 'No puede ser negativo.',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('error', ['label' =>
+                'Hay valores inválidos: sólo se aceptan números enteros mayores o iguales a 0.',
+            ]);
+            throw $e;
+        }
 
         $day = Carbon::parse($this->date)->toDateString();
         $uid = Auth::id();

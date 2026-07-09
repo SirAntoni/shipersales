@@ -42,12 +42,12 @@
                         Refrescar
                     </x-base.button>
 
-                    {{-- Guardar (bloqueado hasta completar TODO) --}}
+                    {{-- Guardar (avisa qué falta si el conteo está incompleto) --}}
                     <x-base.button
                         class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
                         variant="primary"
                         wire:click="saveCounts"
-                        :disabled="!$editing || $completedRows !== $totalRows"
+                        :disabled="!$editing"
                     >
                         <div class="px-2"><i class="fa-solid fa-floppy-disk"></i></div>
                         Guardar Stock
