@@ -30,8 +30,20 @@
                                     </x-base.tom-select>
                                 </div>
 
+                                <!-- Botón: Refrescar resultados (mantiene el producto seleccionado) -->
+                                <button type="button"
+                                        wire:click="getKardex"
+                                        wire:loading.attr="disabled"
+                                        wire:target="getKardex"
+                                        @disabled(!$article)
+                                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="fa-solid fa-rotate-right" wire:loading.class="fa-spin" wire:target="getKardex"></i>
+                                    Refrescar
+                                </button>
+
                                 <!-- Botón: Copiar Nombre + toast encima -->
                                 <div class="relative shrink-0 inline-block">
+
                                     <button type="button" id="btnCopyName"
                                             class="inline-flex items-center px-3 py-1.5 rounded-md text-sm bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50">
                                         Copiar Nombre
