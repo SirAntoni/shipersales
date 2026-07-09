@@ -321,6 +321,64 @@ class TableDocuments extends Component
         $this->dispatch('document_delete', ['label' => 'Esta seguro que desea anular el comprobante?.', 'btn' => 'Anular', 'id' => $id]);
     }
 
+    public function deletePending($id)
+    {
+        $document = Document::find($id);
+
+        if (!$document) {
+            $this->dispatch('error', ['label' => 'No se encontró el comprobante.']);
+            return;
+        }
+
+        if ($document->status_sunat !== 'pendiente') {
+            $this->dispatch('error', ['label' => 'Solo se pueden eliminar comprobantes pendientes de envío a SUNAT.']);
+            return;
+        }
+
+        if (str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC')) {
+            $this->dispatch('error', ['label' => 'Las notas de crédito no se eliminan desde el sistema.']);
+            return;
+        }
+
+        $this->dispatch('document_delete_pending', [
+            'id'     => $document->id,
+            'number' => $document->serie . '-' . $document->correlative,
+        ]);
+    }
+
+    /**
+     * Elimina definitivamente un comprobante pendiente (nunca aceptado por
+     * SUNAT). La venta asociada queda intacta: puede emitirse uno nuevo.
+     */
+    #[On('document_destroy_pending')]
+    public function destroyPending(Document $document)
+    {
+        if ($document->status_sunat !== 'pendiente') {
+            $this->dispatch('error', ['label' => 'Solo se pueden eliminar comprobantes pendientes de envío a SUNAT.']);
+            return;
+        }
+
+        if (str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC')) {
+            $this->dispatch('error', ['label' => 'Las notas de crédito no se eliminan desde el sistema.']);
+            return;
+        }
+
+        $numero = $document->serie . '-' . $document->correlative;
+
+        // Constancia en logs: el registro desaparece de la tabla
+        Log::warning('Comprobante pendiente eliminado', [
+            'document'   => $document->only(['id', 'serie', 'correlative', 'date', 'subtotal', 'tax', 'total', 'sale_id', 'client_id', 'notes']),
+            'deleted_by' => auth()->id(),
+        ]);
+
+        DB::transaction(function () use ($document) {
+            $document->documentDetails()->delete();
+            $document->delete();
+        });
+
+        $this->dispatch('successNotRoute', ['label' => "El comprobante {$numero} fue eliminado. La venta asociada no se modificó: puede emitir uno nuevo."]);
+    }
+
     /**
      * Un documento que SUNAT nunca aceptó (pendiente/rechazado) puede corregir
      * su fecha de emisión y reenviarse: es la salida al error 2329 (fecha fuera

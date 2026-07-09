@@ -231,6 +231,21 @@
                                                         @endcan
                                                     @endif
 
+                                                    {{-- Pendiente: eliminar definitivamente (la venta no se toca) --}}
+                                                    @if($document->status_sunat == "pendiente" && !$esNotaCredito)
+                                                        @can('delete')
+                                                            <x-base.tippy
+                                                                as="x-base.button-sm"
+                                                                variant="danger"
+                                                                size="sm"
+                                                                class="mr-2"
+                                                                content="Eliminar comprobante pendiente"
+                                                                wire:click="deletePending({{$document->id}})">
+                                                                <i class="text-white fa-solid fa-trash-can"></i>
+                                                            </x-base.tippy>
+                                                        @endcan
+                                                    @endif
+
                                                     @if($document->status == "nota_credito")
                                                         <span class="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-amber-900 dark:text-amber-300">Con NC</span>
                                                     @elseif($document->status != "anulado" && $document->status_sunat != "pendiente")

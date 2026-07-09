@@ -334,6 +334,26 @@
         });
     });
 
+    window.addEventListener('document_delete_pending', event => {
+        const doc = event.detail[0];
+
+        Swal.fire({
+            title: 'Eliminar comprobante pendiente',
+            html: `El comprobante <b>${doc['number']}</b> se eliminará definitivamente.<br>La venta asociada no se modifica: podrá emitir un comprobante nuevo.`,
+            icon: 'warning',
+            confirmButtonText: 'Eliminar',
+            confirmButtonColor: 'red',
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Livewire.dispatch('document_destroy_pending', {document: doc['id']})
+            }
+        });
+    });
+
     window.addEventListener('document_edit_date', event => {
         const doc = event.detail[0];
 
