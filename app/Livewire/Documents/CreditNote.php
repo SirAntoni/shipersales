@@ -110,9 +110,11 @@ class CreditNote extends Component
     {
         // Calculamos la fecha mínima permitida (hoy menos 5 días).
         $minDate = Carbon::now()->subDays(5)->format('Y-m-d');
+        $maxDate = Carbon::now()->format('Y-m-d');
 
+        // before_or_equal: SUNAT rechaza fechas futuras (error 2329)
         return [
-            'date'             => ['required', 'date', "after_or_equal:{$minDate}"],
+            'date'             => ['required', 'date', "after_or_equal:{$minDate}", "before_or_equal:{$maxDate}"],
             'documentType'     => ['required'],
             'articlesSelected' => ['required', 'array', 'min:1'],
             'client'           => ['required'],
@@ -125,6 +127,10 @@ class CreditNote extends Component
         Log::info("inicio de emisión de nota de crédito");
 
         $this->validate();
+
+        // Normalizar a ISO: si llegó un string tipeado (ej. "08/07/2026"), PHP y
+        // MySQL lo interpretan distinto (mm/dd vs basura); así BD y XML coinciden
+        $this->date = Carbon::parse($this->date)->format('Y-m-d');
 
         // El documento afectado debe estar vigente y aceptado por SUNAT
         $affectedDoc = Document::find($this->id);

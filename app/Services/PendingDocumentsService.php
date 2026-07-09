@@ -199,13 +199,14 @@ class PendingDocumentsService
                 'code_original' => $code,
             ]);
 
-            // 1079: demasiado antiguo para reenvío individual, requiere resumen diario → rechazar
-            if ($code === '1079') {
+            // 1079/2329: fecha de emisión fuera del plazo para envío individual.
+            // Reintentar es inútil (siempre va con la fecha original) → rechazar
+            if (in_array($code, ['1079', '2329'], true)) {
                 $document->update([
                     'status_sunat' => 'rechazado',
-                    'notes'        => $sunatResponse['notes'] ?? [],
+                    'notes'        => $sunatResponse['notes'] ?: ["Error SUNAT {$code}: fecha de emisión fuera del plazo permitido para envío individual."],
                 ]);
-                Log::warning("Documento ID {$document->id} marcado como rechazado (1079 - requiere resumen diario).");
+                Log::warning("Documento ID {$document->id} marcado como rechazado ({$code} - fuera de plazo).");
                 return;
             }
 

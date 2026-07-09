@@ -63,9 +63,12 @@ class NewDocument extends Component
     public function rules()
     {
         $minDate = Carbon::now()->subDays(5)->format('Y-m-d');
+        $maxDate = Carbon::now()->format('Y-m-d');
 
+        // before_or_equal: SUNAT rechaza fechas futuras (error 2329); una fecha
+        // tipeada como dd/mm que PHP lee como mm/dd suele caer fuera de este rango
         return [
-            'date'             => ['required', 'date', "after_or_equal:{$minDate}"],
+            'date'             => ['required', 'date', "after_or_equal:{$minDate}", "before_or_equal:{$maxDate}"],
             'documentType'     => ['required'],
             'articlesSelected' => ['required', 'array', 'min:1'],
             'client'           => ['required'],
@@ -116,6 +119,10 @@ class NewDocument extends Component
         Log::info("inicio de emisión de comprobante");
 
         $this->validate();
+
+        // Normalizar a ISO: si llegó un string tipeado (ej. "08/07/2026"), PHP y
+        // MySQL lo interpretan distinto (mm/dd vs basura); así BD y XML coinciden
+        $this->date = Carbon::parse($this->date)->format('Y-m-d');
 
         // La venta no debe tener ya un comprobante vigente (evita doble emisión)
         $existente = Document::where('sale_id', $this->id)
@@ -297,6 +304,7 @@ class NewDocument extends Component
             $mensajesSunat = [
                 '1033' => 'Este comprobante ya fue registrado en SUNAT con datos distintos.',
                 '1079' => 'Este comprobante es demasiado antiguo para enviarse individualmente a SUNAT.',
+                '2329' => 'La fecha de emisión está fuera del plazo que SUNAT permite para envío individual.',
                 '2800' => 'El número de RUC del cliente no está activo en SUNAT.',
                 '2801' => 'El número de RUC del cliente no existe en SUNAT.',
                 '2804' => 'La dirección del cliente no coincide con la registrada en SUNAT.',

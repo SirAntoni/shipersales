@@ -143,11 +143,14 @@
                                             <x-base.form-label for="datepicker">
                                                 Fecha del documento
                                             </x-base.form-label>
+                                            {{-- readonly: tipear "08/07/2026" (dd/mm) se interpreta como
+                                                 mm/dd en el backend; solo se permite elegir del calendario --}}
                                             <x-base.litepicker
                                                 id="datepicker"
                                                 class="w-full block"
                                                 data-single-mode="true"
                                                 wire:model.live="date"
+                                                readonly
                                             />
 
                                             @error('date')
@@ -363,7 +366,10 @@
         const picker = new Litepicker({
             element: document.getElementById('datepicker'),
             autoApply: true,
-            singleMode: true
+            singleMode: true,
+            // SUNAT solo acepta emisión dentro de esta ventana (futuras dan 2329)
+            minDate: '{{ \Carbon\Carbon::now()->subDays(5)->format('Y-m-d') }}',
+            maxDate: '{{ now()->format('Y-m-d') }}'
         });
 
         new TomSelect('#tomClients', {

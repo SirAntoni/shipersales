@@ -215,6 +215,22 @@
                                                     $esNotaCredito = str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC');
                                                 @endphp
                                                 <div class="flex items-center justify-center">
+                                                    {{-- Pendiente/rechazado (nunca aceptado por SUNAT): permitir corregir
+                                                         la fecha de emisión y reenviar (salida al error 2329) --}}
+                                                    @if($document->status != "anulado" && !$esNotaCredito && in_array($document->status_sunat, ['pendiente', 'rechazado']))
+                                                        @can('update')
+                                                            <x-base.tippy
+                                                                as="x-base.button-sm"
+                                                                variant="warning"
+                                                                size="sm"
+                                                                class="mr-2"
+                                                                content="Cambiar fecha de emisión y reenviar"
+                                                                wire:click="editDate({{$document->id}})">
+                                                                <i class="text-white fa-solid fa-calendar-day"></i>
+                                                            </x-base.tippy>
+                                                        @endcan
+                                                    @endif
+
                                                     @if($document->status == "nota_credito")
                                                         <span class="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-amber-900 dark:text-amber-300">Con NC</span>
                                                     @elseif($document->status != "anulado" && $document->status_sunat != "pendiente")

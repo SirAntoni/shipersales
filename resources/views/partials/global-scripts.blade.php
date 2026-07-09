@@ -334,6 +334,42 @@
         });
     });
 
+    window.addEventListener('document_edit_date', event => {
+        const doc = event.detail[0];
+
+        Swal.fire({
+            title: 'Cambiar fecha de emisión',
+            text: `El comprobante ${doc['number']} se reenviará a SUNAT con la nueva fecha de emisión.`,
+            icon: 'warning',
+            input: 'date',
+            inputLabel: 'Nueva fecha de emisión',
+            inputValue: doc['date'],
+            inputAttributes: {
+                min: doc['min'],
+                max: doc['max'],
+            },
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Debe indicar la fecha de emisión.';
+                }
+                if (value < doc['min'] || value > doc['max']) {
+                    return `La fecha debe estar entre ${doc['min']} y ${doc['max']}.`;
+                }
+            },
+            confirmButtonText: 'Guardar y reenviar',
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // El resultado (aceptado/rechazado/pendiente) lo confirma el
+                // backend con 'successNotRoute' / 'error' tras responder SUNAT.
+                Livewire.dispatch('document_change_date', {document: doc['id'], date: result.value})
+            }
+        });
+    });
+
     window.addEventListener('abrir-nueva-pestania', event => {
         window.open(event.detail[0]['url'], '_blank');
     });

@@ -321,6 +321,98 @@ class TableDocuments extends Component
         $this->dispatch('document_delete', ['label' => 'Esta seguro que desea anular el comprobante?.', 'btn' => 'Anular', 'id' => $id]);
     }
 
+    /**
+     * Un documento que SUNAT nunca aceptó (pendiente/rechazado) puede corregir
+     * su fecha de emisión y reenviarse: es la salida al error 2329 (fecha fuera
+     * del plazo de envío individual). Devuelve null si el documento califica.
+     */
+    private function motivoFechaNoEditable(Document $document): ?string
+    {
+        if (str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC')) {
+            return 'Las notas de crédito no admiten cambio de fecha desde el sistema.';
+        }
+
+        if ($document->status == 'anulado') {
+            return 'Este comprobante está anulado: no corresponde cambiar su fecha.';
+        }
+
+        if (!in_array($document->status_sunat, ['pendiente', 'rechazado'], true)) {
+            return 'Solo se puede cambiar la fecha de comprobantes que SUNAT no ha aceptado (pendientes o rechazados).';
+        }
+
+        return null;
+    }
+
+    public function editDate($id)
+    {
+        $document = Document::find($id);
+
+        if (!$document) {
+            $this->dispatch('error', ['label' => 'No se encontró el comprobante.']);
+            return;
+        }
+
+        if ($motivo = $this->motivoFechaNoEditable($document)) {
+            $this->dispatch('error', ['label' => $motivo]);
+            return;
+        }
+
+        $this->dispatch('document_edit_date', [
+            'id'     => $document->id,
+            'number' => $document->serie . '-' . $document->correlative,
+            'date'   => $document->date ? Carbon::parse($document->date)->format('Y-m-d') : now()->format('Y-m-d'),
+            // Misma ventana que NewDocument::rules(): SUNAT rechaza fechas más antiguas (2329)
+            'min'    => Carbon::now()->subDays(5)->format('Y-m-d'),
+            'max'    => now()->format('Y-m-d'),
+        ]);
+    }
+
+    #[On('document_change_date')]
+    public function changeDate(Document $document, $date)
+    {
+        if ($motivo = $this->motivoFechaNoEditable($document)) {
+            $this->dispatch('error', ['label' => $motivo]);
+            return;
+        }
+
+        $min = Carbon::now()->subDays(5)->format('Y-m-d');
+        $max = now()->format('Y-m-d');
+        $date = trim((string) $date);
+
+        $esFechaValida = \DateTime::createFromFormat('Y-m-d', $date) !== false;
+        if (!$esFechaValida || $date < $min || $date > $max) {
+            $this->dispatch('error', ['label' => "La fecha debe estar entre {$min} y {$max} (plazo que SUNAT acepta para envío individual)."]);
+            return;
+        }
+
+        $document->update([
+            'date'         => $date,
+            'status_sunat' => 'pendiente',
+            'notes'        => [],
+        ]);
+
+        try {
+            app(PendingDocumentsService::class)->resend($document);
+        } catch (\Throwable $e) {
+            Log::error("Error reenviando documento ID {$document->id} tras cambio de fecha: {$e->getMessage()}", [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $this->dispatch('error', ['label' => 'La fecha se actualizó, pero ocurrió un error al reenviar a SUNAT. Puede reintentar con "Reenviar pendientes".']);
+            return;
+        }
+
+        $document->refresh();
+
+        $numero = $document->serie . '-' . $document->correlative;
+
+        match ($document->status_sunat) {
+            'aceptado'  => $this->dispatch('successNotRoute', ['label' => "Fecha actualizada y comprobante {$numero} aceptado por SUNAT."]),
+            'rechazado' => $this->dispatch('error', ['label' => "SUNAT rechazó el comprobante {$numero}: " . (($document->notes[0] ?? null) ?: 'revise los datos e intente nuevamente.')]),
+            default     => $this->dispatch('error', ['label' => "La fecha se actualizó, pero no se pudo confirmar el envío del comprobante {$numero} (quedó pendiente). Se reintentará automáticamente."]),
+        };
+    }
+
     public
     function creditNote($id)
     {
