@@ -407,6 +407,7 @@ class NewDocument extends Component
     public function searchArticles($query)
     {
         $qb = Article::query()
+            ->active()
             ->where('title', 'like', '%'.$query.'%')
             ->limit(10)
             ->get(['id', 'title', 'stock', 'sale_price', 'purchase_price']);

@@ -250,10 +250,13 @@ class ShowSale extends Component
 
     public function searchArticles($query)
     {
-        return Article::where('title', 'like', '%'.$query.'%')
-            ->where('status','active')
-            ->orWhereHas('brand', fn($q) =>
-            $q->where('name', 'like', '%'.$query.'%')
+        return Article::query()
+            ->active()
+            ->where(fn($q) => $q
+                ->where('title', 'like', '%'.$query.'%')
+                ->orWhereHas('brand', fn($qq) =>
+                    $qq->where('name', 'like', '%'.$query.'%')
+                )
             )
             ->limit(10)
             ->get()

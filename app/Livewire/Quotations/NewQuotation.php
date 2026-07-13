@@ -254,6 +254,7 @@ class NewQuotation extends Component
     public function searchArticles($query)
     {
         return Article::query()
+            ->active()
             ->where('title', 'like', '%' . $query . '%')
             ->limit(10)
             ->get(['id', 'title', 'stock', 'sale_price'])

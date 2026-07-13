@@ -17,6 +17,7 @@ class Kardex extends Component
     public function searchArticles($query)
     {
         return Article::query()
+            ->active()
             ->where(fn($q) => $q
                 ->where('title', 'like', '%'.$query.'%')
                 ->orWhere('sku',   'like', '%'.$query.'%')
