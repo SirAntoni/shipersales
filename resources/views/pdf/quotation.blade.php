@@ -430,7 +430,7 @@
                     </div>
                     <div class="pay-total">
                         <table class="pay">
-                            <tr><td class="label">Total cotizado</td><td class="value">S/ {{ number_format($quotation->total, 2) }}</td></tr>
+                            <tr><td class="label">Total cotizado{{ $quotation->tax > 0 ? '' : ' (SIN IGV)' }}</td><td class="value">S/ {{ number_format($quotation->total, 2) }}</td></tr>
                         </table>
                     </div>
                 </div>
