@@ -86,7 +86,7 @@
         <div>
 
             <div class="box box--stacked mt-3.5">
-                <div id="kardexScroll" class="w-full overflow-x-auto">
+                <div id="kardexScroll" class="w-full overflow-x-auto" style="overflow-x:auto">
                     <x-base.table>
                         <x-base.table.thead>
                             <x-base.table.tr>
@@ -249,6 +249,18 @@
                         </x-base.table.tbody>
                     </x-base.table>
                 </div>
+
+                @if($truncated ?? false)
+                    <div class="border-t border-dashed border-slate-200/80 p-4 text-center">
+                        <button type="button"
+                                wire:click="$set('showAll', true)"
+                                wire:loading.attr="disabled"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                            <i class="fa-solid fa-chevron-down" wire:loading.class="fa-spin" wire:target="showAll"></i>
+                            Mostrar todos los {{ $total }} movimientos
+                        </button>
+                    </div>
+                @endif
             </div>
 
         </div>

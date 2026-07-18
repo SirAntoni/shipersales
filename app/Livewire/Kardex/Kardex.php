@@ -10,8 +10,11 @@ use Illuminate\Support\Facades\DB;
 class Kardex extends Component
 {
 
-    public $kardex = [];
     public $article;
+    public $showAll = false;
+
+    /** Cuantos movimientos recientes se muestran por defecto (el resto con "Mostrar todos"). */
+    private const VISIBLE_ROWS = 100;
 
 
     public function searchArticles($query)
@@ -34,14 +37,18 @@ class Kardex extends Component
     public function updatedArticle($id)
     {
         $this->article = $id;
-        $this->getKardex();
+        $this->showAll = false;
     }
 
+    /** El botón Refrescar solo fuerza re-render; los datos se consultan frescos en render(). */
     public function getKardex()
     {
+    }
+
+    private function fetchKardex()
+    {
         if (!$this->article) {
-            $this->kardex = [];
-            return;
+            return collect();
         }
 
         // COMPRAS (entradas) -> excluir solo canceladas (status = 0)
@@ -136,15 +143,20 @@ class Kardex extends Component
             ->orderByDesc('m.detail_id')
             ->get();
 
-        $this->kardex = $rows;
+        return $rows;
     }
-
-
-
 
 
     public function render()
     {
-        return view('livewire.kardex.kardex');
+        $all   = $this->fetchKardex();
+        $total = $all->count();
+        $kardex = $this->showAll ? $all : $all->take(self::VISIBLE_ROWS);
+
+        return view('livewire.kardex.kardex', [
+            'kardex'    => $kardex,
+            'total'     => $total,
+            'truncated' => !$this->showAll && $total > self::VISIBLE_ROWS,
+        ]);
     }
 }
