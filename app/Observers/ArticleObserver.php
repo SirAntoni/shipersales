@@ -18,21 +18,28 @@ class ArticleObserver
             return;
         }
 
-        $old = (int) $article->getOriginal('stock');
-        $new = (int) $article->stock;
+        // La auditoria NUNCA debe romper la operacion que cambio el stock
+        // (venta, compra, etc.). Si falla (p.ej. tabla sin migrar), se
+        // reporta al log del sistema y la operacion continua.
+        try {
+            $old = (int) $article->getOriginal('stock');
+            $new = (int) $article->stock;
 
-        DB::table('stock_change_logs')->insert([
-            'article_id' => $article->id,
-            'old_stock'  => $old,
-            'new_stock'  => $new,
-            'delta'      => $new - $old,
-            'context'    => $this->callerContext(),
-            'via'        => mb_substr(preg_replace('/\s+/', ' ', app()->runningInConsole()
-                ? 'console:' . (implode(' ', array_slice($_SERVER['argv'] ?? [], 1, 2)) ?: 'unknown')
-                : 'http:' . request()->path()), 0, 60),
-            'user_id'    => Auth::id(),
-            'created_at' => now(),
-        ]);
+            DB::table('stock_change_logs')->insert([
+                'article_id' => $article->id,
+                'old_stock'  => $old,
+                'new_stock'  => $new,
+                'delta'      => $new - $old,
+                'context'    => $this->callerContext(),
+                'via'        => mb_substr(preg_replace('/\s+/', ' ', app()->runningInConsole()
+                    ? 'console:' . (implode(' ', array_slice($_SERVER['argv'] ?? [], 1, 2)) ?: 'unknown')
+                    : 'http:' . request()->path()), 0, 60),
+                'user_id'    => Auth::id(),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /** Primer frame del backtrace dentro de app/ que no sea este observer: "Archivo.php:linea". */
