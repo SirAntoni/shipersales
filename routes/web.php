@@ -40,6 +40,14 @@ Route::get('/cron/sunat/resend-pending', function (PendingDocumentsService $serv
     ]);
 })->name('sunat.resend.pending');
 
+// Cron diario (cPanel): detecta desfases nuevos stock vs kardex
+Route::get('/cron/kardex/check', function () {
+    Artisan::call('kardex:check');
+
+    return response('<pre>' . e(Artisan::output()) . '</pre>', 200)
+        ->header('Content-Type', 'text/html');
+})->name('kardex.check');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/', [DashboardController::class,'index'])->middleware(['auth', RedirectIfNoDashboardPermission::class])->name('dashboard.index');
     Route::get('/dashboard/inventory', [DashboardController::class,'inventory'])->name('dashboard.inventory');

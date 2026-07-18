@@ -65,6 +65,25 @@
                 </div>
             </div>
 
+            @if(!empty($gapAlerts) && count($gapAlerts))
+                <div class="mt-3.5 rounded-[0.6rem] border border-warning/40 bg-warning/10 p-4 text-warning">
+                    <div class="font-medium">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                        Desfase de kardex detectado en los últimos 7 días ({{ count($gapAlerts) }} artículo{{ count($gapAlerts) > 1 ? 's' : '' }}):
+                    </div>
+                    <ul class="mt-1 list-disc pl-6 text-sm">
+                        @foreach($gapAlerts as $ga)
+                            <li>
+                                {{ $ga->title }} — gap {{ sprintf('%+d', $ga->gap) }}
+                                @if($ga->transit) (tránsito {{ $ga->transit }}) @endif
+                                — detectado el {{ $ga->checked_date }}
+                            </li>
+                        @endforeach
+                    </ul>
+                    <div class="mt-1 text-xs">Revisa el kardex del artículo y la auditoría de cambios de stock para ubicar la operación.</div>
+                </div>
+            @endif
+
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
 

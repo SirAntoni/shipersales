@@ -47,6 +47,12 @@ class RegularizeKardex extends Command
             return self::FAILURE;
         }
 
+        $transit = (int) ($this->transitQtys()[$articleId] ?? 0);
+        if ($transit > 0) {
+            $this->error("El artículo tiene {$transit} unidades en compras abiertas (status 2/3): el kardex ya las cuenta pero aún no ingresan al almacén, así que parte del desfase es tránsito legítimo. Regulariza después de recibir la mercadería.");
+            return self::FAILURE;
+        }
+
         $stock  = (int) $article->stock;
         $kardex = (int) DB::table('v_kardex_stock')
             ->where('article_id', $articleId)
@@ -96,6 +102,19 @@ class RegularizeKardex extends Command
         return $kardexAfter === $stock ? self::SUCCESS : self::FAILURE;
     }
 
+    /** Unidades en compras abiertas (status 2/3) por artículo: el kardex ya las cuenta, el almacén todavía no. */
+    private function transitQtys()
+    {
+        return DB::table('purchase_details as pd')
+            ->join('purchases as p', 'p.id', '=', 'pd.purchase_id')
+            ->whereIn('p.status', [2, 3])
+            ->whereNull('pd.deleted_at')
+            ->whereNull('p.deleted_at')
+            ->groupBy('pd.article_id')
+            ->selectRaw('pd.article_id, SUM(pd.quantity) as qty')
+            ->pluck('qty', 'article_id');
+    }
+
     private function mismatches()
     {
         return DB::table('articles as a')
@@ -114,10 +133,10 @@ class RegularizeKardex extends Command
             ]);
     }
 
-    private function renderMismatchTable($rows): void
+    private function renderMismatchTable($rows, $transit): void
     {
         $this->table(
-            ['ID', 'SKU', 'Artículo', 'Stock almacén', 'Saldo kardex', 'Delta'],
+            ['ID', 'SKU', 'Artículo', 'Stock almacén', 'Saldo kardex', 'Delta', 'En tránsito'],
             $rows->map(fn ($r) => [
                 $r->id,
                 $r->sku,
@@ -125,6 +144,7 @@ class RegularizeKardex extends Command
                 $r->stock,
                 $r->kardex_stock,
                 sprintf('%+d', $r->delta),
+                ($transit[$r->id] ?? 0) ?: '-',
             ])
         );
     }
@@ -138,23 +158,39 @@ class RegularizeKardex extends Command
             return self::SUCCESS;
         }
 
-        $this->renderMismatchTable($rows);
+        $transit = $this->transitQtys();
+        $this->renderMismatchTable($rows, $transit);
 
-        $this->warn("{$rows->count()} artículos descuadrados. Regulariza solo tras verificar con conteo físico: kardex:regularize {id}");
+        $conTransito = $rows->filter(fn ($r) => ($transit[$r->id] ?? 0) > 0)->count();
+        $this->warn("{$rows->count()} artículos descuadrados ({$conTransito} con compras abiertas, excluidos de --all). Regulariza solo tras verificar con conteo físico: kardex:regularize {id}");
 
         return self::SUCCESS;
     }
 
     private function regularizeAll(): int
     {
-        $rows = $this->mismatches();
+        $all = $this->mismatches();
 
-        if ($rows->isEmpty()) {
+        if ($all->isEmpty()) {
             $this->info('Todos los artículos activos tienen el kardex cuadrado con el almacén.');
             return self::SUCCESS;
         }
 
-        $this->renderMismatchTable($rows);
+        $transit = $this->transitQtys();
+        [$skipped, $rows] = $all->partition(fn ($r) => ($transit[$r->id] ?? 0) > 0);
+
+        if ($skipped->isNotEmpty()) {
+            $this->warn("EXCLUIDOS {$skipped->count()} artículos con compras abiertas (status 2/3): su desfase puede ser tránsito legítimo. Regularízalos tras recibir la mercadería:");
+            $this->renderMismatchTable($skipped, $transit);
+        }
+
+        if ($rows->isEmpty()) {
+            $this->info('No queda ningún artículo regularizable sin compras abiertas.');
+            return self::SUCCESS;
+        }
+
+        $this->line('A regularizar:');
+        $this->renderMismatchTable($rows, $transit);
 
         $totalDelta = $rows->sum('delta');
         $this->line("{$rows->count()} artículos a regularizar (suma de deltas: " . sprintf('%+d', $totalDelta) . ').');
@@ -188,14 +224,19 @@ class RegularizeKardex extends Command
             }
         });
 
-        $remaining = $this->mismatches()->count();
+        $transitNow = $this->transitQtys();
+        $remaining  = $this->mismatches()->filter(fn ($r) => ($transitNow[$r->id] ?? 0) == 0)->count();
 
         if ($remaining === 0) {
-            $this->info("Listo: {$rows->count()} ajustes registrados. Todos los artículos activos quedaron cuadrados.");
+            $msg = "Listo: {$rows->count()} ajustes registrados.";
+            if ($skipped->isNotEmpty()) {
+                $msg .= " Quedan {$skipped->count()} artículos con compras abiertas sin regularizar (a propósito).";
+            }
+            $this->info($msg);
             return self::SUCCESS;
         }
 
-        $this->error("Se registraron {$rows->count()} ajustes pero quedan {$remaining} artículos descuadrados (¿movimientos concurrentes?). Corre --list para revisarlos.");
+        $this->error("Se registraron {$rows->count()} ajustes pero quedan {$remaining} artículos descuadrados sin compras abiertas (¿movimientos concurrentes?). Corre --list para revisarlos.");
         return self::FAILURE;
     }
 }

@@ -420,6 +420,14 @@ class Index extends Component
 
     public function render()
     {
-        return view('livewire.inventory.index');
+        // Alertas del chequeo diario: articulos cuyo desfase neto cambio en la ultima semana
+        $gapAlerts = DB::table('stock_gap_snapshots as s')
+            ->join('articles as a', 'a.id', '=', 's.article_id')
+            ->where('s.changed', true)
+            ->where('s.checked_date', '>=', now()->subDays(7)->toDateString())
+            ->orderByDesc('s.checked_date')
+            ->get(['a.title', 's.gap', 's.transit', 's.checked_date']);
+
+        return view('livewire.inventory.index', compact('gapAlerts'));
     }
 }
