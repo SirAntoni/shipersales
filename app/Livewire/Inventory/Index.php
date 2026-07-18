@@ -383,15 +383,23 @@ class Index extends Component
                 $article = Article::lockForUpdate()->findOrFail($articleId);
                 $old     = (int) $article->stock;
 
+                // Saldo del kardex ANTES de registrar este ajuste (la vista ya
+                // incluye ajustes anteriores). El delta se mide contra el kardex,
+                // no contra el almacén: es el movimiento que deja el kardex igual
+                // al físico contado.
+                $kardex = (int) DB::table('v_kardex_stock')
+                    ->where('article_id', $articleId)
+                    ->value('kardex_stock');
+
                 // Update almacén
                 $article->update(['stock' => $physical]);
 
-                // Auditoría
+                // Auditoría + movimiento de kardex
                 InventoryAdjustment::create([
                     'article_id' => $articleId,
                     'old_stock'  => $old,
                     'new_stock'  => $physical,
-                    'delta'      => $physical - $old,
+                    'delta'      => $physical - $kardex,
                     'reason'     => 'Conteo físico',
                     'source'     => 'inventory_module',
                     'created_by' => Auth::id(),

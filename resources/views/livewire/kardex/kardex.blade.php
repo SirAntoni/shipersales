@@ -86,18 +86,18 @@
         <div>
 
             <div class="box box--stacked mt-3.5">
-                <div class="overflow-auto xl:overflow-visible">
+                <div id="kardexScroll" class="w-full overflow-x-auto">
                     <x-base.table>
                         <x-base.table.thead>
                             <x-base.table.tr>
 
                                 <x-base.table.td
-                                    class="w-56 border-slate-200/80 bg-slate-50 py-5 font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem]"
+                                    class="w-40 border-slate-200/80 bg-slate-50 py-5 font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem]"
                                 >
                                     Fecha
                                 </x-base.table.td>
                                 <x-base.table.td
-                                    class="w-56 border-slate-200/80 bg-slate-50 py-5 font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem]"
+                                    class="w-40 border-slate-200/80 bg-slate-50 py-5 font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem]"
                                 >
                                     Número
                                 </x-base.table.td>
@@ -117,17 +117,17 @@
                                     Usuario
                                 </x-base.table.td>
                                 <x-base.table.td
-                                    class="w-32 truncate border-slate-200/80 bg-slate-50 py-5 text-right font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem] text-center"
+                                    class="w-24 border-slate-200/80 bg-slate-50 py-5 font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem] text-center"
                                 >
                                     Entradas
                                 </x-base.table.td>
                                 <x-base.table.td
-                                    class="w-32 truncate border-slate-200/80 bg-slate-50 py-5 text-right font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem] text-center"
+                                    class="w-24 border-slate-200/80 bg-slate-50 py-5 font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem] text-center"
                                 >
                                     Salidas
                                 </x-base.table.td>
                                 <x-base.table.td
-                                    class="w-32 truncate border-slate-200/80 bg-slate-50 py-5 text-right font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem] text-center"
+                                    class="w-24 border-slate-200/80 bg-slate-50 py-5 font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem] text-center"
                                 >
                                     Saldo
                                 </x-base.table.td>
@@ -140,6 +140,12 @@
 
                                 @foreach($kardex as $article)
 
+                                    @php
+                                        $rowColor = ($article->src === 'adjustment')
+                                            ? 'text-warning'
+                                            : (($article->tipo == 'entrada') ? 'text-success' : 'text-danger');
+                                    @endphp
+
                                     <x-base.table.tr class="[&_td]:last:border-b-0">
 
                                         <x-base.table.td
@@ -147,7 +153,7 @@
                                         >
 
                                             <div
-                                                class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
+                                                class="ml-1.5 whitespace-nowrap {{ $rowColor }} font-semibold">
                                                {{$article->fecha}}
                                             </div>
 
@@ -157,7 +163,7 @@
                                         >
 
                                             <div
-                                                class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
+                                                class="ml-1.5 whitespace-nowrap {{ $rowColor }} font-semibold">
                                                 {{($article->tipo == "salida") ? $article->number:$article->document}}
                                             </div>
 
@@ -166,7 +172,7 @@
                                             class="rounded-l-none rounded-r-none border-x-0 border-t-0 border-dashed py-5 first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] dark:bg-darkmode-600 text-center"
                                         >
                                             <div
-                                                class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
+                                                class="ml-1.5 whitespace-nowrap {{ $rowColor }} font-semibold">
                                                 {{($article->tipo == "salida") ? $article->contact_name:$article->provider_name}}
                                             </div>
                                         </x-base.table.td>
@@ -174,7 +180,7 @@
                                             class="rounded-l-none rounded-r-none border-x-0 border-t-0 border-dashed py-5 first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] dark:bg-darkmode-600 text-center"
                                         >
                                             <div
-                                                class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
+                                                class="ml-1.5 whitespace-nowrap {{ $rowColor }} font-semibold">
                                                 {{($article->tipo == "salida") ? $article->client_name:$article->passenger}}
                                             </div>
                                         </x-base.table.td>
@@ -182,37 +188,37 @@
                                             class="rounded-l-none rounded-r-none border-x-0 border-t-0 border-dashed py-5 first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] dark:bg-darkmode-600 text-center"
                                         >
                                             <div
-                                                class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
+                                                class="ml-1.5 whitespace-nowrap {{ $rowColor }} font-semibold">
                                                 {{$article->user_name}}
                                             </div>
                                         </x-base.table.td>
                                         <x-base.table.td
-                                            class="rounded-l-none rounded-r-none border-x-0 border-t-0 border-dashed py-5 text-right first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] dark:bg-darkmode-600 text-center"
+                                            class="rounded-l-none rounded-r-none border-x-0 border-t-0 border-dashed py-5 first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] dark:bg-darkmode-600 text-center"
                                         >
 
                                             <div
-                                                class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
+                                                class="ml-1.5 whitespace-nowrap {{ $rowColor }} font-semibold">
                                                 {{($article->tipo == "entrada") ? $article->cantidad:"-"}}
                                             </div>
 
                                         </x-base.table.td>
 
                                         <x-base.table.td
-                                            class="rounded-l-none rounded-r-none border-x-0 border-t-0 border-dashed py-5 text-right first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] dark:bg-darkmode-600 text-center"
+                                            class="rounded-l-none rounded-r-none border-x-0 border-t-0 border-dashed py-5 first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] dark:bg-darkmode-600 text-center"
                                         >
 
                                             <div
-                                                class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
+                                                class="ml-1.5 whitespace-nowrap {{ $rowColor }} font-semibold">
                                                 {{($article->tipo == "salida") ? $article->cantidad:"-"}}
                                             </div>
 
                                         </x-base.table.td>
                                         <x-base.table.td
-                                            class="rounded-l-none rounded-r-none border-x-0 border-t-0 border-dashed py-5 text-right first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] dark:bg-darkmode-600 text-center"
+                                            class="rounded-l-none rounded-r-none border-x-0 border-t-0 border-dashed py-5 first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] dark:bg-darkmode-600 text-center"
                                         >
 
                                             <div
-                                                class="ml-1.5 whitespace-nowrap {{($article->tipo == "entrada") ? "text-success":"text-danger"}} font-semibold">
+                                                class="ml-1.5 whitespace-nowrap {{ $rowColor }} font-semibold">
                                                 <i class="fa-solid {{($article->tipo == "entrada") ? "fa-circle-plus":"fa-circle-minus"}}"></i> {{$article->saldo}}
                                             </div>
 
@@ -337,6 +343,79 @@
             copyToClipboard(sku, toastSku);
         });
     });
+</script>
+
+<script>
+    // Arrastrar con el mouse para desplazar la tabla del kardex horizontalmente.
+    (function () {
+        const SEL = '#kardexScroll';
+
+        function refreshCursor(el) {
+            if (!el) return;
+            const scrollable = el.scrollWidth > el.clientWidth + 1;
+            // "manito" (grab) solo cuando hay contenido que desplazar
+            el.style.cursor = scrollable ? 'grab' : '';
+        }
+
+        function bind(el) {
+            if (!el || el.dataset.dragBound) return;
+            el.dataset.dragBound = '1';
+
+            let isDown = false, startX = 0, startLeft = 0, moved = false;
+
+            el.addEventListener('mousedown', function (e) {
+                if (e.button !== 0 || el.scrollWidth <= el.clientWidth + 1) return;
+                isDown = true;
+                moved = false;
+                startX = e.pageX;
+                startLeft = el.scrollLeft;
+                el.style.cursor = 'grabbing';
+                el.style.userSelect = 'none';
+            });
+
+            window.addEventListener('mousemove', function (e) {
+                if (!isDown) return;
+                const dx = e.pageX - startX;
+                if (Math.abs(dx) > 3) moved = true;
+                el.scrollLeft = startLeft - dx;
+                e.preventDefault();
+            });
+
+            window.addEventListener('mouseup', function () {
+                if (!isDown) return;
+                isDown = false;
+                el.style.userSelect = '';
+                refreshCursor(el); // vuelve a 'grab'
+            });
+
+            // Evita que un arrastre dispare clicks accidentales dentro de la tabla
+            el.addEventListener('click', function (e) {
+                if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; }
+            }, true);
+        }
+
+        function init() {
+            const el = document.querySelector(SEL);
+            bind(el);
+            refreshCursor(el);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('livewire:navigated', init);
+        document.addEventListener('livewire:init', function () {
+            if (window.Livewire && window.Livewire.hook) {
+                // Tras cada actualizacion del componente (ej. seleccionar producto)
+                window.Livewire.hook('commit', function (payload) {
+                    if (payload && payload.succeed) {
+                        payload.succeed(function () { setTimeout(init, 0); });
+                    }
+                });
+            }
+        });
+        window.addEventListener('resize', function () {
+            refreshCursor(document.querySelector(SEL));
+        });
+    })();
 </script>
 
 

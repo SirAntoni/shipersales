@@ -95,8 +95,31 @@ class Kardex extends Component
             ->where('sales.status', '<>', 0)                 // 👈 solo filtra estado 0
             ->where('sale_details.article_id', $this->article);
 
+        // AJUSTES DE INVENTARIO (conteo físico / regularizaciones)
+        $adjustmentMovements = \DB::table('inventory_adjustments as ia')
+            ->selectRaw("
+            ia.id               AS detail_id,
+            'adjustment'        AS src,
+            ia.article_id,
+            articles.title      AS article_name,
+            NULL                AS provider_name,
+            NULL                AS contact_name,
+            NULL                AS client_name,
+            users.name          AS user_name,
+            CONCAT('Ajuste — ', ia.reason) AS `number`,
+            ia.created_at       AS fecha,
+            CASE WHEN ia.delta >= 0 THEN 'entrada' ELSE 'salida' END AS tipo,
+            ABS(ia.delta)       AS cantidad,
+            CONCAT('Ajuste — ', ia.reason) AS document,
+            NULL                AS passenger
+        ")
+            ->join('articles', 'articles.id', '=', 'ia.article_id')
+            ->leftJoin('users', 'users.id', '=', 'ia.created_by')
+            ->where('ia.delta', '<>', 0)
+            ->where('ia.article_id', $this->article);
+
         // UNION ALL (no perder movimientos válidos)
-        $movements = $purchaseMovements->unionAll($saleMovements);
+        $movements = $purchaseMovements->unionAll($saleMovements)->unionAll($adjustmentMovements);
 
         // Saldo acumulado en SQL (orden estable por fecha, fuente y detail_id)
         $rows = \DB::query()
