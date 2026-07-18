@@ -15,7 +15,8 @@ class RegularizeKardex extends Command
                             {--all : Regularizar TODOS los artículos activos descuadrados bajo el mismo motivo}
                             {--reason= : Motivo del ajuste (default: Regularización kardex vs stock de almacén)}
                             {--user= : ID de usuario que firma el ajuste (default: sin usuario)}
-                            {--dry-run : Solo mostrar qué haría, sin escribir nada}';
+                            {--dry-run : Solo mostrar qué haría, sin escribir nada}
+                            {--force : No pedir confirmación (para ejecución vía ruta web o cron)}';
 
     protected $description = 'Registra un ajuste de kardex que iguala el saldo documental al stock de almacén (articles.stock)';
 
@@ -69,7 +70,7 @@ class RegularizeKardex extends Command
 
         $reason = $this->option('reason') ?: 'Regularización kardex vs stock de almacén';
 
-        if (!$this->confirm("Se registrará un ajuste de {$delta} en el kardex de \"{$article->title}\" (motivo: {$reason}). ¿Continuar?")) {
+        if (!$this->option('force') && !$this->confirm("Se registrará un ajuste de {$delta} en el kardex de \"{$article->title}\" (motivo: {$reason}). ¿Continuar?")) {
             $this->warn('Cancelado.');
             return self::SUCCESS;
         }
@@ -166,7 +167,7 @@ class RegularizeKardex extends Command
         $reason = $this->option('reason') ?: 'Regularización kardex vs stock de almacén';
 
         $this->warn('Esto asume que articles.stock es el valor correcto para TODOS los listados.');
-        if (!$this->confirm("Se registrarán {$rows->count()} ajustes con motivo \"{$reason}\". ¿Continuar?")) {
+        if (!$this->option('force') && !$this->confirm("Se registrarán {$rows->count()} ajustes con motivo \"{$reason}\". ¿Continuar?")) {
             $this->warn('Cancelado.');
             return self::SUCCESS;
         }

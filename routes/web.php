@@ -113,6 +113,35 @@ Route::middleware(['auth'])->group(function () {
             ->header('Content-Type', 'text/html');
     });
 
+    //Start Regularizar kardex en Cpanel (sin acceso a terminal)
+    // Paso 1: vista previa (dry-run, no escribe nada) con enlace para ejecutar
+    Route::get('/kardex-regularize', function () {
+        Artisan::call('kardex:regularize', ['--all' => true, '--dry-run' => true]);
+        $out    = e(Artisan::output());
+        $runUrl = url('/kardex-regularize/run');
+
+        return response(
+            "<h3>Kardex — vista previa de regularización (no se escribió nada)</h3>"
+            . "<pre>{$out}</pre>"
+            . "<p><a href=\"{$runUrl}\" onclick=\"return confirm('¿Registrar TODOS los ajustes listados?')\">Ejecutar regularización</a></p>",
+            200
+        )->header('Content-Type', 'text/html');
+    });
+
+    // Paso 2: ejecutar. Firma con el usuario logueado; motivo opcional via ?reason=...
+    Route::get('/kardex-regularize/run', function () {
+        Artisan::call('kardex:regularize', [
+            '--all'    => true,
+            '--force'  => true,
+            '--reason' => request('reason', 'Regularización kardex vs stock de almacén'),
+            '--user'   => auth()->id(),
+        ]);
+
+        return response('<pre>' . e(Artisan::output()) . '</pre>', 200)
+            ->header('Content-Type', 'text/html');
+    });
+    //End Regularizar kardex en Cpanel
+
 });
 
 
