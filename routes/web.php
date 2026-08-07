@@ -83,6 +83,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('reports/articles/export', [ReportController::class, 'articles'])->name('reports.articles')->middleware('can:store');
     Route::get('reports/on-demand-products/export', [ReportController::class, 'onDemandProducts'])->name('reports.on-demand-products')->middleware('can:store');
     Route::get('reports/commissions/export', [ReportController::class, 'commissions'])->name('reports.commissions.export')->middleware('can:commissions');
+    // Bajo el prefijo reports/ a proposito: documents/export chocaria con
+    // documents/{document} del resource declarado arriba.
+    Route::get('reports/documents/export', [ReportController::class, 'documents'])->name('documents.export')->middleware('can:documents');
     Route::get('kardex', [KardexController::class,'index'])->name('kardex')->middleware('can:kardex');
     Route::get('pdf/{id}', [SaleController::class,'pdf'])->name('pdf.view');
     Route::get('pdf-v2/{id}', [SaleController::class,'pdfV2'])->name('pdf.v2');

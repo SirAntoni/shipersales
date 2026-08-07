@@ -18,7 +18,12 @@ class TableDocuments extends Component
 {
     public $search;
     public $statusSunat = '';
+    public $anio = '';
+    public $mes = '';
     use WithPagination;
+
+    /** Series de las notas de credito: restan del total en vez de sumar. */
+    public const SERIES_NOTA_CREDITO = ['FC', 'BC'];
 
     public function updatingSearch()
     {
@@ -26,6 +31,16 @@ class TableDocuments extends Component
     }
 
     public function updatingStatusSunat()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingAnio()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingMes()
     {
         $this->resetPage();
     }
@@ -506,20 +521,136 @@ class TableDocuments extends Component
         }
     }
 
+    /**
+     * Filtros compartidos por la tabla, el pie de totales y el Excel: los tres
+     * tienen que ver exactamente el mismo conjunto de documentos.
+     */
+    public static function filtrar($query, ?string $search, ?string $statusSunat, ?string $anio, ?string $mes)
+    {
+        return $query
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($q) use ($search) {
+                    $q->whereRaw("CONCAT(serie, '-', correlative) LIKE ?", ["%{$search}%"])
+                      ->orWhere('serie', 'LIKE', "%{$search}%")
+                      ->orWhere('correlative', 'LIKE', "%{$search}%")
+                      ->orWhereHas('sale', fn($q) => $q->where('number', 'LIKE', "%{$search}%"));
+                });
+            })
+            ->when($statusSunat, fn($q) => $q->where('status_sunat', $statusSunat))
+            // Se filtra por la fecha de emision (la que va en el XML de SUNAT),
+            // no por created_at: en 588 documentos no coinciden.
+            ->when($anio, fn($q) => $q->whereYear('date', $anio))
+            ->when($mes, fn($q) => $q->whereMonth('date', $mes));
+    }
+
+    /**
+     * Totales de TODO el filtro, al margen de la pagina que se este viendo.
+     * Solo entran los aceptados por SUNAT; las notas de credito restan.
+     */
+    public static function resumen(?string $search, ?string $statusSunat, ?string $anio, ?string $mes): array
+    {
+        $aceptados = self::filtrar(Document::query(), $search, $statusSunat, $anio, $mes)
+            ->where('status_sunat', 'aceptado');
+
+        // documents.total es DOUBLE y casi todas las filas traen mas de 2
+        // decimales. Se suman los importes YA redondeados para que el pie
+        // cuadre con lo que se ve en la tabla y con lo que sale en el Excel.
+        $like = collect(self::SERIES_NOTA_CREDITO)
+            ->map(fn($serie) => "serie LIKE '{$serie}%'")
+            ->implode(' OR ');
+
+        $totales = function ($query, bool $notasCredito) use ($like) {
+            return $query
+                ->whereRaw($notasCredito ? "({$like})" : "NOT ({$like})")
+                ->selectRaw('COALESCE(SUM(ROUND(total, 2)), 0) as importe, COUNT(*) as cantidad')
+                ->first();
+        };
+
+        $comprobantes = $totales(clone $aceptados, false);
+        $notasCredito = $totales(clone $aceptados, true);
+
+        $importeComprobantes = (float) $comprobantes->importe;
+        $importeNotasCredito = (float) $notasCredito->importe;
+
+        return [
+            'comprobantes'             => round($importeComprobantes, 2),
+            'notas_credito'            => round($importeNotasCredito, 2),
+            'neto'                     => round($importeComprobantes - $importeNotasCredito, 2),
+            'cantidad_comprobantes'    => (int) $comprobantes->cantidad,
+            'cantidad_notas_credito'   => (int) $notasCredito->cantidad,
+            'cantidad'                 => (int) $comprobantes->cantidad + (int) $notasCredito->cantidad,
+            'excluidos'                => self::filtrar(Document::query(), $search, $statusSunat, $anio, $mes)
+                ->where(fn($q) => $q->where('status_sunat', '!=', 'aceptado')->orWhereNull('status_sunat'))
+                ->count(),
+        ];
+    }
+
+    /** Etiqueta del periodo filtrado, para el titulo y el nombre del Excel. */
+    public static function etiquetaPeriodo(?string $anio, ?string $mes): string
+    {
+        $nombreMes = $mes ? (self::MESES[$mes] ?? null) : null;
+
+        if ($anio && $nombreMes) {
+            return "{$nombreMes} {$anio}";
+        }
+
+        if ($anio) {
+            return "año {$anio}";
+        }
+
+        // Un mes sin año filtra ese mes en todos los años: hay que decirlo.
+        if ($nombreMes) {
+            return "{$nombreMes} de todos los años";
+        }
+
+        return 'todos los periodos';
+    }
+
+    /** Anios con documentos emitidos, para el selector. */
+    public function getAniosProperty()
+    {
+        return Document::selectRaw('YEAR(date) as anio')
+            ->whereNotNull('date')
+            ->distinct()
+            ->orderByDesc('anio')
+            ->pluck('anio');
+    }
+
+    public function limpiarFiltros()
+    {
+        $this->reset(['search', 'statusSunat', 'anio', 'mes']);
+        $this->resetPage();
+    }
+
+    public function exportar()
+    {
+        $url = route('documents.export', array_filter([
+            'search'      => $this->search,
+            'statusSunat' => $this->statusSunat,
+            'anio'        => $this->anio,
+            'mes'         => $this->mes,
+        ], fn($v) => $v !== null && $v !== ''));
+
+        $this->dispatch('abrir-nueva-pestania', ['url' => $url]);
+    }
+
     public
     function render()
     {
-        $documents = Document::with('sale')
-            ->when($this->search, function ($q) {
-                $q->where(function ($q) {
-                    $q->whereRaw("CONCAT(serie, '-', correlative) LIKE ?", ["%{$this->search}%"])
-                      ->orWhere('serie', 'LIKE', "%{$this->search}%")
-                      ->orWhere('correlative', 'LIKE', "%{$this->search}%")
-                      ->orWhereHas('sale', fn($q) => $q->where('number', 'LIKE', "%{$this->search}%"));
-                });
-            })
-            ->when($this->statusSunat, fn($q) => $q->where('status_sunat', $this->statusSunat))
+        $documents = self::filtrar(Document::with('sale'), $this->search, $this->statusSunat, $this->anio, $this->mes)
             ->orderBy('id', 'desc')->paginate(10);
-        return view('livewire.documents.table-documents', compact('documents'));
+
+        return view('livewire.documents.table-documents', [
+            'documents' => $documents,
+            'resumen'   => self::resumen($this->search, $this->statusSunat, $this->anio, $this->mes),
+            'anios'     => $this->anios,
+            'meses'     => self::MESES,
+        ]);
     }
+
+    public const MESES = [
+        '01' => 'Enero', '02' => 'Febrero', '03' => 'Marzo', '04' => 'Abril',
+        '05' => 'Mayo', '06' => 'Junio', '07' => 'Julio', '08' => 'Agosto',
+        '09' => 'Setiembre', '10' => 'Octubre', '11' => 'Noviembre', '12' => 'Diciembre',
+    ];
 }

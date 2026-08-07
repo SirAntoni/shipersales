@@ -33,7 +33,37 @@
 
                         </div>
 
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <x-base.tippy
+                                as="x-base.button"
+                                variant="outline-primary"
+                                content="Descargar en Excel los comprobantes del filtro actual"
+                                wire:click="exportar"
+                            >
+                                <i class="fa-solid fa-file-excel mr-1"></i>
+                                Exportar Excel
+                            </x-base.tippy>
+
+                            <x-base.form-select
+                                class="rounded-[0.5rem] sm:w-32"
+                                wire:model.live="anio"
+                            >
+                                <option value="">Todos los años</option>
+                                @foreach($anios as $unAnio)
+                                    <option value="{{ $unAnio }}">{{ $unAnio }}</option>
+                                @endforeach
+                            </x-base.form-select>
+
+                            <x-base.form-select
+                                class="rounded-[0.5rem] sm:w-36"
+                                wire:model.live="mes"
+                            >
+                                <option value="">Todos los meses</option>
+                                @foreach($meses as $numero => $nombre)
+                                    <option value="{{ $numero }}">{{ $nombre }}</option>
+                                @endforeach
+                            </x-base.form-select>
+
                             <x-base.form-select
                                 class="rounded-[0.5rem] sm:w-44"
                                 wire:model.live="statusSunat"
@@ -50,10 +80,22 @@
                                 <x-base.form-input
                                     class="rounded-[0.5rem] pl-9 sm:w-64"
                                     type="text"
+                                    maxlength="100"
                                     placeholder="Buscar comprobante..."
                                     wire:model.live="search"
                                 />
                             </div>
+
+                            @if($search || $statusSunat || $anio || $mes)
+                                <x-base.tippy
+                                    as="x-base.button"
+                                    variant="outline-secondary"
+                                    content="Quitar todos los filtros"
+                                    wire:click="limpiarFiltros"
+                                >
+                                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                                </x-base.tippy>
+                            @endif
                         </div>
                     </div>
                     <div class="overflow-auto xl:overflow-visible text-sm">
@@ -117,9 +159,15 @@
                                     @foreach ($documents as $document)
                                         <x-base.table.tr class="[&_td]:last:border-b-0">
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600 text">
-
-                                                {{ $document->created_at->format("d-m-Y H:i:s")}}
-
+                                                {{-- Fecha de emision: es la que va en el XML de SUNAT y la
+                                                     que usan los filtros. La de registro se muestra debajo
+                                                     porque en 588 documentos no coinciden. --}}
+                                                <div class="whitespace-nowrap">
+                                                    {{ $document->date ? \Carbon\Carbon::parse($document->date)->format('d-m-Y') : '—' }}
+                                                </div>
+                                                <div class="whitespace-nowrap text-xs text-slate-400">
+                                                    Registrado {{ $document->created_at->format('d-m-Y H:i') }}
+                                                </div>
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                                 <span
@@ -298,13 +346,55 @@
                                     @endforeach
                                 @else
                                     <x-base.table.tr>
-                                        <x-base.table.td colspan="11"
+                                        <x-base.table.td colspan="10"
                                                          class=" text-center border-dashed dark:bg-darkmode-600">
                                             No se encontrarón resultados.
                                         </x-base.table.td>
                                     </x-base.table.tr>
                                 @endif
                             </x-base.table.tbody>
+                            <tfoot>
+                                {{-- El pie suma TODOS los documentos del filtro, no solo la
+                                     pagina visible. Solo entran los aceptados por SUNAT y
+                                     las notas de credito restan. --}}
+                                <x-base.table.tr>
+                                    <x-base.table.td colspan="4"
+                                                     class="border-t border-slate-200/60 bg-slate-50 text-right font-medium text-slate-500">
+                                        Comprobantes aceptados ({{ $resumen['cantidad_comprobantes'] }})
+                                    </x-base.table.td>
+                                    <x-base.table.td colspan="6"
+                                                     class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-600">
+                                        S/. {{ number_format($resumen['comprobantes'], 2) }}
+                                    </x-base.table.td>
+                                </x-base.table.tr>
+                                @if($resumen['notas_credito'] > 0)
+                                    <x-base.table.tr>
+                                        <x-base.table.td colspan="4"
+                                                         class="bg-slate-50 text-right font-medium text-slate-500">
+                                            Notas de crédito ({{ $resumen['cantidad_notas_credito'] }})
+                                        </x-base.table.td>
+                                        <x-base.table.td colspan="6"
+                                                         class="bg-slate-50 font-medium text-danger">
+                                            - S/. {{ number_format($resumen['notas_credito'], 2) }}
+                                        </x-base.table.td>
+                                    </x-base.table.tr>
+                                @endif
+                                <x-base.table.tr>
+                                    <x-base.table.td colspan="4"
+                                                     class="bg-slate-100 text-right text-base font-bold text-slate-700">
+                                        Total aceptado por SUNAT
+                                    </x-base.table.td>
+                                    <x-base.table.td colspan="6"
+                                                     class="bg-slate-100 text-base font-bold text-slate-700">
+                                        S/. {{ number_format($resumen['neto'], 2) }}
+                                        @if($resumen['excluidos'] > 0)
+                                            <span class="ml-2 text-xs font-medium text-slate-400">
+                                                ({{ $resumen['excluidos'] }} documento{{ $resumen['excluidos'] > 1 ? 's' : '' }} sin estado aceptado no suma{{ $resumen['excluidos'] > 1 ? 'n' : '' }})
+                                            </span>
+                                        @endif
+                                    </x-base.table.td>
+                                </x-base.table.tr>
+                            </tfoot>
                         </x-base.table>
                     </div>
                     <div class="m-4">
