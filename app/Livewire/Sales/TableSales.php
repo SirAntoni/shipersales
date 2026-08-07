@@ -52,8 +52,11 @@ class TableSales extends Component
             return;
         }
 
-        // Debe tener exactamente 1 detalle y cantidad 1
-        if ($sale->saleDetails->count() !== 1 || (int)$sale->saleDetails->first()->quantity !== 1) {
+        // Debe tener exactamente 1 detalle y cantidad 1.
+        // withTrashed: una venta con un producto eliminado desde /sales/{id} tuvo
+        // mas de un item y su cabecera ya no es "precio x 1", asi que el atajo
+        // de editar el total no aplica.
+        if ($sale->saleDetails()->withTrashed()->count() !== 1 || (int)$sale->saleDetails->first()->quantity !== 1) {
             $this->dispatch('errorNotRoute', ['label' => 'Solo se puede editar el total cuando hay 1 ítem con cantidad 1.']);
             return;
         }
@@ -87,7 +90,7 @@ class TableSales extends Component
                 throw ValidationException::withMessages(['newTotal' => 'No puedes editar una venta anulada.']);
             }
 
-            if ($sale->saleDetails()->count() !== 1) {
+            if ($sale->saleDetails()->withTrashed()->count() !== 1) {
                 throw ValidationException::withMessages(['newTotal' => 'La venta debe tener exactamente un ítem.']);
             }
 
@@ -98,6 +101,11 @@ class TableSales extends Component
 
             $nuevo = (float) $this->newTotal;
 
+            // detail.total es el importe que leen los recalculos de la venta:
+            // dejarlo obsoleto descuadra la cabecera al editar la venta despues.
+            $detail->total = $nuevo;
+            $detail->tax = 0;
+
             // Actualizar precio del detalle (y subtotal si aplica)
             $detail->price = $nuevo;
             if ($detail->isFillable('subtotal') || isset($detail->subtotal)) {
@@ -107,6 +115,8 @@ class TableSales extends Component
 
             // Actualizar total de la venta
             // Si tu columna es total_amount, cámbialo aquí:
+            $sale->subtotal = $nuevo;
+            $sale->tax = 0;
             $sale->total = $nuevo;
             $sale->updated_at = now();
             $sale->save();
@@ -348,6 +358,7 @@ class TableSales extends Component
                             ->orWhereIn('sales.id', function ($sub) use ($like) {
                                 $sub->select('sale_id')->from('sale_details')
                                     ->join('articles', 'articles.id', '=', 'sale_details.article_id')
+                                    ->whereNull('sale_details.deleted_at')
                                     ->where('articles.title', 'like', $like);
                             });
                     });

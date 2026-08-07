@@ -49,6 +49,17 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Super administrador identificado por correo. Es una medida temporal
+     * mientras se modela como rol/permiso de Spatie.
+     */
+    public function isSuperAdmin(): bool
+    {
+        $email = config('app.super_admin_email');
+
+        return $email !== null && strcasecmp((string) $this->email, $email) === 0;
+    }
+
     public function getAvatarUrlAttribute()
     {
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&size=128&background=0D8ABC&color=fff';

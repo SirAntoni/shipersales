@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Super administrador
+    |--------------------------------------------------------------------------
+    |
+    | Correo del usuario con permisos excepcionales (hoy: eliminar productos
+    | de una venta ya registrada). Es temporal hasta modelarlo como rol de
+    | Spatie Permission; ver User::isSuperAdmin().
+    |
+    */
+
+    'super_admin_email' => env('SUPER_ADMIN_EMAIL', 'administrador@shipersales.com'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

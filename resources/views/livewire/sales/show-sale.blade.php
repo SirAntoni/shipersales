@@ -509,6 +509,19 @@
                                 </div>
                             </div>
                         </div>
+                        @if($esSuperAdmin && $comprobanteVigente)
+                            <div class="mt-10 rounded border-l-4 border-amber-500 bg-amber-50 p-4 text-amber-800">
+                                <p class="font-bold">Productos bloqueados</p>
+                                <p class="text-sm">
+                                    Esta venta tiene el comprobante
+                                    <strong>{{ $comprobanteVigente->serie }}-{{ $comprobanteVigente->correlative }}</strong>
+                                    emitido (SUNAT: {{ $comprobanteVigente->status_sunat ?? 'sin estado' }}).
+                                    Para poder eliminar un producto primero hay que anular el comprobante o emitir una
+                                    nota de crédito.
+                                </p>
+                            </div>
+                        @endif
+
                         <div class="mt-10 rounded-[0.6rem] border border-slate-200/80">
                             <div class="overflow-auto xl:overflow-visible">
                                 <x-base.table>
@@ -534,17 +547,45 @@
                                             >
                                                 Total
                                             </x-base.table.td>
+                                            @if($esSuperAdmin)
+                                                <x-base.table.td
+                                                    class="border-slate-200/80 bg-slate-50 py-4 text-center font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem]"
+                                                >
+                                                    Acción
+                                                </x-base.table.td>
+                                            @endif
                                         </x-base.table.tr>
                                     </x-base.table.thead>
                                     <x-base.table.tbody>
                                         @if(!empty($articlesSelected))
+                                            @php
+                                                $productosActivos = collect($articlesSelected)
+                                                    ->filter(fn ($fila) => empty($fila['deleted_at']))
+                                                    ->count();
+                                            @endphp
                                             @foreach($articlesSelected as $index => $article)
-                                                <x-base.table.tr class="[&_td]:last:border-b-0">
+                                                @php
+                                                    $eliminado = !empty($article['deleted_at']);
+                                                @endphp
+                                                <x-base.table.tr
+                                                    class="[&_td]:last:border-b-0 {{ $eliminado ? 'bg-slate-50/50' : '' }}">
 
                                                     <x-base.table.td class="border-dashed py-4 dark:bg-darkmode-600">
-                                                        <div class="whitespace-nowrap">
+                                                        <div
+                                                            class="whitespace-nowrap {{ $eliminado ? 'line-through text-slate-400' : '' }}">
                                                             {{$article['title']}}
                                                         </div>
+                                                        @if($eliminado)
+                                                            <div class="mt-1 flex items-center gap-2 whitespace-nowrap">
+                                                                <span
+                                                                    class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                                                                    ELIMINADO
+                                                                </span>
+                                                                <span class="text-xs text-slate-400">
+                                                                    {{ $article['deleted_by'] ? 'por '.$article['deleted_by'].' · ' : '' }}{{ $article['deleted_at'] }}
+                                                                </span>
+                                                            </div>
+                                                        @endif
                                                     </x-base.table.td>
                                                     <x-base.table.td
                                                         class="border-dashed py-4 text-right dark:bg-darkmode-600">
@@ -555,7 +596,7 @@
                                                                 step="1"
                                                                 wire:model="articlesSelected.{{ $index }}.quantity"
                                                                 disabled="true"
-                                                                class="w-15 text-center border rounded"
+                                                                class="w-15 text-center border rounded {{ $eliminado ? 'opacity-40 cursor-not-allowed line-through' : '' }}"
                                                             >
                                                         </div>
                                                     </x-base.table.td>
@@ -568,13 +609,15 @@
                                                                 min="0"
                                                                 wire:model="articlesSelected.{{ $index }}.price"
                                                                 wire:input.debounce.1000ms="updateTotal({{ $index }})"
-                                                                class="w-15 text-center border rounded"
+                                                                @disabled($eliminado)
+                                                                class="w-15 text-center border rounded {{ $eliminado ? 'opacity-40 cursor-not-allowed line-through' : '' }}"
                                                             >
                                                         </div>
                                                     </x-base.table.td>
                                                     <x-base.table.td
                                                         class="border-dashed py-4 text-right dark:bg-darkmode-600">
-                                                        <div class="whitespace-nowrap font-medium">
+                                                        <div
+                                                            class="whitespace-nowrap font-medium {{ $eliminado ? 'line-through text-slate-400' : '' }}">
                                                            <span wire:loading>
                                                                 <i class="fas fa-spinner animate-spin mr-1"></i> Calculando..
                                                             </span>
@@ -582,12 +625,65 @@
                                                                 S/. {{number_format($article['total'],2)}}
                                                             </span>
                                                         </div>
+                                                        @if($eliminado)
+                                                            <div class="whitespace-nowrap text-xs text-slate-400">
+                                                                no suma al total
+                                                            </div>
+                                                        @endif
                                                     </x-base.table.td>
+                                                    @if($esSuperAdmin)
+                                                        <x-base.table.td
+                                                            class="border-dashed py-4 text-center dark:bg-darkmode-600">
+                                                            <div class="flex items-center justify-center">
+                                                                @if(!$article['detail_id'])
+                                                                    <span class="text-xs text-slate-400">Guarda la venta primero</span>
+                                                                @elseif(!$puedeEliminarProductos)
+                                                                    <x-base.button
+                                                                        variant="danger"
+                                                                        size="sm"
+                                                                        class="opacity-50 cursor-not-allowed"
+                                                                        disabled
+                                                                        title="La venta tiene el comprobante {{ $comprobanteVigente->serie }}-{{ $comprobanteVigente->correlative }} emitido"
+                                                                    >
+                                                                        <i class="text-white fa-solid fa-lock"></i>
+                                                                    </x-base.button>
+                                                                @elseif($eliminado)
+                                                                    <x-base.button
+                                                                        variant="secondary"
+                                                                        size="sm"
+                                                                        title="Restaurar producto en la venta"
+                                                                        wire:click="restoreDetail({{ $article['detail_id'] }})"
+                                                                    >
+                                                                        <i class="fa-solid fa-rotate-left"></i>
+                                                                    </x-base.button>
+                                                                @elseif($productosActivos <= 1)
+                                                                    <x-base.button
+                                                                        variant="danger"
+                                                                        size="sm"
+                                                                        class="opacity-50 cursor-not-allowed"
+                                                                        disabled
+                                                                        title="Es el último producto de la venta: para dejarla sin productos hay que anularla"
+                                                                    >
+                                                                        <i class="text-white fa-solid fa-trash"></i>
+                                                                    </x-base.button>
+                                                                @else
+                                                                    <x-base.button
+                                                                        variant="danger"
+                                                                        size="sm"
+                                                                        title="Eliminar producto de la venta"
+                                                                        wire:click="deleteDetail({{ $article['detail_id'] }})"
+                                                                    >
+                                                                        <i class="text-white fa-solid fa-trash"></i>
+                                                                    </x-base.button>
+                                                                @endif
+                                                            </div>
+                                                        </x-base.table.td>
+                                                    @endif
                                                 </x-base.table.tr>
                                             @endforeach
                                         @else
                                             <x-base.table.tr class="[&_td]:last:border-b-0">
-                                                <x-base.table.td colspan="5"
+                                                <x-base.table.td colspan="{{ $esSuperAdmin ? 5 : 4 }}"
                                                                  class="text-center border-dashed py-4 dark:bg-darkmode-600">
                                                     <div class="whitespace-nowrap">
                                                         No hay articulos seleccionados

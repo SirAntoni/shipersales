@@ -355,8 +355,11 @@
                                                     </x-base.tippy>
 
                                                     @php
+                                                        // withTrashed: mismo criterio que startEditTotal/saveEditTotal.
+                                                        // Sin el, una venta con un producto eliminado muestra el lapiz
+                                                        // y el servidor lo rechaza siempre.
                                                         $canInlineEdit = $sale->status !== \App\Models\Sale::SALE_CANCELED
-                                                            && $sale->saleDetails->count() === 1
+                                                            && $sale->saleDetails()->withTrashed()->count() === 1
                                                             && (int)$sale->saleDetails->first()->quantity === 1;
                                                     @endphp
 

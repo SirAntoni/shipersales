@@ -5,9 +5,12 @@ namespace App\Livewire\Sales;
 use App\Models\Article;
 use App\Models\Client;
 use App\Models\Contact;
+use App\Models\Document;
 use App\Models\PaymentMethod;
 use App\Services\MigoApiService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
@@ -51,6 +54,10 @@ class ShowSale extends Component
 
     public $sectionClient = false;
     public $status;
+
+    /** Cache por request del comprobante vigente (no viaja al navegador). */
+    private ?Document $comprobanteCache = null;
+    private bool $comprobanteResuelto = false;
 
     public $name;
     public $document_number;
@@ -116,10 +123,46 @@ class ShowSale extends Component
         $this->status = $sale->status;
         $this->webhook_imported = $sale->webhook_imported;
 
-        foreach ($sale->saleDetails as $detail) {
-            $this->addToArticleSale($detail->id);
+        $this->loadDetails();
+
+    }
+
+    /**
+     * Carga los detalles de la venta incluidos los eliminados por el
+     * administrador (withTrashed), que se siguen mostrando deshabilitados.
+     */
+    private function loadDetails(): void
+    {
+        $this->articlesSelected = [];
+
+        // El articulo se carga con withTrashed: hay ventas historicas de
+        // articulos dados de baja y su linea tiene que seguir viendose.
+        $details = SaleDetail::withTrashed()
+            ->with(['article' => fn ($q) => $q->withTrashed(), 'deletedBy'])
+            ->where('sale_id', $this->id)
+            ->orderBy('id')
+            ->get();
+
+        foreach ($details as $detail) {
+            if (! $detail->article) {
+                continue;
+            }
+
+            $this->articlesSelected[] = [
+                'id'         => $detail->article->id,
+                'detail_id'  => $detail->id,
+                'category'   => $detail->article->category_id,
+                'brand'      => $detail->brand_id,
+                'title'      => $detail->article->title,
+                'price'      => $detail->price,
+                'quantity'   => $detail->quantity,
+                'total'      => $detail->price * $detail->quantity,
+                'deleted_at' => $detail->deleted_at?->format('d/m/Y H:i'),
+                'deleted_by' => $detail->deletedBy?->name,
+            ];
         }
 
+        $this->calculateTotals();
     }
 
     public function updatedDepartmentSelect($value)
@@ -278,7 +321,7 @@ class ShowSale extends Component
         $this->validate();
 
         try {
-            DB::transaction(function () {
+            $estado = DB::transaction(function () {
                 // Bloquea la cabecera de la venta
                 /** @var \App\Models\Sale $sale */
                 $sale = \App\Models\Sale::lockForUpdate()->findOrFail($this->id);
@@ -289,15 +332,51 @@ class ShowSale extends Component
                 // Detalles actuales, bloqueados
                 $currentDetails = $sale->saleDetails()->lockForUpdate()->get();
 
+                // Que un detalle este eliminado lo decide la BD, no el navegador:
+                // articlesSelected es una propiedad publica que el cliente puede
+                // alterar. Se lee DESPUES del lock para que la foto sea la misma
+                // que usa la recreacion (si no, una eliminacion simultanea de otra
+                // pestaña se desharia recreando la linea y descontando su stock).
+                $eliminados = SaleDetail::onlyTrashed()
+                    ->where('sale_id', $sale->id)
+                    ->pluck('id')
+                    ->all();
+
+                // Los detalles eliminados por el administrador no se reescriben:
+                // conservan su deleted_at y quedan fuera de stock, kardex y totales.
+                $activos = collect($this->articlesSelected)
+                    ->reject(fn ($row) => ! empty($row['detail_id']) && in_array((int) $row['detail_id'], $eliminados, true))
+                    ->values()
+                    ->all();
+
+                if (empty($activos)) {
+                    return 'sin-productos';
+                }
+
+                // Quitar un producto vigente solo puede hacerse por deleteDetail(),
+                // que valida permiso y comprobante. Si la pantalla trae menos lineas
+                // persistidas de las que siguen vigentes, se aborta: save() les
+                // revertiria el stock y las borraria sin dejar rastro.
+                $enPantalla = collect($activos)->pluck('detail_id')->filter()->map(fn ($v) => (int) $v)->all();
+                $faltantes  = $currentDetails
+                    ->reject(fn ($d) => in_array((int) $d->id, $enPantalla, true))
+                    ->count();
+
+                if ($faltantes > 0) {
+                    return 'desincronizada';
+                }
+
                 // Conjunto de artículos a bloquear (anteriores + nuevos) si afecta stock
                 $articles = collect();
                 if ($affectsStock) {
                     $articleIds = $currentDetails->pluck('article_id')
-                        ->merge(collect($this->articlesSelected)->pluck('id'))
+                        ->merge(collect($activos)->pluck('id'))
                         ->unique()
                         ->values();
 
-                    $articles = \App\Models\Article::whereIn('id', $articleIds)
+                    // withTrashed: una venta historica puede tener articulos de baja.
+                    $articles = \App\Models\Article::withTrashed()
+                        ->whereIn('id', $articleIds)
                         ->lockForUpdate()
                         ->get()
                         ->keyBy('id');
@@ -310,14 +389,17 @@ class ShowSale extends Component
                     }
                 }
 
-                // 2) Eliminar detalles actuales
-                //    (si usas SoftDeletes en sale_details y NO quieres que salgan en el Kardex,
-                //     recuerda filtrar deleted_at IS NULL en el componente del Kardex)
-                $sale->saleDetails()->delete();
+                // 2) Eliminar fisicamente los detalles vigentes (se recrean abajo).
+                //    Se listan por id a proposito: un ->delete() sobre la relacion
+                //    con SoftDeletes activo tocaria tambien los ya eliminados por
+                //    el administrador y perderiamos su marca.
+                if ($currentDetails->isNotEmpty()) {
+                    \App\Models\SaleDetail::whereIn('id', $currentDetails->pluck('id'))->forceDelete();
+                }
 
                 // 3) Validar stock para los nuevos (solo si afecta stock)
                 if ($affectsStock) {
-                    foreach ($this->articlesSelected as $row) {
+                    foreach ($activos as $row) {
                         $art = $articles[$row['id']] ?? null;
                         if (!$art) {
                             throw new \RuntimeException("Artículo no encontrado: {$row['id']}.");
@@ -329,16 +411,22 @@ class ShowSale extends Component
                 }
 
                 // 4) Crear nuevos detalles + descontar stock si corresponde
-                foreach ($this->articlesSelected as $row) {
+                $subtotal = 0.0;
+
+                foreach ($activos as $row) {
+                    // El neto se recalcula aqui: 'total' viene del navegador.
+                    $neto = round((float) $row['price'] * (int) $row['quantity'], 2);
+                    $subtotal += $neto;
+
                     $detail = $sale->saleDetails()->create([
                         'price'       => $row['price'],
                         'quantity'    => (int)$row['quantity'],
-                        'tax'         => ($this->tax == 1) ? $row['total'] * 0.18 : 0,
-                        'total'       => ($this->tax == 1) ? $row['total'] * 1.18 : $row['total'],
+                        'tax'         => ($this->tax == 1) ? $neto * 0.18 : 0,
+                        'total'       => ($this->tax == 1) ? $neto * 1.18 : $neto,
                         'article_id'  => $row['id'],
                         'category_id' => $row['category'],
                         'brand_id'    => $row['brand'],
-                        'subtotal'    => $row['total'],
+                        'subtotal'    => $neto,
                     ]);
 
                     if ($affectsStock) {
@@ -346,16 +434,40 @@ class ShowSale extends Component
                     }
                 }
 
-                // 5) Actualizar cabecera
+                // 5) Actualizar cabecera con lo que REALMENTE se acaba de grabar.
+                //    Antes se usaban granSubtotal/granTax/granTotal, que se calculan
+                //    en pantalla y excluyen las filas segun el deleted_at que manda
+                //    el navegador: bastaba marcar una fila viva para descuadrar la
+                //    cabecera sin tocar los detalles.
+                $tax = ($this->tax == 1) ? round($subtotal * 0.18, 2) : 0.0;
+
                 $sale->update([
                     'client_id'        => $this->client,
-                    'subtotal'         => $this->granSubtotal,
-                    'tax'              => $this->granTax,
-                    'total'            => $this->granTotal,
+                    'subtotal'         => round($subtotal, 2),
+                    'tax'              => $tax,
+                    'total'            => round($subtotal + $tax, 2),
                     'contact_id'       => $this->contact,
                     'webhook_imported' => null,
                 ]);
+
+                return 'ok';
             });
+
+            if ($estado === 'sin-productos') {
+                $this->dispatch('error', ['label' => 'La venta debe tener al menos un producto activo.']);
+                return;
+            }
+
+            if ($estado === 'desincronizada') {
+                $this->loadDetails();
+                $this->dispatch('error', [
+                    'label' => 'La lista de productos cambio desde que abriste la venta. Se actualizo la pantalla: revisa y vuelve a guardar.'
+                ]);
+                return;
+            }
+
+            // Los detalles se recrearon: refrescamos los detail_id en pantalla.
+            $this->loadDetails();
 
             $this->dispatch('success', [
                 'label' => 'La venta fue editada con éxito.',
@@ -417,8 +529,10 @@ class ShowSale extends Component
 
         if ($article) {
 
+            // Solo se agrupa con una fila vigente: si el articulo esta tachado,
+            // volver a seleccionarlo tiene que crear una linea nueva.
             $index = collect($this->articlesSelected)->search(function ($item) use ($article) {
-                return $item['id'] == $article->id;
+                return $item['id'] == $article->id && empty($item['deleted_at']);
             });
 
             if ($index !== false) {
@@ -436,12 +550,15 @@ class ShowSale extends Component
 
                     $this->articlesSelected[] = [
                         'id' => $article->id,
+                        'detail_id' => null,
                         'category' => $article->category_id,
                         'brand' => $article->brand_id,
                         'title' => $article->title,
                         'price' => $article->sale_price,
                         'quantity' => 1,
-                        'total' => $article->sale_price
+                        'total' => $article->sale_price,
+                        'deleted_at' => null,
+                        'deleted_by' => null
                     ];
 
                 } else {
@@ -453,54 +570,312 @@ class ShowSale extends Component
         }
     }
 
-    public function addToArticleSale($id)
+    // addToArticleSale() y remove() se eliminaron: los detalles ahora se cargan
+    // en loadDetails() y quitar un producto pasa por deleteDetail(), que valida
+    // permisos y comprobante. Eran metodos publicos (invocables desde el
+    // navegador) que modificaban la venta sin ninguna de esas validaciones.
+
+    /* ------------------------------------------------------------------
+     | Eliminar / restaurar productos de una venta ya registrada
+     |------------------------------------------------------------------*/
+
+    /**
+     * Hoy es solo por correo; se migrara a un rol de Spatie Permission.
+     * Estos tres metodos son protected a proposito: en Livewire todo metodo
+     * publico es invocable desde el navegador, y comprobanteVigente devolveria
+     * la fila completa de documents al cliente.
+     */
+    protected function esSuperAdmin(): bool
     {
-
-        $article = SaleDetail::with('article')->find($id);
-
-
-        if ($article) {
-
-            $index = collect($this->articlesSelected)->search(function ($item) use ($article) {
-                return $item['id'] == $article->id;
-            });
-
-            if ($index !== false) {
-
-                if ($this->articlesSelected[$index]['quantity'] < $article->stock) {
-                    $this->articlesSelected[$index]['quantity']++;
-                    $this->articlesSelected[$index]['total'] = $this->articlesSelected[$index]['quantity'] * $article->purchase_price;
-                } else {
-                    $this->dispatch('error', ['label' => '2No hay stock disponible para ' . $article->title]);
-                }
-
-            } else {
-
-                    $this->articlesSelected[] = [
-                        'id' => $article->article->id,
-                        'category' => $article->article->category_id,
-                        'brand' => $article->brand_id,
-                        'title' => $article->article->title,
-                        'price' => $article->price,
-                        'quantity' => $article->quantity,
-                        'total' => $article->price * $article->quantity,
-                    ];
-            }
-
-            $this->calculateTotals();
-        }
+        return (bool) Auth::user()?->isSuperAdmin();
     }
 
-    public function remove($index)
+    /**
+     * Comprobante vigente de la venta: la boleta/factura original que no fue
+     * anulada, ni rechazada por SUNAT, ni sustituida por una nota de credito.
+     * Mismo criterio que usa NewDocument para impedir la doble emision.
+     * Se memoriza por request (propiedad privada, no viaja al navegador).
+     */
+    protected function comprobanteVigente(): ?Document
     {
-        array_splice($this->articlesSelected, $index, 1);
+        if (! $this->comprobanteResuelto) {
+            $this->comprobanteCache = Document::where('sale_id', $this->id)
+                ->whereNull('affected_document_id')
+                ->whereNotIn('status', ['anulado', 'nota_credito'])
+                ->where(fn ($q) => $q->whereNull('status_sunat')
+                    ->orWhereNotIn('status_sunat', ['rechazado', 'anulado']))
+                ->orderBy('id')
+                ->first();
+
+            $this->comprobanteResuelto = true;
+        }
+
+        return $this->comprobanteCache;
+    }
+
+    protected function puedeEliminarProductos(): bool
+    {
+        return $this->esSuperAdmin() && ! $this->comprobanteVigente();
+    }
+
+    private function findRowIndex(int $detailId): ?int
+    {
+        foreach ($this->articlesSelected as $index => $row) {
+            if ((int) ($row['detail_id'] ?? 0) === $detailId) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    private function countActiveRows(): int
+    {
+        return collect($this->articlesSelected)
+            ->filter(fn ($row) => empty($row['deleted_at']))
+            ->count();
+    }
+
+    /** Devuelve el motivo por el que NO se puede operar, o null si se puede. */
+    private function guardDetailChange(int $detailId, bool $restoring = false): ?string
+    {
+        if (! $this->esSuperAdmin()) {
+            return 'Solo el administrador puede modificar los productos de una venta registrada.';
+        }
+
+        if ($comprobante = $this->comprobanteVigente()) {
+            return "Esta venta tiene el comprobante {$comprobante->serie}-{$comprobante->correlative} emitido. "
+                . 'Anulelo o emita una nota de credito antes de modificar sus productos.';
+        }
+
+        $index = $this->findRowIndex($detailId);
+        if ($index === null) {
+            return 'Ese producto ya no forma parte de esta venta.';
+        }
+
+        $estaEliminado = ! empty($this->articlesSelected[$index]['deleted_at']);
+
+        if ($restoring && ! $estaEliminado) {
+            return 'Ese producto ya esta activo en la venta.';
+        }
+
+        if (! $restoring) {
+            if ($estaEliminado) {
+                return 'Ese producto ya estaba eliminado.';
+            }
+
+            if ($this->countActiveRows() <= 1) {
+                return 'La venta debe conservar al menos un producto. Si quieres dejarla sin productos, anula la venta.';
+            }
+        }
+
+        return null;
+    }
+
+    public function deleteDetail($detailId)
+    {
+        $detailId = (int) $detailId;
+
+        if ($motivo = $this->guardDetailChange($detailId)) {
+            $this->dispatch('errorNotRoute', ['label' => $motivo]);
+            return;
+        }
+
+        $row = $this->articlesSelected[$this->findRowIndex($detailId)];
+
+        $this->dispatch('questionDeleteSaleDetail', [
+            'label' => "Se quitara \"{$row['title']}\" de la venta y su stock volvera al inventario. "
+                . 'La fila seguira visible, marcada como eliminada.',
+            'id'    => $detailId,
+        ]);
+    }
+
+    #[On('confirmDeleteSaleDetail')]
+    public function confirmDeleteSaleDetail($id)
+    {
+        $detailId = (int) $id;
+
+        if ($motivo = $this->guardDetailChange($detailId)) {
+            $this->dispatch('errorNotRoute', ['label' => $motivo]);
+            return;
+        }
+
+        try {
+            $marca = DB::transaction(function () use ($detailId) {
+                /** @var \App\Models\Sale $sale */
+                $sale = Sale::lockForUpdate()->findOrFail($this->id);
+
+                // Se relee dentro de la transaccion: si otra pestaña ya lo
+                // elimino, el scope de SoftDeletes hace que no lo encuentre.
+                /** @var \App\Models\SaleDetail $detail */
+                $detail = SaleDetail::where('sale_id', $sale->id)
+                    ->lockForUpdate()
+                    ->findOrFail($detailId);
+
+                // El invariante se revalida contra la BD, no contra la pantalla.
+                if (SaleDetail::where('sale_id', $sale->id)->lockForUpdate()->count() <= 1) {
+                    throw new \RuntimeException(
+                        'La venta debe conservar al menos un producto. Si quieres dejarla sin productos, anula la venta.'
+                    );
+                }
+
+                // Una venta anulada ya devolvio su stock: no se repone dos veces.
+                if ($sale->status != Sale::SALE_CANCELED) {
+                    // withTrashed: hay ventas historicas de articulos dados de baja.
+                    $article = Article::withTrashed()->lockForUpdate()->find($detail->article_id);
+
+                    if (! $article) {
+                        throw new \RuntimeException("Articulo no encontrado: {$detail->article_id}.");
+                    }
+
+                    $article->increment('stock', (int) $detail->quantity);
+                }
+
+                $detail->deleted_by = Auth::id();
+                $detail->save();
+                $detail->delete();
+
+                $this->adjustSaleTotals($sale, $detail, -1);
+
+                return $detail->fresh(['deletedBy']);
+            });
+        } catch (ModelNotFoundException $e) {
+            // Otra pestaña o usuario ya lo elimino entre el clic y la confirmacion.
+            $this->loadDetails();
+            $this->dispatch('errorNotRoute', ['label' => 'Ese producto ya no esta vigente en la venta. Se actualizo la pantalla.']);
+            return;
+        } catch (\Throwable $e) {
+            $this->dispatch('error', ['label' => 'No se pudo eliminar el producto: ' . $e->getMessage()]);
+            report($e);
+            return;
+        }
+
+        $index = $this->findRowIndex($detailId);
+        if ($index !== null) {
+            $this->articlesSelected[$index]['deleted_at'] = $marca?->deleted_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i');
+            $this->articlesSelected[$index]['deleted_by'] = $marca?->deletedBy?->name ?? Auth::user()?->name;
+        }
+
         $this->calculateTotals();
+
+        $this->dispatch('successNotRoute', [
+            'label' => 'Producto eliminado de la venta. El stock volvio al inventario.'
+        ]);
+    }
+
+    public function restoreDetail($detailId)
+    {
+        $detailId = (int) $detailId;
+
+        if ($motivo = $this->guardDetailChange($detailId, true)) {
+            $this->dispatch('errorNotRoute', ['label' => $motivo]);
+            return;
+        }
+
+        $row = $this->articlesSelected[$this->findRowIndex($detailId)];
+
+        $this->dispatch('questionRestoreSaleDetail', [
+            'label' => "Se volvera a incluir \"{$row['title']}\" en la venta y se descontara su stock del inventario.",
+            'id'    => $detailId,
+        ]);
+    }
+
+    #[On('confirmRestoreSaleDetail')]
+    public function confirmRestoreSaleDetail($id)
+    {
+        $detailId = (int) $id;
+
+        if ($motivo = $this->guardDetailChange($detailId, true)) {
+            $this->dispatch('errorNotRoute', ['label' => $motivo]);
+            return;
+        }
+
+        try {
+            DB::transaction(function () use ($detailId) {
+                /** @var \App\Models\Sale $sale */
+                $sale = Sale::lockForUpdate()->findOrFail($this->id);
+
+                // whereNotNull es imprescindible: sin el, restaurar dos veces
+                // (dos pestañas) descontaria el stock dos veces.
+                /** @var \App\Models\SaleDetail $detail */
+                $detail = SaleDetail::onlyTrashed()
+                    ->where('sale_id', $sale->id)
+                    ->lockForUpdate()
+                    ->findOrFail($detailId);
+
+                if ($sale->status != Sale::SALE_CANCELED) {
+                    $article = Article::withTrashed()->lockForUpdate()->find($detail->article_id);
+
+                    if (! $article) {
+                        throw new \RuntimeException("Articulo no encontrado: {$detail->article_id}.");
+                    }
+
+                    if ($article->stock < (int) $detail->quantity) {
+                        throw new \RuntimeException(
+                            "Stock insuficiente para {$article->title} (disp. {$article->stock}, requiere {$detail->quantity})."
+                        );
+                    }
+
+                    $article->decrement('stock', (int) $detail->quantity);
+                }
+
+                $detail->deleted_by = null;
+                $detail->restore();
+
+                $this->adjustSaleTotals($sale, $detail, 1);
+            });
+        } catch (ModelNotFoundException $e) {
+            // Otra pestaña ya lo restauro: sin esto se descontaria el stock dos veces.
+            $this->loadDetails();
+            $this->dispatch('errorNotRoute', ['label' => 'Ese producto ya estaba activo en la venta. Se actualizo la pantalla.']);
+            return;
+        } catch (\Throwable $e) {
+            $this->dispatch('error', ['label' => 'No se pudo restaurar el producto: ' . $e->getMessage()]);
+            report($e);
+            return;
+        }
+
+        $index = $this->findRowIndex($detailId);
+        if ($index !== null) {
+            $this->articlesSelected[$index]['deleted_at'] = null;
+            $this->articlesSelected[$index]['deleted_by'] = null;
+        }
+
+        $this->calculateTotals();
+
+        $this->dispatch('successNotRoute', [
+            'label' => 'Producto restaurado en la venta. Su stock volvio a descontarse.'
+        ]);
+    }
+
+    /**
+     * Ajusta la cabecera restando (-1) o sumando (+1) una linea.
+     *
+     * Se aplica el delta en vez de recalcular la suma de detalles porque
+     * sales.total no siempre es esa suma: en las ventas con delivery incluye
+     * ademas el flete. Con el delta la cabecera conserva la convencion que ya
+     * tuviera la venta. detail.total es el importe con IGV y detail.tax su IGV.
+     */
+    private function adjustSaleTotals(Sale $sale, SaleDetail $detail, int $signo): void
+    {
+        $total = $signo * (float) $detail->total;
+        $tax   = $signo * (float) $detail->tax;
+
+        $sale->update([
+            'subtotal' => round(max(0, (float) $sale->subtotal + ($total - $tax)), 2),
+            'tax'      => round(max(0, (float) $sale->tax + $tax), 2),
+            'total'    => round(max(0, (float) $sale->total + $total), 2),
+        ]);
     }
 
     public function updateTotal($index)
     {
 
         if (!isset($this->articlesSelected[$index])) {
+            return;
+        }
+
+        if (! empty($this->articlesSelected[$index]['deleted_at'])) {
             return;
         }
 
@@ -518,7 +893,11 @@ class ShowSale extends Component
 
     public function calculateTotals()
     {
-        $this->granSubtotal = collect($this->articlesSelected)->sum('total');
+        // Los productos eliminados siguen en la tabla pero no suman.
+        $this->granSubtotal = collect($this->articlesSelected)
+            ->filter(fn ($row) => empty($row['deleted_at']))
+            ->sum('total');
+
         if ($this->tax == 1) {
             $this->granTotal = $this->granSubtotal + ($this->granSubtotal * 0.18);
             $this->granTax = $this->granSubtotal * 0.18;
@@ -535,6 +914,10 @@ class ShowSale extends Component
 
     public function render()
     {
-        return view('livewire.sales.show-sale');
+        return view('livewire.sales.show-sale', [
+            'esSuperAdmin'           => $this->esSuperAdmin(),
+            'comprobanteVigente'     => $this->comprobanteVigente(),
+            'puedeEliminarProductos' => $this->puedeEliminarProductos(),
+        ]);
     }
 }
