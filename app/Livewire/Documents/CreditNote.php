@@ -5,10 +5,14 @@ namespace App\Livewire\Documents;
 use App\Models\Article;
 use App\Models\Client;
 use App\Models\Document;
+use App\Models\InventoryAdjustment;
+use App\Models\Sale;
 use App\Services\MigoApiService;
 use App\Services\SunatService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Luecano\NumeroALetras\NumeroALetras;
 
@@ -40,6 +44,12 @@ class CreditNote extends Component
 
     public $affected_document;
 
+    /** true si el comprobante afectado es una boleta (por serie, no por document_type). */
+    public $esBoleta = false;
+
+    /** Respuesta a "¿reponer stock?" (solo boletas): null = aún sin responder. */
+    public $reponerStock = null;
+
     protected array $docConfig = [
         'DNI' => [
             'size'        => 8,
@@ -56,7 +66,10 @@ class CreditNote extends Component
     public function mount(){
         $document = Document::findOrFail($this->id);
         $this->token = env('MIGO_API_TOKEN');
-        $this->serie = ($document->document_type == '1') ? "FC01" : "BC01";
+        // Por SERIE del afectado, no por document_type: hay históricos con
+        // serie de boleta y document_type de factura (ver Document.php)
+        $this->esBoleta = $document->esBoleta();
+        $this->serie = $this->esBoleta ? 'BC01' : 'FC01';
         $this->correlative = $this->nextCorrelativeForSerie($this->serie);
 
 
@@ -70,7 +83,9 @@ class CreditNote extends Component
         // Fecha de emisión de la nota de crédito (no la del documento afectado)
         $this->date = Carbon::now()->format('Y-m-d');
         $this->defaultClient = $document->client->id;
-        $this->documentType = $document->document_type;
+        // Normalizado por serie ('1' factura / '2' boleta) para que el tipo
+        // mostrado y el de la NC emitida siempre coincidan con la serie
+        $this->documentType = $this->esBoleta ? '2' : '1';
 
         // Precarga con los items del documento afectado (DocumentDetail, no SaleDetail)
         foreach ($document->documentDetails()->with('article')->get() as $detail) {
@@ -155,6 +170,38 @@ class CreditNote extends Component
             return;
         }
 
+        // Una nota de crédito no puede afectar a otra nota de crédito
+        if ($affectedDoc->esNotaCredito()) {
+            $this->dispatch('error', ['label' => "El comprobante {$affectedDoc->serie}-{$affectedDoc->correlative} es una nota de crédito: no puede recibir otra."]);
+            return;
+        }
+
+        // La serie del afectado es lo fiable para saber si es boleta o factura;
+        // document_type miente en históricos (ver Document::SERIES_NOTA_CREDITO)
+        $esBoleta = $affectedDoc->esBoleta();
+
+        $sale = Sale::find($affectedDoc->sale_id);
+
+        // Si la venta ya fue anulada (anulación de venta o devolución confirmada),
+        // el stock ya se repuso por esa vía: la NC no debe reponerlo de nuevo.
+        $stockYaRepuesto = $sale && (int) $sale->status === Sale::SALE_CANCELED;
+
+        // Solo boletas: antes de emitir se pregunta si se repone el stock; la
+        // respuesta vuelve por emitCreditNote. Las facturas reponen siempre.
+        if ($esBoleta && ! $stockYaRepuesto && $this->reponerStock === null) {
+            // Sin nombrar el correlativo: el retry por error 1032 puede emitir
+            // el siguiente y el diálogo habría prometido otro número.
+            $this->dispatch('questionRestockCreditNote', [
+                'label' => "Se anulará la boleta {$this->affected_document} emitiendo una nota de crédito. ¿Desea reponer el stock de los productos al inventario?",
+            ]);
+            return;
+        }
+
+        $reponerStock = ! $stockYaRepuesto && (! $esBoleta || $this->reponerStock === true);
+
+        // Un reintento (p. ej. tras un rechazo de SUNAT) vuelve a preguntar
+        $this->reponerStock = null;
+
         $items = collect($this->articlesSelected);
 
         $tiposIdentidad = [
@@ -191,8 +238,7 @@ class CreditNote extends Component
             }
         }
 
-        if ($this->documentType == '1'
-            && $client->document_type != 'RUC') {
+        if (! $esBoleta && $client->document_type != 'RUC') {
             $this->dispatch('error', ['label' => 'No puede emitir una factura a un cliente con un documento diferente a RUC.']);
             return;
         }
@@ -201,9 +247,9 @@ class CreditNote extends Component
             "serie" => $this->serie,
             "correlative" => $this->correlative,
             "date" => $this->date ?? "2005-01-01",
-            "tipoDoc" => ($this->documentType == '1') ? '01' : '03',
+            "tipoDoc" => $esBoleta ? '03' : '01',
             // Datos de la nota de credito (Note)
-            "tipDocAfectado" => ($this->documentType == '1') ? '01' : '03',
+            "tipDocAfectado" => $esBoleta ? '03' : '01',
             "numDocAfectado" => $this->affected_document,
             "codMotivo" => '01', // Catalog. 09: Anulación de la operación
             "desMotivo" => 'Anulación de la operación',
@@ -276,69 +322,89 @@ class CreditNote extends Component
         // La NC ya fue ACEPTADA por SUNAT: registrar primero en BD y recién
         // después generar el PDF, para no perder una emisión aceptada.
         try {
-            $sale = \App\Models\Sale::find($affectedDoc->sale_id);
+            // Releer la venta tras el round-trip a SUNAT (varios segundos):
+            // pudo anularse por otra vía mientras la NC estaba en vuelo, y con
+            // el dato viejo el stock se repondría dos veces.
+            $sale = Sale::find($affectedDoc->sale_id);
+            $stockYaRepuesto = $sale && (int) $sale->status === Sale::SALE_CANCELED;
+            $reponerStock = $reponerStock && ! $stockYaRepuesto;
 
-            // Si la venta ya fue anulada (anulación de venta o devolución confirmada),
-            // el stock ya se repuso por esa vía: la NC no debe reponerlo de nuevo.
-            $stockYaRepuesto = $sale && (int) $sale->status === \App\Models\Sale::SALE_CANCELED;
-
-            $document = Document::create([
-                'status' => "enviado",
-                'document_type' => $this->documentType,
-                'serie' => $this->serie,
-                'correlative' => $this->correlative,
-                'date' => $this->date,
-                'currency' => 'PEN',
-                'payment_method' => 'CONTADO',
-                'subtotal' => $this->granSubtotal,
-                'tax' => $this->granTax,
-                'total' => $this->granTotal,
-                'xml_path' => '/xml_path/'.$invoice->getName().'.xml',
-                'cdr_path' => $sunatResponse['cdr'] ?? '',
-                'pdf_path' => null,
-                'status_sunat'=> "aceptado",
-                'notes'=> $sunatResponse['notes'],
-                'sale_id' => $affectedDoc->sale_id,
-                'affected_document_id' => $affectedDoc->id,
-                'stock_restored' => !$stockYaRepuesto,
-                'client_id' => $this->client,
-                'user_id' => auth()->id() ?? $affectedDoc->user_id
-            ]);
-
-            foreach ($this->articlesSelected as $article) {
-                $document->documentDetails()->create([
-                    'price' => $article['price'],
-                    'quantity' => $article['quantity'],
-                    'tax' => $article['total'] * 0.18,
-                    'total' => $article['total'] + ($article['total'] * 0.18),
-                    'article_id' => $article['id'],
-                    'category_id' => $article['category'],
-                    'brand_id' => $article['brand'],
-                    'subtotal' => $article['total'],
+            // Todo o nada: que un fallo a mitad no deje la venta anulada sin su
+            // ajuste compensatorio ni un documento a medio registrar (mismo
+            // criterio que anularVentaPorBaja en TableDocuments).
+            $document = DB::transaction(function () use ($sale, $affectedDoc, $esBoleta, $reponerStock, $invoice, $sunatResponse) {
+                $document = Document::create([
+                    'status' => "enviado",
+                    'document_type' => $esBoleta ? '2' : '1',
+                    'serie' => $this->serie,
+                    'correlative' => $this->correlative,
+                    'date' => $this->date,
+                    'currency' => 'PEN',
+                    'payment_method' => 'CONTADO',
+                    'subtotal' => $this->granSubtotal,
+                    'tax' => $this->granTax,
+                    'total' => $this->granTotal,
+                    'xml_path' => '/xml_path/'.$invoice->getName().'.xml',
+                    'cdr_path' => $sunatResponse['cdr'] ?? '',
+                    'pdf_path' => null,
+                    'status_sunat'=> "aceptado",
+                    'notes'=> $sunatResponse['notes'],
+                    'sale_id' => $affectedDoc->sale_id,
+                    'affected_document_id' => $affectedDoc->id,
+                    'stock_restored' => $reponerStock,
+                    'client_id' => $this->client,
+                    'user_id' => auth()->id() ?? $affectedDoc->user_id
                 ]);
 
-                // La nota de crédito devuelve los productos al inventario
-                if (!$stockYaRepuesto) {
-                    Article::find($article['id'])?->increment('stock', (int) $article['quantity']);
+                foreach ($this->articlesSelected as $article) {
+                    $document->documentDetails()->create([
+                        'price' => $article['price'],
+                        'quantity' => $article['quantity'],
+                        'tax' => $article['total'] * 0.18,
+                        'total' => $article['total'] + ($article['total'] * 0.18),
+                        'article_id' => $article['id'],
+                        'category_id' => $article['category'],
+                        'brand_id' => $article['brand'],
+                        'subtotal' => $article['total'],
+                    ]);
+
+                    // La nota de crédito devuelve los productos al inventario,
+                    // salvo que ya volvieran al anular la venta o que el usuario
+                    // pidiera no reponerlos (opción disponible solo en boletas)
+                    if ($reponerStock) {
+                        Article::find($article['id'])?->increment('stock', (int) $article['quantity']);
+                    }
                 }
-            }
 
-            // Marcar el documento afectado para bloquear nueva NC o anulación sobre él
-            $affectedDoc->update(['status' => 'nota_credito']);
+                // Marcar el documento afectado para bloquear nueva NC o anulación sobre él
+                $affectedDoc->update(['status' => 'nota_credito']);
 
-            // La NC revierte la operación completa: cierra la venta como anulada
-            // (venga de una devolución o de una venta aún activa).
-            if ($sale && (int) $sale->status !== \App\Models\Sale::SALE_CANCELED) {
-                $motivo = ((int) $sale->status === \App\Models\Sale::SALE_RETURN)
-                    ? "Devolución con nota de crédito {$this->serie}-{$this->correlative}"
-                    : "Nota de crédito {$this->serie}-{$this->correlative}";
+                // La NC revierte la operación completa: cierra la venta como anulada
+                // (venga de una devolución o de una venta aún activa).
+                if ($sale && (int) $sale->status !== Sale::SALE_CANCELED) {
+                    $motivo = ((int) $sale->status === Sale::SALE_RETURN)
+                        ? "Devolución con nota de crédito {$this->serie}-{$this->correlative}"
+                        : "Nota de crédito {$this->serie}-{$this->correlative}";
 
-                $sale->update([
-                    'status' => \App\Models\Sale::SALE_CANCELED,
-                    'deletion_date' => now(),
-                    'deletion_reason' => $motivo,
-                ]);
-            }
+                    $sale->update([
+                        'status' => Sale::SALE_CANCELED,
+                        'deletion_date' => now(),
+                        'deletion_reason' => $motivo,
+                    ]);
+
+                    // Sin reposición: al anular la venta su salida deja de contar
+                    // en el kardex y el saldo subiría solo; el ajuste negativo lo
+                    // compensa y deja constancia de que la mercadería no volvió.
+                    if (! $reponerStock) {
+                        InventoryAdjustment::registrarSalidaSinReposicion(
+                            $sale,
+                            "Nota de crédito {$this->serie}-{$this->correlative} sin reposición de stock"
+                        );
+                    }
+                }
+
+                return $document;
+            });
         } catch (\Throwable $e) {
             Log::error('Nota de crédito ACEPTADA por SUNAT pero falló el registro en BD', [
                 'comprobante' => "{$this->serie}-{$this->correlative}",
@@ -361,12 +427,27 @@ class CreditNote extends Component
             Log::error("Nota de crédito {$this->serie}-{$this->correlative} aceptada, pero falló la generación del PDF: {$e->getMessage()}");
         }
 
-        $label = $stockYaRepuesto
-            ? "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito. El stock no se modificó porque ya había sido devuelto al anular la venta."
-            : "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito y el stock fue repuesto.";
+        if ($stockYaRepuesto) {
+            $label = "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito. El stock no se modificó porque ya había sido devuelto al anular la venta.";
+        } elseif ($reponerStock) {
+            $label = "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito y el stock fue repuesto.";
+        } else {
+            $label = "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito sin reponer stock, según lo indicado.";
+        }
 
         $this->dispatch('success', ['label' => $label, 'btn' => 'Ir a documentos', 'route' => route('documents.index')]);
 
+    }
+
+    /**
+     * Respuesta del diálogo "¿reponer stock?" (solo boletas): guarda la
+     * decisión y continúa con la emisión.
+     */
+    #[On('emitCreditNote')]
+    public function emitCreditNote(bool $reponerStock)
+    {
+        $this->reponerStock = $reponerStock;
+        $this->save(app(MigoApiService::class));
     }
 
     public function searchClients($query)

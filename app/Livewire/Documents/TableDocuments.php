@@ -4,6 +4,7 @@ namespace App\Livewire\Documents;
 
 use App\Models\Article;
 use App\Models\Document;
+use App\Models\InventoryAdjustment;
 use App\Models\Sale;
 use App\Services\PendingDocumentsService;
 use App\Services\SunatService;
@@ -68,8 +69,14 @@ class TableDocuments extends Component
     }
 
     #[On('document_destroy')]
-    public function document_destroy(Document $document, $motive = null)
+    public function document_destroy(Document $document, $motive = null, $reponerStock = true)
     {
+        // El diálogo pregunta "¿reponer stock?" solo en boletas; para facturas
+        // siempre llega true y el stock se repone como hasta ahora. La regla se
+        // impone también aquí: un dispatch manipulado desde la consola podría
+        // mandar false para una factura.
+        $reponerStock = (bool) $reponerStock || ! $document->esBoleta();
+
         if ($document->status == 'anulado') {
             return;
         }
@@ -103,11 +110,13 @@ class TableDocuments extends Component
                 'status_sunat' => 'anulado',
             ]);
 
-            $ventaAnulada = $this->anularVentaPorBaja($document);
+            $ventaAnulada = $this->anularVentaPorBaja($document, $reponerStock);
 
             $label = 'El comprobante fue anulado. Como SUNAT no lo había aceptado, no fue necesario comunicar la baja.';
             if ($ventaAnulada) {
-                $label .= ' La venta asociada fue anulada y el stock repuesto.';
+                $label .= $reponerStock
+                    ? ' La venta asociada fue anulada y el stock repuesto.'
+                    : ' La venta asociada fue anulada sin reponer stock, según lo indicado.';
             }
 
             $this->dispatch('successNotRoute', ['label' => $label]);
@@ -122,17 +131,20 @@ class TableDocuments extends Component
 
         $motive = trim((string) $motive) ?: 'ERROR EN LA EMISIÓN';
 
-        // FC/BC = nota de crédito (tipoDoc 07); si no, factura (01) o boleta (03)
+        // FC/BC = nota de crédito (tipoDoc 07); si no, factura (01) o boleta (03).
+        // Siempre por PREFIJO DE SERIE, no por document_type: hay históricos con
+        // serie de boleta y document_type de factura, y elegir RA/RC por ese
+        // campo mandaría la baja por el canal equivocado ante SUNAT.
         $esNotaCredito = str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC');
-        $tipoDoc = $esNotaCredito ? '07' : (($document->document_type == 1) ? '01' : '03');
+        $tipoDoc = $esNotaCredito ? '07' : ($document->esBoleta() ? '03' : '01');
 
         try {
-            // Facturas y sus notas → Comunicación de Baja (RA).
-            // Boletas y sus notas → Resumen Diario (RC) con estado 3.
-            if ($document->document_type == 1) {
-                $this->anularConComunicacionDeBaja($document, $tipoDoc, $motive);
+            // Series B* (boletas y sus notas BC) → Resumen Diario (RC) estado 3.
+            // Series F* (facturas y sus notas FC) → Comunicación de Baja (RA).
+            if (str_starts_with($document->serie, 'B')) {
+                $this->anularConResumenDiario($document, $tipoDoc, $motive, $esNotaCredito, $reponerStock);
             } else {
-                $this->anularConResumenDiario($document, $tipoDoc, $motive, $esNotaCredito);
+                $this->anularConComunicacionDeBaja($document, $tipoDoc, $motive, $reponerStock);
             }
         } catch (\Throwable $e) {
             Log::error('Error anulando comprobante en SUNAT', [
@@ -145,7 +157,7 @@ class TableDocuments extends Component
         }
     }
 
-    private function anularConComunicacionDeBaja(Document $document, string $tipoDoc, string $motive): void
+    private function anularConComunicacionDeBaja(Document $document, string $tipoDoc, string $motive, bool $reponerStock = true): void
     {
         $sunat = new SunatService();
 
@@ -170,10 +182,10 @@ class TableDocuments extends Component
 
         $sunatResponse = $sunat->sunatResponse($voided, $result, 'voided');
 
-        $this->finishAnulacion($document, $voided, $sunatResponse, 'voided', $motive);
+        $this->finishAnulacion($document, $voided, $sunatResponse, 'voided', $motive, $reponerStock);
     }
 
-    private function anularConResumenDiario(Document $document, string $tipoDoc, string $motive, bool $esNotaCredito): void
+    private function anularConResumenDiario(Document $document, string $tipoDoc, string $motive, bool $esNotaCredito, bool $reponerStock = true): void
     {
         $client = $document->client;
 
@@ -228,10 +240,10 @@ class TableDocuments extends Component
 
         $sunatResponse = $sunat->sunatResponse($summary, $result, 'summary');
 
-        $this->finishAnulacion($document, $summary, $sunatResponse, 'summary', $motive);
+        $this->finishAnulacion($document, $summary, $sunatResponse, 'summary', $motive, $reponerStock);
     }
 
-    private function finishAnulacion(Document $document, $comprobante, array $sunatResponse, string $type, string $motive): void
+    private function finishAnulacion(Document $document, $comprobante, array $sunatResponse, string $type, string $motive, bool $reponerStock = true): void
     {
         if ($sunatResponse['status'] != 1) {
             $code = (string) ($sunatResponse['code'] ?? '');
@@ -288,11 +300,13 @@ class TableDocuments extends Component
         }
 
         // Comprobante de venta dado de baja: anular también la venta y reponer stock
-        $ventaAnulada = $this->anularVentaPorBaja($document);
+        $ventaAnulada = $this->anularVentaPorBaja($document, $reponerStock);
 
         $label = 'El comprobante fue anulado y la baja fue aceptada por SUNAT.';
         if ($ventaAnulada) {
-            $label .= ' La venta asociada fue anulada y el stock repuesto.';
+            $label .= $reponerStock
+                ? ' La venta asociada fue anulada y el stock repuesto.'
+                : ' La venta asociada fue anulada sin reponer stock, según lo indicado.';
         }
 
         $this->dispatch('successNotRoute', ['label' => $label]);
@@ -300,10 +314,13 @@ class TableDocuments extends Component
 
     /**
      * La baja de un comprobante de venta anula también la venta asociada y
-     * repone su stock, salvo que la venta ya esté anulada o una nota de
-     * crédito ya lo haya repuesto. Devuelve true si anuló la venta.
+     * repone su stock, salvo que la venta ya esté anulada, una nota de
+     * crédito ya lo haya repuesto, o el usuario pidiera no reponerlo (opción
+     * solo para boletas); en ese último caso se registra un ajuste negativo
+     * en el kardex para que siga cuadrando con el almacén. Devuelve true si
+     * anuló la venta.
      */
-    private function anularVentaPorBaja(Document $document): bool
+    private function anularVentaPorBaja(Document $document, bool $reponerStock = true): bool
     {
         // Las notas de crédito tienen su propia reversión en finishAnulacion
         if (str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC')) {
@@ -320,10 +337,17 @@ class TableDocuments extends Component
             ->where('status', 'nota_credito')
             ->exists();
 
-        DB::transaction(function () use ($sale, $document, $stockYaRepuesto) {
+        DB::transaction(function () use ($sale, $document, $stockYaRepuesto, $reponerStock) {
             if (!$stockYaRepuesto) {
-                foreach ($sale->saleDetails as $item) {
-                    Article::find($item->article_id)?->increment('stock', (int) $item->quantity);
+                if ($reponerStock) {
+                    foreach ($sale->saleDetails as $item) {
+                        Article::find($item->article_id)?->increment('stock', (int) $item->quantity);
+                    }
+                } else {
+                    InventoryAdjustment::registrarSalidaSinReposicion(
+                        $sale,
+                        "Baja del comprobante {$document->serie}-{$document->correlative} sin reposición de stock"
+                    );
                 }
             }
 
@@ -351,7 +375,30 @@ class TableDocuments extends Component
 
     public function delete($id)
     {
-        $this->dispatch('document_delete', ['label' => 'Esta seguro que desea anular el comprobante?.', 'btn' => 'Anular', 'id' => $id]);
+        $document = Document::find($id);
+
+        if (! $document) {
+            return;
+        }
+
+        // Solo boletas cuya baja repondría stock (venta asociada aún activa)
+        // reciben la pregunta "¿reponer stock?"; facturas y ventas ya anuladas
+        // siguen el flujo de siempre. Tampoco se pregunta si document_destroy
+        // va a rechazar la baja por los 7 días de SUNAT: sería pedir una
+        // decisión de inventario para una operación que no se ejecutará.
+        $sale = Sale::find($document->sale_id);
+        $preguntarReposicion = $document->esBoleta()
+            && $sale
+            && (int) $sale->status !== Sale::SALE_CANCELED
+            && ! ($document->status_sunat == 'aceptado'
+                && Carbon::parse($document->date)->diffInDays(Carbon::now()) > 7);
+
+        $this->dispatch('document_delete', [
+            'label' => 'Esta seguro que desea anular el comprobante?.',
+            'btn' => 'Anular',
+            'id' => $id,
+            'preguntarReposicion' => $preguntarReposicion,
+        ]);
     }
 
     public function deletePending($id)

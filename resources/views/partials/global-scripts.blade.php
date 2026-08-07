@@ -307,9 +307,11 @@
     });
 
     window.addEventListener('document_delete', event => {
+        const doc = event.detail[0];
+
         Swal.fire({
             title: 'Anular comprobante',
-            text: event.detail[0]['label'],
+            text: doc['label'],
             icon: 'warning',
             input: 'text',
             inputLabel: 'Motivo de la anulación',
@@ -326,10 +328,61 @@
             allowOutsideClick: false,
             allowEscapeKey: false
         }).then((result) => {
+            if(!result.isConfirmed){
+                return;
+            }
+
+            const motive = result.value;
+
+            // Solo boletas cuya baja repondría stock: preguntar si reponerlo.
+            // El resultado (éxito o error) lo confirma el backend con los
+            // eventos 'successNotRoute' / 'error' tras responder SUNAT.
+            if (doc['preguntarReposicion']) {
+                Swal.fire({
+                    title: 'Reposición de stock',
+                    text: '¿Desea reponer el stock de los productos de la boleta al inventario?',
+                    icon: 'question',
+                    confirmButtonText: 'Sí, reponer stock',
+                    confirmButtonColor: "#3085d6",
+                    showDenyButton: true,
+                    denyButtonText: 'No reponer',
+                    denyButtonColor: "#e74c3c",
+                    showCancelButton: true,
+                    cancelButtonText: 'Cancelar',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                }).then((r2) => {
+                    if(r2.isConfirmed){
+                        Livewire.dispatch('document_destroy', {document: doc['id'], motive: motive, reponerStock: true})
+                    } else if(r2.isDenied){
+                        Livewire.dispatch('document_destroy', {document: doc['id'], motive: motive, reponerStock: false})
+                    }
+                });
+            } else {
+                Livewire.dispatch('document_destroy', {document: doc['id'], motive: motive, reponerStock: true})
+            }
+        });
+    });
+
+    window.addEventListener('questionRestockCreditNote', event => {
+        Swal.fire({
+            title: 'Reposición de stock',
+            text: event.detail[0]['label'],
+            icon: 'question',
+            confirmButtonText: 'Sí, reponer stock',
+            confirmButtonColor: "#3085d6",
+            showDenyButton: true,
+            denyButtonText: 'No reponer',
+            denyButtonColor: "#e74c3c",
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
             if(result.isConfirmed){
-                // El resultado (éxito o error) lo confirma el backend con
-                // los eventos 'successNotRoute' / 'error' tras responder SUNAT.
-                Livewire.dispatch('document_destroy', {document:event.detail[0]['id'], motive: result.value})
+                Livewire.dispatch('emitCreditNote', {reponerStock: true})
+            } else if(result.isDenied){
+                Livewire.dispatch('emitCreditNote', {reponerStock: false})
             }
         });
     });

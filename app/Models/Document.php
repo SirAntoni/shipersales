@@ -29,6 +29,16 @@ class Document extends Model
     }
 
     /**
+     * Boleta de venta (serie B001, B002...). Se decide por SERIE y no por
+     * document_type (que miente en historicos); las notas de credito BC
+     * tambien empiezan con B, por eso se excluyen primero.
+     */
+    public function esBoleta(): bool
+    {
+        return ! $this->esNotaCredito() && str_starts_with((string) $this->serie, 'B');
+    }
+
+    /**
      * Datos de la baja comunicada a SUNAT, leidos del nombre del XML de
      * anulacion (formato RUC-RA|RC-AAAAMMDD-n.xml): RA es comunicacion de baja
      * de facturas y RC resumen diario de boletas.
