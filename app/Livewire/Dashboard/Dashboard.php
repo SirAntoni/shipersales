@@ -145,7 +145,6 @@ class Dashboard extends Component
         $articles = DB::table('articles')
             ->join('sale_details', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales', 'sale_details.sale_id', '=', 'sales.id')
-            ->whereNull('sale_details.deleted_at')
             ->join('clients', 'sales.client_id', '=', 'clients.id')
             ->select(
                 'articles.id',
@@ -199,7 +198,6 @@ class Dashboard extends Component
             // Unir la tabla articles para obtener el provider_id y, si fuese necesario, otros datos
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales', 'sale_details.sale_id', '=', 'sales.id')
-            ->whereNull('sale_details.deleted_at')
             ->join('providers', 'articles.provider_id', '=', 'providers.id')
             ->join('clients', 'sales.client_id', '=', 'clients.id')
             ->select(
@@ -252,7 +250,6 @@ class Dashboard extends Component
             // Unir la tabla articles para obtener el provider_id y, si fuese necesario, otros datos
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales', 'sale_details.sale_id', '=', 'sales.id')
-            ->whereNull('sale_details.deleted_at')
             ->join('contacts', 'sales.contact_id', '=', 'contacts.id')
             ->join('clients', 'sales.client_id', '=', 'clients.id')
             ->select(
@@ -303,7 +300,6 @@ class Dashboard extends Component
             // Unir la tabla articles para obtener el provider_id y, si fuese necesario, otros datos
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales', 'sale_details.sale_id', '=', 'sales.id')
-            ->whereNull('sale_details.deleted_at')
             ->join('categories', 'articles.category_id', '=', 'categories.id')
             ->join('clients', 'sales.client_id', '=', 'clients.id')
             ->select(
@@ -354,7 +350,6 @@ class Dashboard extends Component
             // Unir la tabla articles para obtener el provider_id y, si fuese necesario, otros datos
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales', 'sale_details.sale_id', '=', 'sales.id')
-            ->whereNull('sale_details.deleted_at')
             ->join('clients', 'sales.client_id', '=', 'clients.id')
             ->join('departments', 'clients.department_id', '=', 'departments.id')
             ->select(
@@ -406,7 +401,6 @@ class Dashboard extends Component
             // Unir la tabla articles para obtener el provider_id y, si fuese necesario, otros datos
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales', 'sale_details.sale_id', '=', 'sales.id')
-            ->whereNull('sale_details.deleted_at')
             ->join('clients', 'sales.client_id', '=', 'clients.id')
             ->join('districts', 'clients.district_id', '=', 'districts.id')
             ->select(
@@ -459,7 +453,6 @@ class Dashboard extends Component
             // Unir la tabla articles para obtener el provider_id y, si fuese necesario, otros datos
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales', 'sale_details.sale_id', '=', 'sales.id')
-            ->whereNull('sale_details.deleted_at')
             ->join('clients', 'sales.client_id', '=', 'clients.id')
             ->select(
             // Calcula la ganancia total aplicando la fórmula y el tipo de cambio
@@ -505,7 +498,6 @@ class Dashboard extends Component
         $raw       = DB::table('sale_details')
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales',   'sale_details.sale_id',   '=', 'sales.id')
-            ->whereNull('sale_details.deleted_at')
             ->join('clients',  'sales.client_id',        '=', 'clients.id')
             ->whereIn('sales.status', [1,2,3])
             // filtros opcionales
@@ -558,7 +550,6 @@ class Dashboard extends Component
         $raw = DB::table('sale_details')
             ->join('articles', 'sale_details.article_id', '=', 'articles.id')
             ->join('sales',   'sale_details.sale_id',   '=', 'sales.id')
-            ->whereNull('sale_details.deleted_at')
             ->join('clients',  'sales.client_id',        '=', 'clients.id')
             ->whereIn('sales.status', [1,2,3])
             // filtros opcionales
@@ -615,7 +606,6 @@ class Dashboard extends Component
         $base = DB::table('sale_details as sd')
             ->join('articles as a', 'sd.article_id', '=', 'a.id')
             ->join('sales as s',    'sd.sale_id',    '=', 's.id')
-            ->whereNull('sd.deleted_at')
             ->join('clients as c',  's.client_id',   '=', 'c.id')
             ->whereIn('s.status', [1, 2, 3])
             ->whereYear('sd.created_at', $year)

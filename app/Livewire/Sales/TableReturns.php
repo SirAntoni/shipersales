@@ -172,7 +172,6 @@ class TableReturns extends Component
                             ->orWhereIn('sales.id', function ($sub) use ($like) {
                                 $sub->select('sale_id')->from('sale_details')
                                     ->join('articles', 'articles.id', '=', 'sale_details.article_id')
-                                    ->whereNull('sale_details.deleted_at')
                                     ->where('articles.title', 'like', $like);
                             });
                     });

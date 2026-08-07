@@ -3,17 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SaleDetail extends Model
 {
-    /**
-     * La tabla ya tenia deleted_at desde su migracion original. Al activar el
-     * trait, un detalle eliminado desde /sales/{id} deja de contar para stock,
-     * kardex, reportes, comisiones y comprobantes, pero la fila se conserva
-     * para poder mostrarla deshabilitada en la venta (withTrashed).
-     */
-    use SoftDeletes;
 
     protected $table = 'sale_details';
     protected $fillable = [
@@ -25,16 +17,10 @@ class SaleDetail extends Model
         'quantity',
         'tax',
         'total',
-        'shopper',
-        'deleted_by'
+        'shopper'
     ];
-
     public function sale(){
         return $this->belongsTo(Sale::class);
-    }
-
-    public function deletedBy(){
-        return $this->belongsTo(User::class, 'deleted_by');
     }
 
     public function article(){

@@ -153,42 +153,6 @@
         });
     });
 
-    window.addEventListener('questionDeleteSaleDetail', event => {
-        Swal.fire({
-            title: 'Eliminar producto de la venta',
-            text: event.detail[0]['label'],
-            icon: 'warning',
-            confirmButtonText: 'Sí, eliminar',
-            confirmButtonColor: "#e74c3c",
-            showCancelButton: true,
-            cancelButtonText: 'Cancelar',
-            allowOutsideClick: false,
-            allowEscapeKey: false
-        }).then((result) => {
-            if(result.isConfirmed){
-                Livewire.dispatch('confirmDeleteSaleDetail',{id:event.detail[0]['id']})
-            }
-        });
-    });
-
-    window.addEventListener('questionRestoreSaleDetail', event => {
-        Swal.fire({
-            title: 'Restaurar producto en la venta',
-            text: event.detail[0]['label'],
-            icon: 'question',
-            confirmButtonText: 'Sí, restaurar',
-            confirmButtonColor: "#3085d6",
-            showCancelButton: true,
-            cancelButtonText: 'Cancelar',
-            allowOutsideClick: false,
-            allowEscapeKey: false
-        }).then((result) => {
-            if(result.isConfirmed){
-                Livewire.dispatch('confirmRestoreSaleDetail',{id:event.detail[0]['id']})
-            }
-        });
-    });
-
     window.addEventListener('questionBulkStatusUsa', event => {
         Swal.fire({
             title: 'Cambio masivo de estado',
