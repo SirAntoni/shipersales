@@ -20,12 +20,30 @@ class TableDocuments extends Component
     public $statusSunat = '';
     public $anio = '';
     public $mes = '';
+    public $tipo = '';
     use WithPagination;
 
     /** Series de las notas de credito: restan del total en vez de sumar. */
-    public const SERIES_NOTA_CREDITO = ['FC', 'BC'];
+    public const SERIES_NOTA_CREDITO = Document::SERIES_NOTA_CREDITO;
+
+    /**
+     * Tipos que ofrece el filtro. Se distinguen por PREFIJO DE SERIE, nunca por
+     * document_type: hay comprobantes historicos con serie de boleta (B001) y
+     * document_type de factura, y filtrar por ese campo los manda al grupo
+     * equivocado y descuadra el pie de totales.
+     */
+    public const TIPOS = [
+        'boleta'        => 'Boletas',
+        'factura'       => 'Facturas',
+        'nota_credito'  => 'Notas de crédito',
+    ];
 
     public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingTipo()
     {
         $this->resetPage();
     }
@@ -521,14 +539,38 @@ class TableDocuments extends Component
         }
     }
 
+    /** Condicion SQL que identifica una nota de credito por su serie. */
+    private static function sqlNotaCredito(): string
+    {
+        return collect(self::SERIES_NOTA_CREDITO)
+            ->map(fn($serie) => "serie LIKE '{$serie}%'")
+            ->implode(' OR ');
+    }
+
+    /** Normaliza los filtros para que ningun call site dependa del orden. */
+    public static function filtrosPorDefecto(array $filtros = []): array
+    {
+        return array_merge([
+            'search'      => null,
+            'statusSunat' => null,
+            'anio'        => null,
+            'mes'         => null,
+            'tipo'        => null,
+        ], $filtros);
+    }
+
     /**
      * Filtros compartidos por la tabla, el pie de totales y el Excel: los tres
      * tienen que ver exactamente el mismo conjunto de documentos.
      */
-    public static function filtrar($query, ?string $search, ?string $statusSunat, ?string $anio, ?string $mes)
+    public static function filtrar($query, array $filtros)
     {
+        $f = self::filtrosPorDefecto($filtros);
+        $nc = self::sqlNotaCredito();
+
         return $query
-            ->when($search, function ($q) use ($search) {
+            ->when($f['search'], function ($q) use ($f) {
+                $search = $f['search'];
                 $q->where(function ($q) use ($search) {
                     $q->whereRaw("CONCAT(serie, '-', correlative) LIKE ?", ["%{$search}%"])
                       ->orWhere('serie', 'LIKE', "%{$search}%")
@@ -536,28 +578,30 @@ class TableDocuments extends Component
                       ->orWhereHas('sale', fn($q) => $q->where('number', 'LIKE', "%{$search}%"));
                 });
             })
-            ->when($statusSunat, fn($q) => $q->where('status_sunat', $statusSunat))
+            ->when($f['statusSunat'], fn($q) => $q->where('status_sunat', $f['statusSunat']))
             // Se filtra por la fecha de emision (la que va en el XML de SUNAT),
             // no por created_at: en 588 documentos no coinciden.
-            ->when($anio, fn($q) => $q->whereYear('date', $anio))
-            ->when($mes, fn($q) => $q->whereMonth('date', $mes));
+            ->when($f['anio'], fn($q) => $q->whereYear('date', $f['anio']))
+            ->when($f['mes'], fn($q) => $q->whereMonth('date', $f['mes']))
+            // Por prefijo de serie, no por document_type: ver el comentario de TIPOS.
+            ->when($f['tipo'] === 'nota_credito', fn($q) => $q->whereRaw("({$nc})"))
+            ->when($f['tipo'] === 'boleta', fn($q) => $q->where('serie', 'LIKE', 'B%')->whereRaw("NOT ({$nc})"))
+            ->when($f['tipo'] === 'factura', fn($q) => $q->where('serie', 'LIKE', 'F%')->whereRaw("NOT ({$nc})"));
     }
 
     /**
      * Totales de TODO el filtro, al margen de la pagina que se este viendo.
      * Solo entran los aceptados por SUNAT; las notas de credito restan.
      */
-    public static function resumen(?string $search, ?string $statusSunat, ?string $anio, ?string $mes): array
+    public static function resumen(array $filtros): array
     {
-        $aceptados = self::filtrar(Document::query(), $search, $statusSunat, $anio, $mes)
+        $aceptados = self::filtrar(Document::query(), $filtros)
             ->where('status_sunat', 'aceptado');
 
         // documents.total es DOUBLE y casi todas las filas traen mas de 2
         // decimales. Se suman los importes YA redondeados para que el pie
         // cuadre con lo que se ve en la tabla y con lo que sale en el Excel.
-        $like = collect(self::SERIES_NOTA_CREDITO)
-            ->map(fn($serie) => "serie LIKE '{$serie}%'")
-            ->implode(' OR ');
+        $like = self::sqlNotaCredito();
 
         $totales = function ($query, bool $notasCredito) use ($like) {
             return $query
@@ -579,7 +623,7 @@ class TableDocuments extends Component
             'cantidad_comprobantes'    => (int) $comprobantes->cantidad,
             'cantidad_notas_credito'   => (int) $notasCredito->cantidad,
             'cantidad'                 => (int) $comprobantes->cantidad + (int) $notasCredito->cantidad,
-            'excluidos'                => self::filtrar(Document::query(), $search, $statusSunat, $anio, $mes)
+            'excluidos'                => self::filtrar(Document::query(), $filtros)
                 ->where(fn($q) => $q->where('status_sunat', '!=', 'aceptado')->orWhereNull('status_sunat'))
                 ->count(),
         ];
@@ -618,18 +662,44 @@ class TableDocuments extends Component
 
     public function limpiarFiltros()
     {
-        $this->reset(['search', 'statusSunat', 'anio', 'mes']);
+        $this->reset(['search', 'statusSunat', 'anio', 'mes', 'tipo']);
         $this->resetPage();
     }
 
-    public function exportar()
+    /**
+     * Salta al otro extremo del par comprobante <-> nota de credito.
+     *
+     * Limpia los demas filtros a proposito. El de tipo es imprescindible: los
+     * grupos son disjuntos y el destino esta siempre en el grupo contrario, asi
+     * que sin esto la tabla queda vacia SIEMPRE. El periodo y el estado se
+     * limpian porque una nota de credito puede emitirse en otro mes que su
+     * comprobante, y el enlace debe cumplir lo que promete.
+     */
+    public function verComprobante(string $referencia)
     {
-        $url = route('documents.export', array_filter([
+        $this->reset(['tipo', 'anio', 'mes', 'statusSunat']);
+        $this->search = $referencia;
+        $this->resetPage();
+    }
+
+    /** Los filtros activos en pantalla, en el formato que esperan filtrar() y resumen(). */
+    private function filtrosActivos(): array
+    {
+        return [
             'search'      => $this->search,
             'statusSunat' => $this->statusSunat,
             'anio'        => $this->anio,
             'mes'         => $this->mes,
-        ], fn($v) => $v !== null && $v !== ''));
+            'tipo'        => $this->tipo,
+        ];
+    }
+
+    public function exportar()
+    {
+        $url = route('documents.export', array_filter(
+            $this->filtrosActivos(),
+            fn($v) => $v !== null && $v !== ''
+        ));
 
         $this->dispatch('abrir-nueva-pestania', ['url' => $url]);
     }
@@ -637,14 +707,19 @@ class TableDocuments extends Component
     public
     function render()
     {
-        $documents = self::filtrar(Document::with('sale'), $this->search, $this->statusSunat, $this->anio, $this->mes)
-            ->orderBy('id', 'desc')->paginate(10);
+        // affectedDocument y creditNotes se cargan aqui para poder pintar el par
+        // comprobante <-> nota de credito sin una consulta por fila.
+        $documents = self::filtrar(
+            Document::with(['sale', 'client:id,name', 'affectedDocument', 'creditNotes']),
+            $this->filtrosActivos()
+        )->orderBy('id', 'desc')->paginate(10);
 
         return view('livewire.documents.table-documents', [
             'documents' => $documents,
-            'resumen'   => self::resumen($this->search, $this->statusSunat, $this->anio, $this->mes),
+            'resumen'   => self::resumen($this->filtrosActivos()),
             'anios'     => $this->anios,
             'meses'     => self::MESES,
+            'tipos'     => self::TIPOS,
         ]);
     }
 

@@ -99,19 +99,19 @@ class ReportController extends Controller
             'statusSunat' => ['nullable', 'bail', 'string', Rule::in(['aceptado', 'pendiente', 'rechazado', 'anulado'])],
             'anio'        => ['nullable', 'bail', 'string', 'regex:/^\d{4}$/'],
             'mes'         => ['nullable', 'bail', 'string', Rule::in(array_keys(TableDocuments::MESES))],
+            'tipo'        => ['nullable', 'bail', 'string', Rule::in(array_keys(TableDocuments::TIPOS))],
         ]);
 
-        $anio = $datos['anio'] ?? null;
-        $mes = $datos['mes'] ?? null;
+        $periodo = str_replace(' ', '-', TableDocuments::etiquetaPeriodo($datos['anio'] ?? null, $datos['mes'] ?? null));
 
-        $periodo = str_replace(' ', '-', TableDocuments::etiquetaPeriodo($anio, $mes));
+        if (! empty($datos['tipo'])) {
+            $periodo .= '-' . $datos['tipo'];
+        }
 
-        return Excel::download(new DocumentsExport(
-            $datos['search'] ?? null,
-            $datos['statusSunat'] ?? null,
-            $anio,
-            $mes
-        ), 'reporte-comprobantes-'. $periodo .'.xlsx');
+        return Excel::download(
+            new DocumentsExport($datos),
+            'reporte-comprobantes-'. $periodo .'.xlsx'
+        );
 
     }
 }

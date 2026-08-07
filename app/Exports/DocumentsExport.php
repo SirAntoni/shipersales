@@ -32,29 +32,21 @@ class DocumentsExport implements
     WithColumnFormatting
 {
     /** Ultima columna con datos: se usa en el merge, el autosize y la cabecera. */
-    private const ULTIMA_COL = 'H';
+    private const ULTIMA_COL = 'I';
 
-    public $search;
-    public $statusSunat;
-    public $anio;
-    public $mes;
+    /** Mismos filtros que la pantalla, en el formato de TableDocuments::filtrar(). */
+    public $filtros;
 
-    public function __construct(?string $search, ?string $statusSunat, ?string $anio, ?string $mes){
-        $this->search = $search;
-        $this->statusSunat = $statusSunat;
-        $this->anio = $anio;
-        $this->mes = $mes;
+    public function __construct(array $filtros){
+        $this->filtros = TableDocuments::filtrosPorDefecto($filtros);
     }
 
     public function query()
     {
         // Mismos filtros que la tabla y el pie de totales de /documents.
         return TableDocuments::filtrar(
-            Document::query()->with(['sale:id,number', 'client:id,name']),
-            $this->search,
-            $this->statusSunat,
-            $this->anio,
-            $this->mes
+            Document::query()->with(['sale:id,number', 'client:id,name', 'affectedDocument:id,serie,correlative']),
+            $this->filtros
         )->orderByDesc('id');
     }
 
@@ -63,6 +55,7 @@ class DocumentsExport implements
         return [
             'FECHA',
             'COMPROBANTE',
+            'ANULA A',
             'N° ORDEN',
             'CLIENTE',
             'TIPO',
@@ -84,13 +77,26 @@ class DocumentsExport implements
             ? ($esNotaCredito ? -$monto : $monto)
             : null;
 
+        $afectado = $row->affectedDocument;
+        $baja = $row->bajaSunat();
+
+        // El estado dice ademas COMO se anulo: por baja ante SUNAT (RA/RC) o
+        // por nota de credito, que en la tabla son dos cosas distintas.
+        $estado = strtoupper($row->status_sunat ?? 'SIN ESTADO');
+        if ($baja) {
+            $estado .= ' (' . $baja['numero'] . ')';
+        }
+
         return [
             $row->date ? Carbon::parse($row->date)->format('d/m/Y') : '',
             $row->serie . '-' . $row->correlative,
+            $esNotaCredito
+                ? ($afectado ? $afectado->serie . '-' . $afectado->correlative : 'SIN COMPROBANTE AFECTADO')
+                : '',
             (string) ($row->sale->number ?? '—'),
             $row->client->name ?? '—',
             $esNotaCredito ? 'NOTA DE CREDITO' : 'COMPROBANTE',
-            strtoupper($row->status_sunat ?? 'SIN ESTADO'),
+            $estado,
             $monto,
             $computado,
         ];
@@ -98,13 +104,7 @@ class DocumentsExport implements
 
     public static function esNotaCredito(?string $serie): bool
     {
-        foreach (TableDocuments::SERIES_NOTA_CREDITO as $prefijo) {
-            if (str_starts_with((string) $serie, $prefijo)) {
-                return true;
-            }
-        }
-
-        return false;
+        return Document::serieEsNotaCredito($serie);
     }
 
     public function startCell(): string
@@ -127,9 +127,9 @@ class DocumentsExport implements
     public function columnFormats(): array
     {
         return [
-            'C' => NumberFormat::FORMAT_TEXT,
-            'G' => NumberFormat::FORMAT_NUMBER_00,
+            'D' => NumberFormat::FORMAT_TEXT,
             'H' => NumberFormat::FORMAT_NUMBER_00,
+            'I' => NumberFormat::FORMAT_NUMBER_00,
         ];
     }
 
@@ -142,16 +142,19 @@ class DocumentsExport implements
 
                 // 1) Insertar título al lado del logo
                 // mb_strtoupper: con strtoupper la "ñ" de "año" sale rota.
-                $periodo = mb_strtoupper(TableDocuments::etiquetaPeriodo($this->anio, $this->mes), 'UTF-8');
+                $periodo = mb_strtoupper(TableDocuments::etiquetaPeriodo($this->filtros['anio'], $this->filtros['mes']), 'UTF-8');
 
                 // El titulo declara TODO el alcance, no solo el periodo: si no,
-                // un export filtrado por estado o busqueda parece el consolidado.
+                // un export filtrado por tipo, estado o busqueda parece el consolidado.
                 $alcance = [];
-                if ($this->statusSunat) {
-                    $alcance[] = 'ESTADO ' . mb_strtoupper($this->statusSunat, 'UTF-8');
+                if ($this->filtros['tipo']) {
+                    $alcance[] = 'SOLO ' . mb_strtoupper(TableDocuments::TIPOS[$this->filtros['tipo']] ?? $this->filtros['tipo'], 'UTF-8');
                 }
-                if ($this->search) {
-                    $alcance[] = 'BUSQUEDA "' . mb_strtoupper($this->search, 'UTF-8') . '"';
+                if ($this->filtros['statusSunat']) {
+                    $alcance[] = 'ESTADO ' . mb_strtoupper($this->filtros['statusSunat'], 'UTF-8');
+                }
+                if ($this->filtros['search']) {
+                    $alcance[] = 'BUSQUEDA "' . mb_strtoupper($this->filtros['search'], 'UTF-8') . '"';
                 }
                 $sufijo = $alcance ? ' - ' . implode(' - ', $alcance) : '';
 
@@ -227,7 +230,7 @@ class DocumentsExport implements
 
                 // Pie con el mismo desglose que la pantalla. El neto va como
                 // formula sobre COMPUTADO para que se pueda auditar en Excel.
-                $resumen = TableDocuments::resumen($this->search, $this->statusSunat, $this->anio, $this->mes);
+                $resumen = TableDocuments::resumen($this->filtros);
 
                 // Se escriben importes literales, no formulas: con
                 // pre_calculate_formulas desactivado el xlsx guardaria 0 como
@@ -241,12 +244,12 @@ class DocumentsExport implements
                 $fila = $highestRow;
                 foreach ($filas as [$etiqueta, $importe]) {
                     $fila++;
-                    $sheet->setCellValue("F{$fila}", $etiqueta);
-                    $sheet->setCellValueExplicit("H{$fila}", $importe, DataType::TYPE_NUMERIC);
+                    $sheet->setCellValue("G{$fila}", $etiqueta);
+                    $sheet->setCellValueExplicit("I{$fila}", $importe, DataType::TYPE_NUMERIC);
                 }
 
                 $desde = $highestRow + 1;
-                $sheet->getStyle("F{$desde}:H{$fila}")->applyFromArray([
+                $sheet->getStyle("G{$desde}:I{$fila}")->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'size' => 12,
@@ -256,7 +259,7 @@ class DocumentsExport implements
                         'vertical'   => Alignment::VERTICAL_CENTER,
                     ],
                 ]);
-                $sheet->getStyle("H{$desde}:H{$fila}")
+                $sheet->getStyle("I{$desde}:I{$fila}")
                     ->getNumberFormat()
                     ->setFormatCode(NumberFormat::FORMAT_NUMBER_00);
 

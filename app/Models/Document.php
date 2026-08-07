@@ -16,6 +16,54 @@ class Document extends Model
     const DOCUMENT_ACCEPTED = 1;
     const DOCUMENT_REJECTED = 2;
 
+    /**
+     * Prefijos de serie de las notas de credito: BC01 anula boletas y FC01
+     * facturas. Es la serie la que manda, no document_type: hay comprobantes
+     * historicos con serie de boleta y document_type de factura.
+     */
+    const SERIES_NOTA_CREDITO = ['FC', 'BC'];
+
+    public function esNotaCredito(): bool
+    {
+        return self::serieEsNotaCredito($this->serie);
+    }
+
+    /**
+     * Datos de la baja comunicada a SUNAT, leidos del nombre del XML de
+     * anulacion (formato RUC-RA|RC-AAAAMMDD-n.xml): RA es comunicacion de baja
+     * de facturas y RC resumen diario de boletas.
+     *
+     * Devuelve null si el documento no esta anulado o si la anulacion es
+     * antigua y no guardo constancia (7 documentos de junio 2025).
+     */
+    public function bajaSunat(): ?array
+    {
+        if ($this->status !== 'anulado' || empty($this->xml_path_anulled)) {
+            return null;
+        }
+
+        if (! preg_match('/-(R[AC])-(\d{4})(\d{2})(\d{2})-(\d+)\.xml$/', $this->xml_path_anulled, $m)) {
+            return null;
+        }
+
+        return [
+            'tipo'   => $m[1],
+            'numero' => "{$m[1]}-{$m[2]}{$m[3]}{$m[4]}-{$m[5]}",
+            'fecha'  => "{$m[4]}-{$m[3]}-{$m[2]}",
+        ];
+    }
+
+    public static function serieEsNotaCredito(?string $serie): bool
+    {
+        foreach (self::SERIES_NOTA_CREDITO as $prefijo) {
+            if (str_starts_with((string) $serie, $prefijo)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     protected $fillable = [
         'status',
         'document_type',
@@ -67,5 +115,21 @@ class Document extends Model
     public function affectedDocument()
     {
         return $this->belongsTo(Document::class, 'affected_document_id');
+    }
+
+    /**
+     * Notas de credito que anulan este comprobante.
+     *
+     * hasMany y no hasOne aunque hoy solo pueda haber una: si algun dia se
+     * emiten notas parciales, hasOne mostraria solo la ultima en silencio.
+     * Se excluyen las que no anulan nada (anuladas o no aceptadas por SUNAT):
+     * dejarlas marcaria como anulado un comprobante que sigue vigente.
+     */
+    public function creditNotes()
+    {
+        return $this->hasMany(Document::class, 'affected_document_id')
+            ->where('status', '!=', 'anulado')
+            ->where('status_sunat', 'aceptado')
+            ->orderBy('id');
     }
 }
