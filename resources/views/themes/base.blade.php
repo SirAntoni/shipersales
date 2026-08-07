@@ -67,7 +67,8 @@ License: Uso comercial solo para ShiperSales
 @stack('scripts')
 
 <!-- END: Pages, layouts, components JS Assets-->
-<script src="https://kit.fontawesome.com/808596313d.js" crossorigin="anonymous"></script>
+{{-- Font Awesome ya no viene del kit externo: se autohospeda desde
+     resources/css/app.css (@fortawesome/fontawesome-free). --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 @livewireScripts

@@ -14,6 +14,19 @@
 
 /*
    |--------------------------------------------------------------------------
+   | Font Awesome
+   |--------------------------------------------------------------------------
+   |
+   | Autohospedado via npm en vez del kit de kit.fontawesome.com, que dependia
+   | de que el dominio estuviera autorizado en la cuenta (en local devolvia 503
+   | y no se veia ningun icono). Misma version que tenia el kit: 6.7.2, asi que
+   | los nombres de icono de las vistas siguen siendo validos.
+   |
+   */
+@import "@fortawesome/fontawesome-free/css/all.min.css";
+
+/*
+   |--------------------------------------------------------------------------
    | Components
    |--------------------------------------------------------------------------
    |
