@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -22,7 +23,20 @@ class TableDocuments extends Component
     public $anio = '';
     public $mes = '';
     public $tipo = '';
+
+    /**
+     * Comprobantes por pagina. Se guarda en la URL para que la eleccion
+     * sobreviva a un refresco y al volver desde el detalle de un documento.
+     */
+    #[Url(as: 'porPagina', except: self::POR_PAGINA_DEFECTO)]
+    public $perPage = self::POR_PAGINA_DEFECTO;
+
     use WithPagination;
+
+    public const POR_PAGINA_DEFECTO = 40;
+
+    /** Opciones del selector. Cualquier otro valor cae al de por defecto. */
+    public const OPCIONES_POR_PAGINA = [15, 30, 40, 60, 100, 200];
 
     /** Series de las notas de credito: restan del total en vez de sumar. */
     public const SERIES_NOTA_CREDITO = Document::SERIES_NOTA_CREDITO;
@@ -62,6 +76,23 @@ class TableDocuments extends Component
     public function updatingMes()
     {
         $this->resetPage();
+    }
+
+    /** Al cambiar el tamano de pagina la actual puede ya no existir. */
+    public function updatingPerPage()
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * El valor llega del cliente (select y query string), asi que se acota a
+     * las opciones ofrecidas: evita un ?porPagina=100000 contra 3 mil registros.
+     */
+    public function porPagina(): int
+    {
+        return in_array((int) $this->perPage, self::OPCIONES_POR_PAGINA, true)
+            ? (int) $this->perPage
+            : self::POR_PAGINA_DEFECTO;
     }
 
     public function rendered(){
@@ -759,14 +790,15 @@ class TableDocuments extends Component
         $documents = self::filtrar(
             Document::with(['sale', 'client:id,name', 'affectedDocument', 'creditNotes']),
             $this->filtrosActivos()
-        )->orderBy('id', 'desc')->paginate(10);
+        )->orderBy('id', 'desc')->paginate($this->porPagina());
 
         return view('livewire.documents.table-documents', [
-            'documents' => $documents,
-            'resumen'   => self::resumen($this->filtrosActivos()),
-            'anios'     => $this->anios,
-            'meses'     => self::MESES,
-            'tipos'     => self::TIPOS,
+            'documents'         => $documents,
+            'resumen'           => self::resumen($this->filtrosActivos()),
+            'anios'             => $this->anios,
+            'meses'             => self::MESES,
+            'tipos'             => self::TIPOS,
+            'opcionesPorPagina' => self::OPCIONES_POR_PAGINA,
         ]);
     }
 

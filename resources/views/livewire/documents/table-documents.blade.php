@@ -85,6 +85,18 @@
                                 <option value="anulado">Anulado</option>
                             </x-base.form-select>
 
+                            <div class="relative">
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
+                                <x-base.form-select
+                                    class="rounded-[0.5rem] pl-9 sm:w-44"
+                                    wire:model.live="perPage"
+                                >
+                                    @foreach($opcionesPorPagina as $opcion)
+                                        <option value="{{ $opcion }}" @selected((int) $perPage === $opcion)>{{ $opcion }} por página</option>
+                                    @endforeach
+                                </x-base.form-select>
+                            </div>
+
                             <div class="relative mr-2">
                                 <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
                                 <x-base.form-input
