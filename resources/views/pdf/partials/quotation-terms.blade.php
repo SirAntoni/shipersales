@@ -16,7 +16,7 @@
                     <span class="term-check">✓</span> La cotización tiene una validez de {{ $validityDays }} días.
                 </div>
                 <div class="term-title">Tiempo de entrega</div>
-                <div class="term-text">Tiempo estimado: 12-20 días hábiles desde el abono.</div>
+                <div class="term-text">Tiempo estimado: {{ $quotation->delivery_time_text }}</div>
             </td>
             <td class="tright">
                 <div class="term-title">Cancelaciones</div>

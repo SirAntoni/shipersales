@@ -199,12 +199,23 @@
 
                                                     <div class="col-span-12 sm:col-span-3">
                                                         <x-base.form-label for="manualBrand">Marca</x-base.form-label>
-                                                        <x-base.form-select id="manualBrand" wire:model="manualBrand">
-                                                            <option value="">Selecciona una opción</option>
-                                                            @foreach($brandsList as $brand)
-                                                                <option value="{{ $brand->id }}">{{ $brand->name }}</option>
-                                                            @endforeach
-                                                        </x-base.form-select>
+                                                        <div class="flex items-center gap-2">
+                                                            <x-base.form-select class="flex-1" id="manualBrand" wire:model="manualBrand">
+                                                                <option value="">Selecciona una opción</option>
+                                                                @foreach($brandsList as $brand)
+                                                                    <option value="{{ $brand->id }}" @selected((string) $manualBrand === (string) $brand->id)>{{ $brand->name }}</option>
+                                                                @endforeach
+                                                            </x-base.form-select>
+                                                            <x-base.button
+                                                                class="h-[40px] w-10 shrink-0"
+                                                                type="button"
+                                                                variant="outline-primary"
+                                                                title="Crear una marca nueva"
+                                                                wire:click="openBrandModal"
+                                                            >
+                                                                <i class="fa-solid fa-plus"></i>
+                                                            </x-base.button>
+                                                        </div>
                                                         @error('manualBrand')
                                                         <div class="p-1 text-red-600">{{ $message }}</div>
                                                         @enderror
@@ -215,7 +226,7 @@
                                                         <x-base.form-select id="manualCategory" wire:model="manualCategory">
                                                             <option value="">Selecciona una opción</option>
                                                             @foreach($categoriesList as $category)
-                                                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                                                <option value="{{ $category->id }}" @selected((string) $manualCategory === (string) $category->id)>{{ $category->name }}</option>
                                                             @endforeach
                                                         </x-base.form-select>
                                                         @error('manualCategory')
@@ -224,30 +235,42 @@
                                                     </div>
 
                                                     <div class="col-span-12 sm:col-span-3">
-                                                        <x-base.form-label for="manualPurchasePrice">Precio compra (opcional)</x-base.form-label>
-                                                        <x-base.form-input
-                                                            id="manualPurchasePrice"
-                                                            type="number"
-                                                            step="0.01"
-                                                            min="0"
-                                                            placeholder="0.00"
-                                                            wire:model="manualPurchasePrice"
-                                                        />
+                                                        <x-base.form-label for="manualPurchasePrice">Precio compra ($)</x-base.form-label>
+                                                        <x-base.input-group>
+                                                            <x-base.input-group.text>$</x-base.input-group.text>
+                                                            <x-base.form-input
+                                                                id="manualPurchasePrice"
+                                                                type="number"
+                                                                step="0.01"
+                                                                min="0"
+                                                                placeholder="0.00"
+                                                                wire:model="manualPurchasePrice"
+                                                            />
+                                                        </x-base.input-group>
+                                                        <div class="mt-1 text-xs text-slate-500">
+                                                            Opcional. En dólares, igual que en Almacén &gt; Artículos.
+                                                        </div>
                                                         @error('manualPurchasePrice')
                                                         <div class="p-1 text-red-600">{{ $message }}</div>
                                                         @enderror
                                                     </div>
 
                                                     <div class="col-span-12 sm:col-span-3">
-                                                        <x-base.form-label for="manualSalePrice">Precio venta</x-base.form-label>
-                                                        <x-base.form-input
-                                                            id="manualSalePrice"
-                                                            type="number"
-                                                            step="0.01"
-                                                            min="0"
-                                                            placeholder="0.00"
-                                                            wire:model="manualSalePrice"
-                                                        />
+                                                        <x-base.form-label for="manualSalePrice">Precio venta (S/)</x-base.form-label>
+                                                        <x-base.input-group>
+                                                            <x-base.input-group.text>S/</x-base.input-group.text>
+                                                            <x-base.form-input
+                                                                id="manualSalePrice"
+                                                                type="number"
+                                                                step="0.01"
+                                                                min="0"
+                                                                placeholder="0.00"
+                                                                wire:model="manualSalePrice"
+                                                            />
+                                                        </x-base.input-group>
+                                                        <div class="mt-1 text-xs text-slate-500">
+                                                            En soles. Es el precio que se cotiza.
+                                                        </div>
                                                         @error('manualSalePrice')
                                                         <div class="p-1 text-red-600">{{ $message }}</div>
                                                         @enderror
@@ -266,6 +289,26 @@
                                             </div>
                                         </div>
                                     @endif
+
+                                    <div class="col-span-12 sm:col-span-6 flex flex-col gap-3.5 px-5 py-2">
+                                        <div>
+                                            <x-base.form-label for="deliveryTime">
+                                                Tiempo de entrega (se muestra en el PDF)
+                                            </x-base.form-label>
+                                            <x-base.form-input
+                                                id="deliveryTime"
+                                                type="text"
+                                                placeholder="Ej. 5 días hábiles desde el abono."
+                                                wire:model="deliveryTime"
+                                            />
+                                            <div class="mt-1 text-xs text-slate-500">
+                                                Se muestra como «Tiempo estimado: …». Ajústalo si el plazo de esta cotización es distinto.
+                                            </div>
+                                            @error('deliveryTime')
+                                            <div class="p-1 text-red-600">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
 
                                     <div class="col-span-12 flex flex-col gap-3.5 px-5 py-2 pb-5">
                                         <div>
@@ -305,7 +348,7 @@
                                             </x-base.table.td>
                                             <x-base.table.td
                                                 class="border-slate-200/80 bg-slate-50 py-4 text-right font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem]">
-                                                Precio
+                                                Precio (S/)
                                             </x-base.table.td>
                                             <x-base.table.td
                                                 class="border-slate-200/80 bg-slate-50 py-4 text-right font-medium text-slate-500 first:rounded-tl-[0.6rem] last:rounded-tr-[0.6rem]">
@@ -670,6 +713,90 @@
                         <x-base.button variant="primary" wire:click="saveClient">
                             Guardar
                         </x-base.button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Marca (Alpine.js) -->
+    <div
+        x-data="{ open: false }"
+        x-on:open-brand-modal.window="open = true; $nextTick(() => $refs.brandName && $refs.brandName.focus())"
+        x-on:close-brand-modal.window="open = false"
+        x-on:keydown.escape.window="open = false"
+    >
+        <!-- Backdrop -->
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-[1050] bg-gradient-to-b from-theme-1/50 via-theme-2/50 to-black/50"
+            x-on:click="open = false"
+            style="display: none;"
+        ></div>
+
+        <!-- Panel -->
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 -translate-y-8"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-8"
+            class="fixed inset-0 z-[1051] overflow-y-auto"
+            style="display: none;"
+        >
+            <div class="flex min-h-full items-center justify-center p-4" x-on:click.self="open = false">
+                <div class="w-[90%] lg:w-[600px] bg-white rounded-md shadow-md dark:bg-darkmode-600" x-on:click.stop>
+
+                    <!-- Header -->
+                    <div class="flex items-center px-5 py-3 border-b border-slate-200/60 dark:border-darkmode-400">
+                        <h2 class="text-base font-medium mr-auto">Crear marca</h2>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-5">
+                        <x-base.form-label for="newBrandName">
+                            Nombre de la marca
+                        </x-base.form-label>
+                        <x-base.form-input
+                            id="newBrandName"
+                            x-ref="brandName"
+                            type="text"
+                            placeholder="Nombre de la marca"
+                            wire:model="newBrandName"
+                            wire:keydown.enter="saveBrand"
+                        />
+                        @error('newBrandName')
+                        <div class="p-1 text-red-600">{{ $message }}</div>
+                        @enderror
+                        <div class="mt-2 text-xs text-slate-500">
+                            Quedará registrada en Almacén &gt; Marcas y seleccionada en esta cotización.
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex justify-end px-5 py-3 border-t border-slate-200/60 dark:border-darkmode-400">
+                        <x-base.button variant="outline-secondary" class="mr-2" x-on:click="open = false">
+                            Cancelar
+                        </x-base.button>
+                        <span wire:loading wire:target="saveBrand">
+                            <x-base.button variant="primary" disabled="true">
+                                <i class="fas fa-spinner animate-spin mr-1"></i> Guardando..
+                            </x-base.button>
+                        </span>
+                        <span wire:loading.remove wire:target="saveBrand">
+                            <x-base.button variant="primary" wire:click="saveBrand">
+                                Guardar marca
+                            </x-base.button>
+                        </span>
                     </div>
 
                 </div>

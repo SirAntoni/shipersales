@@ -3,6 +3,7 @@
 namespace App\Livewire\Quotations;
 
 use App\Models\Article;
+use App\Models\Brand;
 use App\Models\Client;
 use App\Models\Quotation;
 use App\Services\MigoApiService;
@@ -15,6 +16,7 @@ class NewQuotation extends Component
     public $client;
     public $date;
     public $validDays = 7;
+    public $deliveryTime;
     public $notes;
     public $tax = false;
 
@@ -60,12 +62,16 @@ class NewQuotation extends Component
     public $brandsList = [];
     public $categoriesList = [];
 
+    /** Nombre de la marca que se crea desde la cotización */
+    public $newBrandName = '';
+
     public function rules()
     {
         return [
             'client'           => 'required',
             'date'             => 'required|date_format:Y-m-d',
             'validDays'        => 'required|integer|min:1|max:90',
+            'deliveryTime'     => 'required|string|max:255',
             'notes'            => 'nullable|string|max:1000',
             'articlesSelected' => 'required|array|min:1',
         ];
@@ -75,14 +81,17 @@ class NewQuotation extends Component
         'articlesSelected.required' => 'Debe agregar al menos 1 artículo a la cotización.',
         'client.required'           => 'Debe seleccionar un cliente.',
         'validDays.required'        => 'Debe indicar los días de validez.',
+        'deliveryTime.required'     => 'Debe indicar el tiempo de entrega.',
+        'deliveryTime.max'          => 'El tiempo de entrega no debe superar los 255 caracteres.',
     ];
 
     public function mount()
     {
-        $this->date        = Carbon::now()->format('Y-m-d');
-        $this->token       = env('MIGO_API_TOKEN');
+        $this->date         = Carbon::now()->format('Y-m-d');
+        $this->deliveryTime = Quotation::DEFAULT_DELIVERY_TIME;
+        $this->token        = env('MIGO_API_TOKEN');
         $this->departments = DB::table('departments')->get();
-        $this->brandsList     = DB::table('brands')->select('id', 'name')->orderBy('name')->get();
+        $this->loadBrands();
         $this->categoriesList = DB::table('categories')->select('id', 'name')->orderBy('name')->get();
         $this->phone = '990062896';
         $this->email = 'info@shipersales.pe';
@@ -193,16 +202,17 @@ class NewQuotation extends Component
 
             DB::transaction(function () use (&$quotation) {
                 $quotation = Quotation::create([
-                    'number'      => Quotation::nextNumber(),
-                    'date'        => $this->date,
-                    'valid_until' => Carbon::parse($this->date)->addDays((int) $this->validDays)->format('Y-m-d'),
-                    'status'      => Quotation::STATUS_PENDING,
-                    'notes'       => $this->notes,
-                    'subtotal'    => $this->granSubtotal,
-                    'tax'         => $this->granTax,
-                    'total'       => $this->granTotal,
-                    'client_id'   => $this->client,
-                    'user_id'     => auth()->id(),
+                    'number'        => Quotation::nextNumber(),
+                    'date'          => $this->date,
+                    'valid_until'   => Carbon::parse($this->date)->addDays((int) $this->validDays)->format('Y-m-d'),
+                    'delivery_time' => trim((string) $this->deliveryTime),
+                    'status'        => Quotation::STATUS_PENDING,
+                    'notes'         => $this->notes,
+                    'subtotal'      => $this->granSubtotal,
+                    'tax'           => $this->granTax,
+                    'total'         => $this->granTotal,
+                    'client_id'     => $this->client,
+                    'user_id'       => auth()->id(),
                 ]);
 
                 foreach ($this->articlesSelected as $item) {
@@ -271,6 +281,54 @@ class NewQuotation extends Component
             $this->addToArticle($id);
             $this->articleSelected = null;
         }
+    }
+
+    /** Marcas vigentes para el select del producto manual */
+    private function loadBrands(): void
+    {
+        $this->brandsList = DB::table('brands')
+            ->whereNull('deleted_at')
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function openBrandModal(): void
+    {
+        $this->reset('newBrandName');
+        $this->resetErrorBag('newBrandName');
+        $this->dispatch('open-brand-modal');
+    }
+
+    /** Crea la marca sin salir de la cotización y la deja seleccionada en el formulario manual */
+    public function saveBrand(): void
+    {
+        $this->newBrandName = trim((string) $this->newBrandName);
+
+        $this->validate([
+            'newBrandName' => 'required|string|min:3|max:100',
+        ], [], [
+            'newBrandName' => 'nombre de la marca',
+        ]);
+
+        // Las marcas no tienen índice único: se evita el duplicado reutilizando la existente.
+        $brand = Brand::whereRaw('LOWER(name) = ?', [mb_strtolower($this->newBrandName)])->first();
+        $existed = (bool) $brand;
+
+        if (!$existed) {
+            $brand = Brand::create(['name' => $this->newBrandName]);
+        }
+
+        $this->loadBrands();
+        $this->manualBrand = $brand->id;
+        $this->reset('newBrandName');
+
+        $this->dispatch('close-brand-modal');
+        $this->dispatch('toast', [
+            'label' => $existed
+                ? "La marca «{$brand->name}» ya existía y quedó seleccionada."
+                : "La marca «{$brand->name}» se creó y quedó seleccionada.",
+        ]);
     }
 
     public function addManualArticle()
