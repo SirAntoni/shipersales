@@ -67,7 +67,8 @@ class Kardex extends Component
             'entrada'           AS tipo,
             purchase_details.quantity AS cantidad,
             purchases.document AS document,
-            purchases.passenger AS passenger
+            purchases.passenger AS passenger,
+            NULL                AS adjustment_source
         ")
             ->join('purchases', 'purchases.id', '=', 'purchase_details.purchase_id')
             ->join('articles',  'articles.id',  '=', 'purchase_details.article_id')
@@ -92,7 +93,8 @@ class Kardex extends Component
             'salida'            AS tipo,
             sale_details.quantity AS cantidad,
              NULL                AS document,
-             NULL                AS passenger
+             NULL                AS passenger,
+             NULL                AS adjustment_source
         ")
             ->join('sales',   'sales.id',   '=', 'sale_details.sale_id')
             ->join('users',   'users.id',   '=', 'sales.user_id')
@@ -113,12 +115,21 @@ class Kardex extends Component
             NULL                AS contact_name,
             NULL                AS client_name,
             users.name          AS user_name,
-            CONCAT('Ajuste — ', ia.reason) AS `number`,
+            CASE WHEN ia.source = 'anulacion:sin_reposicion'
+                 THEN CONCAT('Regularización — la venta anulada no devolvió mercadería (',
+                             REPLACE(ia.reason, ' sin reposición de stock', ''), ')')
+                 ELSE CONCAT('Ajuste — ', ia.reason)
+            END AS `number`,
             ia.created_at       AS fecha,
             CASE WHEN ia.delta >= 0 THEN 'entrada' ELSE 'salida' END AS tipo,
             ABS(ia.delta)       AS cantidad,
-            CONCAT('Ajuste — ', ia.reason) AS document,
-            NULL                AS passenger
+            CASE WHEN ia.source = 'anulacion:sin_reposicion'
+                 THEN CONCAT('Regularización — la venta anulada no devolvió mercadería (',
+                             REPLACE(ia.reason, ' sin reposición de stock', ''), ')')
+                 ELSE CONCAT('Ajuste — ', ia.reason)
+            END AS document,
+            NULL                AS passenger,
+            ia.source           AS adjustment_source
         ")
             ->join('articles', 'articles.id', '=', 'ia.article_id')
             ->leftJoin('users', 'users.id', '=', 'ia.created_by')

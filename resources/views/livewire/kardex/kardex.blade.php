@@ -144,6 +144,14 @@
                                         $rowColor = ($article->src === 'adjustment')
                                             ? 'text-warning'
                                             : (($article->tipo == 'entrada') ? 'text-success' : 'text-danger');
+
+                                        // Compensa la salida de una venta anulada que no devolvió
+                                        // mercadería: no salió nada del almacén ese día.
+                                        $esRegularizacion = $article->src === 'adjustment'
+                                            && ($article->adjustment_source ?? null) === 'anulacion:sin_reposicion';
+                                        $tituloRegularizacion = 'Este día no salió mercadería del almacén. '
+                                            . 'La venta original ya no figura en el kardex porque fue anulada, '
+                                            . 'y como el producto no volvió, esta línea mantiene esa salida en la cuenta.';
                                     @endphp
 
                                     <x-base.table.tr class="[&_td]:last:border-b-0">
@@ -209,7 +217,14 @@
 
                                             <div
                                                 class="ml-1.5 whitespace-nowrap {{ $rowColor }} font-semibold">
-                                                {{($article->tipo == "salida") ? $article->cantidad:"-"}}
+                                                @if($esRegularizacion)
+                                                    <span class="cursor-help" title="{{ $tituloRegularizacion }}">
+                                                        <i class="fa-solid fa-right-left"></i> {{ $article->cantidad }}
+                                                        <span class="text-xs font-normal">(regulariza)</span>
+                                                    </span>
+                                                @else
+                                                    {{($article->tipo == "salida") ? $article->cantidad:"-"}}
+                                                @endif
                                             </div>
 
                                         </x-base.table.td>
