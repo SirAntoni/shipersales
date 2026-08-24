@@ -39,6 +39,41 @@ class Document extends Model
     }
 
     /**
+     * Etiquetas del tipo de comprobante, en singular. Las claves son las mismas
+     * que usa el filtro de /documents (TableDocuments::TIPOS) para que columna y
+     * filtro no puedan discrepar.
+     */
+    const TIPOS_ETIQUETA = [
+        'factura'      => 'Factura',
+        'boleta'       => 'Boleta',
+        'nota_credito' => 'Nota de crédito',
+    ];
+
+    /**
+     * Clave del tipo de comprobante. Se decide por PREFIJO DE SERIE, nunca por
+     * document_type: hay historicos con serie de boleta y document_type de
+     * factura, y ese campo los clasificaria al reves. Null si la serie no encaja.
+     */
+    public function tipoClave(): ?string
+    {
+        if ($this->esNotaCredito()) {
+            return 'nota_credito';
+        }
+
+        if ($this->esBoleta()) {
+            return 'boleta';
+        }
+
+        return str_starts_with((string) $this->serie, 'F') ? 'factura' : null;
+    }
+
+    /** Etiqueta lista para mostrar; guion si la serie no corresponde a ningun tipo conocido. */
+    public function tipoEtiqueta(): string
+    {
+        return self::TIPOS_ETIQUETA[$this->tipoClave()] ?? '—';
+    }
+
+    /**
      * Datos de la baja comunicada a SUNAT, leidos del nombre del XML de
      * anulacion (formato RUC-RA|RC-AAAAMMDD-n.xml): RA es comunicacion de baja
      * de facturas y RC resumen diario de boletas.

@@ -137,7 +137,17 @@
                                     <x-base.table.td
                                         class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
                                     >
+                                        Tipo
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
                                         N° Orden
+                                    </x-base.table.td>
+                                    <x-base.table.td
+                                        class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
+                                    >
+                                        Contacto
                                     </x-base.table.td>
                                     <x-base.table.td
                                         class="border-t border-slate-200/60 bg-slate-50 font-medium text-slate-500"
@@ -258,8 +268,30 @@
                                                 @endif
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
+                                                @php
+                                                    $tipoClave = $document->tipoClave();
+                                                    $tipoEstilo = match($tipoClave) {
+                                                        'factura'      => 'bg-blue-100 text-slate-700',
+                                                        'boleta'       => 'bg-green-100 text-green-800',
+                                                        'nota_credito' => 'bg-red-100 text-red-700',
+                                                        default        => 'bg-slate-100 text-slate-700',
+                                                    };
+                                                @endphp
+                                                @if($tipoClave)
+                                                    <span class="{{ $tipoEstilo }} whitespace-nowrap rounded-full px-2.5 p-1 text-xs font-medium">{{ $document->tipoEtiqueta() }}</span>
+                                                @else
+                                                    <span class="text-slate-400" title="La serie {{ $document->serie }} no corresponde a boleta, factura ni nota de crédito">—</span>
+                                                @endif
+                                            </x-base.table.td>
+                                            <x-base.table.td class="border-dashed dark:bg-darkmode-600">
 
                                                 {{ $document->sale?->number ?? '—' }}
+
+                                            </x-base.table.td>
+                                            <x-base.table.td class="border-dashed dark:bg-darkmode-600">
+
+                                                {{-- Canal por el que entro la venta (Agora, Falabella, ...) --}}
+                                                <span class="whitespace-nowrap">{{ $document->sale?->contact?->name ?? '—' }}</span>
 
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
@@ -439,7 +471,7 @@
                                     @endforeach
                                 @else
                                     <x-base.table.tr>
-                                        <x-base.table.td colspan="10"
+                                        <x-base.table.td colspan="12"
                                                          class=" text-center border-dashed dark:bg-darkmode-600">
                                             No se encontrarón resultados.
                                         </x-base.table.td>
@@ -451,7 +483,7 @@
                                      pagina visible. Solo entran los aceptados por SUNAT y
                                      las notas de credito restan. --}}
                                 <x-base.table.tr>
-                                    <x-base.table.td colspan="4"
+                                    <x-base.table.td colspan="6"
                                                      class="border-t border-slate-200/60 bg-slate-50 text-right font-medium text-slate-500">
                                         Comprobantes aceptados ({{ $resumen['cantidad_comprobantes'] }})
                                     </x-base.table.td>
@@ -462,7 +494,7 @@
                                 </x-base.table.tr>
                                 @if($resumen['notas_credito'] > 0)
                                     <x-base.table.tr>
-                                        <x-base.table.td colspan="4"
+                                        <x-base.table.td colspan="6"
                                                          class="bg-slate-50 text-right font-medium text-slate-500">
                                             Notas de crédito ({{ $resumen['cantidad_notas_credito'] }})
                                         </x-base.table.td>
@@ -473,7 +505,7 @@
                                     </x-base.table.tr>
                                 @endif
                                 <x-base.table.tr>
-                                    <x-base.table.td colspan="4"
+                                    <x-base.table.td colspan="6"
                                                      class="bg-slate-100 text-right text-base font-bold text-slate-700">
                                         {{-- Con el filtro de tipo puesto el total ya no es "lo aceptado":
                                              es solo la parte del tipo elegido, y hay que decirlo o

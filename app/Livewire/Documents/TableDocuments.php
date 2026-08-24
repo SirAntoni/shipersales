@@ -788,7 +788,7 @@ class TableDocuments extends Component
         // affectedDocument y creditNotes se cargan aqui para poder pintar el par
         // comprobante <-> nota de credito sin una consulta por fila.
         $documents = self::filtrar(
-            Document::with(['sale', 'client:id,name', 'affectedDocument', 'creditNotes']),
+            Document::with(['sale', 'sale.contact:id,name', 'client:id,name', 'affectedDocument', 'creditNotes']),
             $this->filtrosActivos()
         )->orderBy('id', 'desc')->paginate($this->porPagina());
 
