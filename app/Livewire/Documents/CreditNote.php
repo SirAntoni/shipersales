@@ -5,7 +5,6 @@ namespace App\Livewire\Documents;
 use App\Models\Article;
 use App\Models\Client;
 use App\Models\Document;
-use App\Models\InventoryAdjustment;
 use App\Models\Sale;
 use App\Services\MigoApiService;
 use App\Services\SunatService;
@@ -192,7 +191,7 @@ class CreditNote extends Component
             // Sin nombrar el correlativo: el retry por error 1032 puede emitir
             // el siguiente y el diálogo habría prometido otro número.
             $this->dispatch('questionRestockCreditNote', [
-                'label' => "Se anulará la boleta {$this->affected_document} emitiendo una nota de crédito. ¿Desea reponer el stock de los productos al inventario?",
+                'label' => "Se anulará la boleta {$this->affected_document} emitiendo una nota de crédito. ¿Desea reponer el stock de los productos al inventario? Si repone, la venta quedará anulada. Si no repone, la venta se mantiene activa y podrá emitir un comprobante nuevo.",
             ]);
             return;
         }
@@ -329,9 +328,9 @@ class CreditNote extends Component
             $stockYaRepuesto = $sale && (int) $sale->status === Sale::SALE_CANCELED;
             $reponerStock = $reponerStock && ! $stockYaRepuesto;
 
-            // Todo o nada: que un fallo a mitad no deje la venta anulada sin su
-            // ajuste compensatorio ni un documento a medio registrar (mismo
-            // criterio que anularVentaPorBaja en TableDocuments).
+            // Todo o nada: que un fallo a mitad no deje stock repuesto sin la
+            // venta anulada ni un documento a medio registrar (mismo criterio
+            // que anularVentaPorBaja en TableDocuments).
             $document = DB::transaction(function () use ($sale, $affectedDoc, $esBoleta, $reponerStock, $invoice, $sunatResponse) {
                 $document = Document::create([
                     'status' => "enviado",
@@ -379,9 +378,12 @@ class CreditNote extends Component
                 // Marcar el documento afectado para bloquear nueva NC o anulación sobre él
                 $affectedDoc->update(['status' => 'nota_credito']);
 
-                // La NC revierte la operación completa: cierra la venta como anulada
-                // (venga de una devolución o de una venta aún activa).
-                if ($sale && (int) $sale->status !== Sale::SALE_CANCELED) {
+                // Con reposición la mercadería volvió: la NC revierte la operación
+                // completa y cierra la venta como anulada (venga de una devolución
+                // o de una venta aún activa). Sin reposición la mercadería se quedó
+                // con el cliente: la venta sigue activa tal cual, su salida sigue
+                // contando en el kardex y puede emitirse un comprobante nuevo.
+                if ($reponerStock && $sale && (int) $sale->status !== Sale::SALE_CANCELED) {
                     $motivo = ((int) $sale->status === Sale::SALE_RETURN)
                         ? "Devolución con nota de crédito {$this->serie}-{$this->correlative}"
                         : "Nota de crédito {$this->serie}-{$this->correlative}";
@@ -391,16 +393,6 @@ class CreditNote extends Component
                         'deletion_date' => now(),
                         'deletion_reason' => $motivo,
                     ]);
-
-                    // Sin reposición: al anular la venta su salida deja de contar
-                    // en el kardex y el saldo subiría solo; el ajuste negativo lo
-                    // compensa y deja constancia de que la mercadería no volvió.
-                    if (! $reponerStock) {
-                        InventoryAdjustment::registrarSalidaSinReposicion(
-                            $sale,
-                            "Nota de crédito {$this->serie}-{$this->correlative} sin reposición de stock"
-                        );
-                    }
                 }
 
                 return $document;
@@ -430,9 +422,9 @@ class CreditNote extends Component
         if ($stockYaRepuesto) {
             $label = "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito. El stock no se modificó porque ya había sido devuelto al anular la venta.";
         } elseif ($reponerStock) {
-            $label = "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito y el stock fue repuesto.";
+            $label = "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito, el stock fue repuesto y la venta quedó anulada.";
         } else {
-            $label = "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito sin reponer stock, según lo indicado.";
+            $label = "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito sin reponer stock. La venta se mantiene activa: puede emitir un comprobante nuevo.";
         }
 
         $this->dispatch('success', ['label' => $label, 'btn' => 'Ir a documentos', 'route' => route('documents.index')]);

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Document;
+use App\Models\Sale;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -333,7 +334,8 @@ class AuditarReposicionStock extends Command
         // La venta solo genera ajuste si ESTE comprobante fue el que la anulo:
         // si ya estaba anulada, el stock volvio antes y no hay nada que compensar.
         $venta = $documento->sale_id ? DB::table('sales')->where('id', $documento->sale_id)->first() : null;
-        $anuladaPorEste = $venta && str_contains((string) $venta->deletion_reason, $numero);
+        // Con limite de digitos, igual que el filtro de ajustes: BC01-1 no es BC01-15
+        $anuladaPorEste = $venta && (bool) preg_match('/' . preg_quote($numero, '/') . '(?!\d)/', (string) $venta->deletion_reason);
 
         $unidades = collect($articulos)->sum('cantidad');
         $repuesto = collect($movimientos)->sum('delta');
@@ -361,7 +363,9 @@ class AuditarReposicionStock extends Command
         }
 
         if (! $declara && ! $anuladaPorEste && $venta) {
-            $notas[] = 'La venta ya estaba anulada antes: el stock se resolvio en esa anulacion, no aqui.';
+            $notas[] = (int) $venta->status === Sale::SALE_CANCELED
+                ? 'La venta ya estaba anulada antes: el stock se resolvio en esa anulacion, no aqui.'
+                : 'La venta sigue activa: la mercaderia se quedo con el cliente y su salida sigue contando en el kardex.';
         }
 
         $afectado = null;

@@ -153,6 +153,37 @@ Route::middleware(['auth'])->group(function () {
     });
     //End Regularizar kardex en Cpanel
 
+    //Start Reactivar ventas anuladas por comprobante sin reposición (cPanel, sin terminal)
+    // Paso 1: vista previa (dry-run, no escribe nada) con enlace para ejecutar
+    // Solo quien administra el kardex: reescribe ventas y borra ajustes.
+    Route::get('/ventas-reactivar', function () {
+        Artisan::call('ventas:reactivar-sin-reposicion', ['--dry-run' => true]);
+        $out    = e(Artisan::output());
+        $runUrl = url('/ventas-reactivar/run');
+
+        return response(
+            "<h3>Ventas: vista previa de reactivación (no se escribió nada)</h3>"
+            . "<pre>{$out}</pre>"
+            . "<form method=\"POST\" action=\"{$runUrl}\" onsubmit=\"return confirm('¿Reactivar TODAS las ventas listadas y retirar sus ajustes de kardex?')\">"
+            . csrf_field()
+            . "<button type=\"submit\">Ejecutar reactivación</button></form>",
+            200
+        )->header('Content-Type', 'text/html');
+    })->middleware('can:kardex');
+
+    // Paso 2: ejecutar (POST con CSRF desde la vista previa). Queda en el log
+    // con el usuario logueado.
+    Route::post('/ventas-reactivar/run', function () {
+        Artisan::call('ventas:reactivar-sin-reposicion', [
+            '--force' => true,
+            '--user'  => auth()->id(),
+        ]);
+
+        return response('<pre>' . e(Artisan::output()) . '</pre>', 200)
+            ->header('Content-Type', 'text/html');
+    })->middleware('can:kardex');
+    //End Reactivar ventas
+
 });
 
 

@@ -23,6 +23,24 @@ class Document extends Model
      */
     const SERIES_NOTA_CREDITO = ['FC', 'BC'];
 
+    /**
+     * Comprobantes de venta que siguen vigentes: no son notas de credito y no
+     * fueron dados de baja, rechazados por SUNAT ni cubiertos por una nota de
+     * credito. Es el criterio unico para decidir si una venta "ya tiene
+     * comprobante" o puede emitirse uno nuevo.
+     */
+    public function scopeVigente($query)
+    {
+        // Hay historicos con status 'pendiente' pero status_sunat 'anulado', y
+        // un 'cancelado' en ambas columnas: se descartan por cualquiera de las dos.
+        return $query->whereNull('affected_document_id')
+            ->whereNotIn('status', ['anulado', 'nota_credito', 'cancelado'])
+            ->where(function ($q) {
+                $q->whereNull('status_sunat')
+                    ->orWhereNotIn('status_sunat', ['rechazado', 'anulado', 'cancelado']);
+            });
+    }
+
     public function esNotaCredito(): bool
     {
         return self::serieEsNotaCredito($this->serie);

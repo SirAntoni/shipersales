@@ -143,9 +143,14 @@ class TableSales extends Component
             'motiveDetail' => 'detalle'
         ]);
 
-        $this->destroy($this->saleDeleteSelect);
+        $anulada = $this->destroy($this->saleDeleteSelect);
         $this->sectionDelete = false;
         $this->saleDeleteSelect = null;
+
+        if (! $anulada) {
+            $this->dispatch('errorNotRoute', ['label' => 'La venta ya estaba anulada: no se registró el motivo.']);
+            return;
+        }
 
         $this->dispatch('successNotRoute', ['label' => 'Venta anulada con éxito.']);
 
@@ -182,10 +187,13 @@ class TableSales extends Component
 
         $sale = Sale::find($id);
 
-        // Si el comprobante ya tiene nota de crédito, la NC ya repuso el stock
-        $stockYaRepuesto = \App\Models\Document::where('sale_id', $sale->id)
-            ->where('status', 'nota_credito')
-            ->exists();
+        // Pudo anularse por otra vía (otro usuario, una NC) con el modal abierto
+        if (! $sale || (int) $sale->status === Sale::SALE_CANCELED) {
+            return false;
+        }
+
+        // Si una nota de crédito ya repuso el stock, no se repone dos veces
+        $stockYaRepuesto = $sale->stockRepuestoPorNotaCredito();
 
         if (!$stockYaRepuesto) {
             DB::transaction(function () use ($sale) {
@@ -212,24 +220,33 @@ class TableSales extends Component
             'deletion_reason' => ($this->motive == 'Otros') ? $this->motive . ' - ' . $this->motiveDetail : $this->motive
         ]);
         $this->render();
+
+        return true;
     }
 
     public function delete($id)
     {
-        // Comprobante original de la venta (las NC tienen affected_document_id)
-        $document = \App\Models\Document::where('sale_id', $id)
-            ->whereNull('affected_document_id')
-            ->orderBy('id')
+        $sale = Sale::find($id);
+
+        if (! $sale || (int) $sale->status === Sale::SALE_CANCELED) {
+            $this->dispatch('errorNotRoute', ['label' => 'Esta venta ya está anulada.']);
+            return;
+        }
+
+        // Comprobante vigente de la venta: uno anulado, rechazado o cubierto por
+        // nota de crédito ya no cuenta (la venta pudo recibir otro después)
+        $document = \App\Models\Document::vigente()
+            ->where('sale_id', $id)
+            ->where('status_sunat', 'aceptado')
+            ->orderByDesc('id')
             ->first();
 
         // Si hay comprobante electrónico vigente, lo correcto ante SUNAT es
-        // emitir una nota de crédito (que repone stock y anula la venta).
-        if ($document
-            && $document->status_sunat == 'aceptado'
-            && !in_array($document->status, ['anulado', 'nota_credito'])) {
+        // emitir una nota de crédito reponiendo el stock (eso anula la venta).
+        if ($document) {
 
             $this->dispatch('questionDeleteWithDocument', [
-                'label' => "Esta venta tiene el comprobante {$document->serie}-{$document->correlative} emitido y aceptado por SUNAT. Lo correcto es emitir una nota de crédito: repone el stock y anula la venta.",
+                'label' => "Esta venta tiene el comprobante {$document->serie}-{$document->correlative} emitido y aceptado por SUNAT. Lo correcto es emitir una nota de crédito y reponer el stock: eso anula la venta. Si no repone el stock, la venta seguirá activa.",
                 'id'    => $id,
                 'ncUrl' => route('documents.credit-note.blade.php', $document->id),
             ]);
@@ -326,7 +343,13 @@ class TableSales extends Component
                 'contact:id,name',
                 'paymentMethod:id,name'
             ])
-            ->whereNotIn('status', [Sale::SALE_CANCELED, Sale::SALE_RETURN])
+            // Activas más las anuladas por un comprobante (baja o nota de crédito),
+            // marcadas, para no perder de vista esa venta. Las anuladas a mano
+            // quedan en /canceled y las devoluciones en su propio módulo.
+            ->where(function ($q) {
+                $q->whereNotIn('status', [Sale::SALE_CANCELED, Sale::SALE_RETURN])
+                    ->orWhere(fn ($w) => $w->anuladaPorComprobante());
+            })
             ->when($this->search, function ($query, $search) {
                 $terms = collect(preg_split('/[\s\+]+/', trim($search)))
                     ->filter()
@@ -359,13 +382,15 @@ class TableSales extends Component
                     Carbon::parse($this->endDate)->endOfDay(),
                 ]);
             })
-            ->when($this->status, function ($query) {
-                $query->where('sales.status', $this->status);
+            // "0" (anuladas) es falsy: no basta con when($this->status)
+            ->when($this->status !== null && $this->status !== '', function ($query) {
+                $query->where('sales.status', (int) $this->status);
             })
             ->orderByDesc('sales.id')
             ->paginate($limit);
 
         $statusVariants = [
+            Sale::SALE_CANCELED    => 'danger',
             Sale::SALE_APPROVED    => 'success',
             Sale::SALE_OBSERVATION => 'warning',
             Sale::SALE_SQUARE      => 'primary',
@@ -393,6 +418,11 @@ class TableSales extends Component
 
             if ($sale->observations) {
                 $sale->htmlDetails .= "<br><p>Observaciones: " . e($sale->observations) . "</p><br>";
+            }
+
+            if ((int) $sale->status === Sale::SALE_CANCELED) {
+                $sale->htmlDetails .= "<br><p><strong>ANULADA</strong> el " . e((string) $sale->deletion_date)
+                    . ": " . e($sale->deletion_reason ?: 'sin motivo registrado') . "</p><br>";
             }
         }
 

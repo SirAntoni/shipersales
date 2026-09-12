@@ -124,12 +124,18 @@ class NewDocument extends Component
         // MySQL lo interpretan distinto (mm/dd vs basura); así BD y XML coinciden
         $this->date = Carbon::parse($this->date)->format('Y-m-d');
 
-        // La venta no debe tener ya un comprobante vigente (evita doble emisión)
-        $existente = Document::where('sale_id', $this->id)
-            ->whereNull('affected_document_id')
-            ->where('status', '!=', 'anulado')
-            ->where('status_sunat', '!=', 'rechazado')
-            ->first();
+        // Una venta anulada ya no es una operación: no genera comprobantes
+        $venta = Sale::find($this->id);
+
+        if (! $venta || (int) $venta->status === Sale::SALE_CANCELED) {
+            $this->dispatch('error', ['label' => 'Esta venta está anulada: no se puede emitir un comprobante.']);
+            return;
+        }
+
+        // La venta no debe tener ya un comprobante vigente (evita doble emisión).
+        // Uno anulado, rechazado o cubierto por nota de crédito no cuenta: la
+        // venta sigue activa y el comprobante se reemplaza por el nuevo.
+        $existente = Document::vigente()->where('sale_id', $this->id)->first();
 
         if ($existente) {
             $this->dispatch('error', ['label' => "Esta venta ya tiene el comprobante {$existente->serie}-{$existente->correlative} (estado SUNAT: {$existente->status_sunat}). Anúlelo antes de emitir uno nuevo."]);

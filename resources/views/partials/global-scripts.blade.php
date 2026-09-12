@@ -340,7 +340,7 @@
             if (doc['preguntarReposicion']) {
                 Swal.fire({
                     title: 'Reposición de stock',
-                    text: '¿Desea reponer el stock de los productos de la boleta al inventario?',
+                    text: '¿Desea reponer el stock de los productos de la boleta al inventario? Si repone, la venta quedará anulada. Si no repone, la venta se mantiene activa y podrá emitir un comprobante nuevo.',
                     icon: 'question',
                     confirmButtonText: 'Sí, reponer stock',
                     confirmButtonColor: "#3085d6",

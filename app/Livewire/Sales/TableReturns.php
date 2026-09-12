@@ -44,20 +44,20 @@ class TableReturns extends Component
 
     public function confirmCancel($id)
     {
-        // Comprobante original de la venta (las NC tienen affected_document_id)
-        $document = \App\Models\Document::where('sale_id', $id)
-            ->whereNull('affected_document_id')
-            ->orderBy('id')
+        // Comprobante vigente de la venta: uno anulado, rechazado o cubierto por
+        // nota de crédito ya no cuenta (la venta pudo recibir otro después)
+        $document = \App\Models\Document::vigente()
+            ->where('sale_id', $id)
+            ->where('status_sunat', 'aceptado')
+            ->orderByDesc('id')
             ->first();
 
         // Si hay comprobante electrónico vigente, lo correcto ante SUNAT es
-        // emitir una nota de crédito (que repone stock y cierra la venta).
-        if ($document
-            && $document->status_sunat == 'aceptado'
-            && !in_array($document->status, ['anulado', 'nota_credito'])) {
+        // emitir una nota de crédito reponiendo el stock (eso cierra la venta).
+        if ($document) {
 
             $this->dispatch('questionReturnWithDocument', [
-                'label' => "Esta venta tiene el comprobante {$document->serie}-{$document->correlative} emitido y aceptado por SUNAT. Lo correcto es emitir una nota de crédito: repone el stock y anula la venta.",
+                'label' => "Esta venta tiene el comprobante {$document->serie}-{$document->correlative} emitido y aceptado por SUNAT. Lo correcto es emitir una nota de crédito y reponer el stock: eso anula la venta. Si no repone el stock, la venta seguirá activa.",
                 'id' => $id,
                 'ncUrl' => route('documents.credit-note.blade.php', $document->id),
             ]);
@@ -81,10 +81,9 @@ class TableReturns extends Component
             return;
         }
 
-        // Si el comprobante ya tiene nota de crédito, la NC ya repuso el stock
-        $stockYaRepuesto = \App\Models\Document::where('sale_id', $sale->id)
-            ->where('status', 'nota_credito')
-            ->exists();
+        // Si una nota de crédito ya repuso el stock, no se repone dos veces.
+        // Una NC sin reposición no cuenta: la mercadería sigue afuera.
+        $stockYaRepuesto = $sale->stockRepuestoPorNotaCredito();
 
         if (!$stockYaRepuesto) {
             DB::transaction(function () use ($sale) {

@@ -69,10 +69,13 @@ class Commissions extends Component
 
         $sale = Sale::find($id);
 
-        // Si el comprobante ya tiene nota de crédito, la NC ya repuso el stock
-        $stockYaRepuesto = \App\Models\Document::where('sale_id', $sale->id)
-            ->where('status', 'nota_credito')
-            ->exists();
+        if (! $sale || (int) $sale->status === Sale::SALE_CANCELED) {
+            return;
+        }
+
+        // Si una nota de crédito ya repuso el stock, no se repone dos veces.
+        // Una NC sin reposición no cuenta: la mercadería sigue afuera.
+        $stockYaRepuesto = $sale->stockRepuestoPorNotaCredito();
 
         if (!$stockYaRepuesto) {
             DB::transaction(function () use ($sale) {

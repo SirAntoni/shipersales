@@ -4,7 +4,6 @@ namespace App\Livewire\Documents;
 
 use App\Models\Article;
 use App\Models\Document;
-use App\Models\InventoryAdjustment;
 use App\Models\Sale;
 use App\Services\PendingDocumentsService;
 use App\Services\SunatService;
@@ -141,14 +140,10 @@ class TableDocuments extends Component
                 'status_sunat' => 'anulado',
             ]);
 
-            $ventaAnulada = $this->anularVentaPorBaja($document, $reponerStock);
+            $efecto = $this->anularVentaPorBaja($document, $reponerStock);
 
-            $label = 'El comprobante fue anulado. Como SUNAT no lo había aceptado, no fue necesario comunicar la baja.';
-            if ($ventaAnulada) {
-                $label .= $reponerStock
-                    ? ' La venta asociada fue anulada y el stock repuesto.'
-                    : ' La venta asociada fue anulada sin reponer stock, según lo indicado.';
-            }
+            $label = 'El comprobante fue anulado. Como SUNAT no lo había aceptado, no fue necesario comunicar la baja.'
+                . $this->mensajeVenta($efecto);
 
             $this->dispatch('successNotRoute', ['label' => $label]);
             return;
@@ -330,55 +325,51 @@ class TableDocuments extends Component
             return;
         }
 
-        // Comprobante de venta dado de baja: anular también la venta y reponer stock
-        $ventaAnulada = $this->anularVentaPorBaja($document, $reponerStock);
+        // Comprobante de venta dado de baja: lo que pasa con la venta depende
+        // de si se repuso stock (ver anularVentaPorBaja)
+        $efecto = $this->anularVentaPorBaja($document, $reponerStock);
 
-        $label = 'El comprobante fue anulado y la baja fue aceptada por SUNAT.';
-        if ($ventaAnulada) {
-            $label .= $reponerStock
-                ? ' La venta asociada fue anulada y el stock repuesto.'
-                : ' La venta asociada fue anulada sin reponer stock, según lo indicado.';
-        }
+        $label = 'El comprobante fue anulado y la baja fue aceptada por SUNAT.'
+            . $this->mensajeVenta($efecto);
 
         $this->dispatch('successNotRoute', ['label' => $label]);
     }
 
     /**
-     * La baja de un comprobante de venta anula también la venta asociada y
-     * repone su stock, salvo que la venta ya esté anulada, una nota de
-     * crédito ya lo haya repuesto, o el usuario pidiera no reponerlo (opción
-     * solo para boletas); en ese último caso se registra un ajuste negativo
-     * en el kardex para que siga cuadrando con el almacén. Devuelve true si
-     * anuló la venta.
+     * Efecto de la baja de un comprobante sobre su venta.
+     *
+     * Con reposición de stock la mercadería volvió al almacén: la venta se
+     * anula y su stock se repone. Sin reposición (opción solo para boletas)
+     * la mercadería se quedó con el cliente: la venta sigue activa tal cual,
+     * su salida sigue contando en el kardex y puede emitirse un comprobante
+     * nuevo. No se toca la venta si ya estaba anulada.
+     *
+     * Devuelve 'anulada', 'activa' o null (sin venta o ya anulada).
      */
-    private function anularVentaPorBaja(Document $document, bool $reponerStock = true): bool
+    private function anularVentaPorBaja(Document $document, bool $reponerStock = true): ?string
     {
         // Las notas de crédito tienen su propia reversión en finishAnulacion
-        if (str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC')) {
-            return false;
+        if ($document->esNotaCredito()) {
+            return null;
         }
 
         $sale = Sale::with('saleDetails')->find($document->sale_id);
 
         if (!$sale || (int) $sale->status === Sale::SALE_CANCELED) {
-            return false;
+            return null;
         }
 
-        $stockYaRepuesto = Document::where('sale_id', $sale->id)
-            ->where('status', 'nota_credito')
-            ->exists();
+        if (! $reponerStock) {
+            return 'activa';
+        }
 
-        DB::transaction(function () use ($sale, $document, $stockYaRepuesto, $reponerStock) {
+        // Una nota de crédito que sí repuso stock ya devolvió estas unidades
+        $stockYaRepuesto = $sale->stockRepuestoPorNotaCredito();
+
+        DB::transaction(function () use ($sale, $document, $stockYaRepuesto) {
             if (!$stockYaRepuesto) {
-                if ($reponerStock) {
-                    foreach ($sale->saleDetails as $item) {
-                        Article::find($item->article_id)?->increment('stock', (int) $item->quantity);
-                    }
-                } else {
-                    InventoryAdjustment::registrarSalidaSinReposicion(
-                        $sale,
-                        "Baja del comprobante {$document->serie}-{$document->correlative} sin reposición de stock"
-                    );
+                foreach ($sale->saleDetails as $item) {
+                    Article::find($item->article_id)?->increment('stock', (int) $item->quantity);
                 }
             }
 
@@ -389,7 +380,17 @@ class TableDocuments extends Component
             ]);
         });
 
-        return true;
+        return 'anulada';
+    }
+
+    /** Texto para el usuario sobre qué pasó con la venta tras la baja. */
+    private function mensajeVenta(?string $efecto): string
+    {
+        return match ($efecto) {
+            'anulada' => ' La venta asociada fue anulada y el stock repuesto.',
+            'activa'  => ' La venta se mantiene activa y el stock no se modificó: puede emitir un comprobante nuevo.',
+            default   => '',
+        };
     }
 
     /**

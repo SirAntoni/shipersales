@@ -165,6 +165,7 @@
                                     <option value="2">Completado</option>
                                     <option value="3">Observados</option>
                                     <option value="4">Cuadre</option>
+                                    <option value="0">Anuladas</option>
 
                                 </x-base.form-select>
                             </div>
@@ -251,6 +252,7 @@
                             <x-base.table.tbody>
                                 @if($sales->count() > 0 )
                                     @foreach ($sales as $sale)
+                                        @php $anulada = (int) $sale->status === \App\Models\Sale::SALE_CANCELED; @endphp
                                         <x-base.table.tr class="[&_td]:last:border-b-0 ">
                                             <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 text">
 
@@ -316,7 +318,7 @@
                                                 {{ $sale->paymentMethod->name }}
 
                                             </x-base.table.td-sale>
-                                            <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600">
+                                            <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 {{ $anulada ? 'line-through text-slate-400' : '' }}">
                                                 {{ $sale->number }}
                                             </x-base.table.td-sale>
 
@@ -344,6 +346,8 @@
                                                         <i class="text-white fa-solid fa-file-pdf"></i>
                                                     </x-base.tippy>
 
+                                                    {{-- Una venta anulada solo se consulta: sin etiqueta, edición ni más acciones --}}
+                                                    @if(! $anulada)
                                                     <x-base.tippy
                                                         as="x-base.button-sm"
                                                         variant="warning"
@@ -450,6 +454,10 @@
                                                             @endcan
                                                         </div>
                                                     </div>
+                                                    @else
+                                                        <span class="bg-danger text-white text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+                                                              title="{{ $sale->deletion_reason }}">Anulada</span>
+                                                    @endif
 
                                                 </div>
                                             </x-base.table.td>
