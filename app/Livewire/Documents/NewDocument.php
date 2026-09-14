@@ -149,9 +149,11 @@ class NewDocument extends Component
             return;
         }
 
-        // Factura solo a clientes con RUC (validar antes de llamar servicios externos)
-        if ($this->documentType == '1' && $client->document_type != 'RUC') {
-            $this->dispatch('error', ['label' => 'No puede emitir una factura a un cliente con un documento diferente a RUC.']);
+        // Factura solo a clientes con RUC válido: SUNAT rechaza con el error 2017
+        // cualquier receptor cuyo número no sea un RUC (validar antes de llamar
+        // servicios externos)
+        if ($this->documentType == '1' && ($motivo = $client->motivoNoFacturable()) !== null) {
+            $this->dispatch('error', ['label' => $motivo]);
             return;
         }
 

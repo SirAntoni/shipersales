@@ -237,8 +237,9 @@ class CreditNote extends Component
             }
         }
 
-        if (! $esBoleta && $client->document_type != 'RUC') {
-            $this->dispatch('error', ['label' => 'No puede emitir una factura a un cliente con un documento diferente a RUC.']);
+        // La NC de una factura también lleva receptor con RUC: mismo error 2017 si no es válido
+        if (! $esBoleta && ($motivo = $client->motivoNoFacturable()) !== null) {
+            $this->dispatch('error', ['label' => $motivo]);
             return;
         }
 

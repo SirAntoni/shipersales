@@ -184,6 +184,30 @@ Route::middleware(['auth'])->group(function () {
     })->middleware('can:kardex');
     //End Reactivar ventas
 
+    //Start Limpiar espacios en documentos y nombres de clientes (cPanel, sin terminal)
+    Route::get('/clientes-limpiar', function () {
+        Artisan::call('clientes:limpiar-documentos', ['--dry-run' => true]);
+        $out    = e(Artisan::output());
+        $runUrl = url('/clientes-limpiar/run');
+
+        return response(
+            "<h3>Clientes: vista previa de limpieza (no se escribió nada)</h3>"
+            . "<pre>{$out}</pre>"
+            . "<form method=\"POST\" action=\"{$runUrl}\" onsubmit=\"return confirm('¿Limpiar TODOS los clientes listados?')\">"
+            . csrf_field()
+            . "<button type=\"submit\">Ejecutar limpieza</button></form>",
+            200
+        )->header('Content-Type', 'text/html');
+    })->middleware('can:clients');
+
+    Route::post('/clientes-limpiar/run', function () {
+        Artisan::call('clientes:limpiar-documentos', ['--force' => true, '--user' => auth()->id()]);
+
+        return response('<pre>' . e(Artisan::output()) . '</pre>', 200)
+            ->header('Content-Type', 'text/html');
+    })->middleware('can:clients');
+    //End Limpiar clientes
+
 });
 
 

@@ -46,6 +46,13 @@ class AddClient extends Component
         $this->dispatch('error', ['label' => $message]);
     }
 
+    /** Espacios, tabuladores y espacios duros pegados junto al dato rompen la validación y a SUNAT. */
+    private function limpiarCampos(): void
+    {
+        $this->document_number = Client::normalizarNumeroDocumento((string) $this->document_number);
+        $this->name            = Client::normalizarNombre((string) $this->name);
+    }
+
     public function mount()
     {
 
@@ -58,6 +65,8 @@ class AddClient extends Component
 
     public function searchDocument(MigoApiService $api)
     {
+        $this->limpiarCampos();
+
 
         $this->validate([
             'document_number' => 'required|numeric|min:3|unique:clients,document_number',
@@ -139,7 +148,13 @@ class AddClient extends Component
 
     public function save()
     {
+        $this->limpiarCampos();
         $this->validate();
+
+        // Un RUC mal escrito se detecta aquí y no como rechazo 2017 de SUNAT al facturar
+        if ($this->document_type === 'RUC' && ! Client::rucValido($this->document_number)) {
+            return $this->throwError('El RUC no es válido: debe tener 11 dígitos, empezar con 10, 15, 16, 17 o 20 y tener el dígito verificador correcto.');
+        }
         Client::create([
             'name' => $this->name,
             'document_number' => $this->document_number,
