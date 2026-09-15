@@ -222,11 +222,27 @@ class TableUsaPurchases extends Component
 
         if ($this->editingId) {
             $article = $this->articlesSelected[0] ?? null;
-            UsaPurchase::findOrFail($this->editingId)->update(array_merge($header, [
+            $record = UsaPurchase::findOrFail($this->editingId);
+            $nuevaCantidad = (int) ($article['quantity'] ?? 1);
+
+            // Lo ya importado esta en el stock: ni menos cantidad ni otro articulo
+            if ($nuevaCantidad < (int) $record->imported_quantity) {
+                $this->dispatch('errorNotRoute', ['label' => "Este registro ya tiene {$record->imported_quantity} unidad(es) importadas al stock: la cantidad no puede ser menor."]);
+                return;
+            }
+
+            if ((int) $record->imported_quantity > 0 && (int) ($article['id'] ?? 0) !== (int) $record->article_id) {
+                $this->dispatch('errorNotRoute', ['label' => "Este registro ya importó {$record->imported_quantity} unidad(es) de su artículo al stock: no se puede cambiar el artículo."]);
+                return;
+            }
+
+            $record->update(array_merge($header, [
                 'description' => $article['title'] ?? '',
                 'sku' => $article['sku'] ?? null,
                 'article_id' => $article['id'] ?? null,
-                'quantity' => (int) ($article['quantity'] ?? 1),
+                'quantity' => $nuevaCantidad,
+                // Subir la cantidad de un registro completo lo reabre con saldo
+                'processed' => (int) $record->imported_quantity >= $nuevaCantidad,
             ]));
             $msg = 'Registro actualizado.';
         } else {
@@ -283,7 +299,14 @@ class TableUsaPurchases extends Component
     #[On('confirmDeleteUsa')]
     public function confirmDeleteUsa($id)
     {
-        UsaPurchase::findOrFail($id)->delete();
+        $record = UsaPurchase::findOrFail($id);
+
+        if ((int) $record->imported_quantity > 0) {
+            $this->dispatch('errorNotRoute', ['label' => "Este registro ya importó {$record->imported_quantity} unidad(es) al stock (compra #{$record->purchase_id}): no se puede eliminar."]);
+            return;
+        }
+
+        $record->delete();
         $this->dispatch('successNotRoute', ['label' => 'Registro eliminado.']);
     }
 
@@ -364,17 +387,13 @@ class TableUsaPurchases extends Component
             ->whereIn('id', $this->selectedIds)
             ->get();
 
-        $valid = $records->filter(fn($r) =>
-            !$r->processed
-            && $r->article_id
-            && in_array($r->status, [UsaPurchase::STATUS_DELIVERED, UsaPurchase::STATUS_PARTIAL])
-        );
+        $valid = $records->filter(fn($r) => $r->esImportable());
 
         $this->bulkDiscardedCount = $records->count() - $valid->count();
 
         if ($valid->isEmpty()) {
             $this->dispatch('errorNotRoute', [
-                'label' => 'Ninguno de los registros seleccionados puede importarse (deben estar en ENTREGADO/PARCIAL, sin procesar y con artículo vinculado).'
+                'label' => 'Ninguno de los registros seleccionados puede importarse (deben estar en ENTREGADO/PARCIAL, con saldo por importar y con artículo vinculado).'
             ]);
             return;
         }
@@ -408,7 +427,12 @@ class TableUsaPurchases extends Component
                 'brand_id' => $r->article?->brand_id,
                 'sku' => $r->article?->sku ?? $r->sku,
                 'title' => $r->article?->title ?? $r->description,
-                'quantity' => (int) $r->quantity ?: 1,
+                // Se propone el saldo; si llego menos, el usuario baja la cantidad
+                // y la fila queda abierta con lo que falte
+                'quantity' => $r->pendingQuantity(),
+                'pending' => $r->pendingQuantity(),
+                'ordered' => (int) $r->quantity,
+                'imported' => (int) $r->imported_quantity,
                 'price' => (float) ($r->article?->purchase_price ?? 0),
             ];
         }
@@ -474,6 +498,13 @@ class TableUsaPurchases extends Component
                     $this->dispatch('errorNotRoute', ['label' => "Precio inválido en {$label} ({$item['sku']})."]);
                     return;
                 }
+
+                // El saldo se relee de la BD: el modal pudo quedar abierto un rato
+                $pendiente = UsaPurchase::find($item['usa_purchase_id'])?->pendingQuantity() ?? 0;
+                if ((int) $item['quantity'] > $pendiente) {
+                    $this->dispatch('errorNotRoute', ['label' => "En {$label} ({$item['sku']}) solo quedan {$pendiente} unidad(es) por importar: corrige la cantidad."]);
+                    return;
+                }
             }
         }
 
@@ -481,6 +512,7 @@ class TableUsaPurchases extends Component
         $editedCount = 0;
         $detailsCount = 0;
 
+        try {
         DB::transaction(function () use (&$newCount, &$editedCount, &$detailsCount) {
             foreach ($this->bulkGroups as $group) {
                 if ($group['is_new']) {
@@ -508,6 +540,12 @@ class TableUsaPurchases extends Component
                     $qty = (int) $item['quantity'];
                     $subtotal = $price * $qty;
 
+                    // Bloqueo por fila: dos importaciones a la vez no pueden pasarse del saldo
+                    $usa = UsaPurchase::lockForUpdate()->find($item['usa_purchase_id']);
+                    if (! $usa || $qty > $usa->pendingQuantity()) {
+                        throw new \RuntimeException("El registro #{$item['usa_purchase_id']} ({$item['sku']}) ya no tiene {$qty} unidad(es) pendientes por importar.");
+                    }
+
                     $purchase->purchaseDetails()->create([
                         'article_id' => $item['article_id'],
                         'category_id' => $item['category_id'],
@@ -526,15 +564,17 @@ class TableUsaPurchases extends Component
                         $article->update(['provider_id' => $purchase->provider_id]);
                     }
 
-                    UsaPurchase::where('id', $item['usa_purchase_id'])->update([
-                        'processed' => true,
-                        'purchase_id' => $purchase->id,
-                    ]);
+                    // Acumula lo importado; queda "procesada" solo al completar el pedido
+                    $usa->registrarImportacion($qty, $purchase->id);
                 }
 
                 $this->recalculatePurchaseTotals($purchase);
             }
         });
+        } catch (\RuntimeException $e) {
+            $this->dispatch('errorNotRoute', ['label' => $e->getMessage()]);
+            return;
+        }
 
         $this->resetBulkImport();
         $this->clearSelection();
@@ -580,7 +620,7 @@ class TableUsaPurchases extends Component
     private function getCurrentPageSelectableIds(): array
     {
         return $this->buildBaseQuery()
-            ->where('processed', false)
+            ->whereColumn('imported_quantity', '<', 'quantity')
             ->orderByRaw($this->orderByExpression())
             ->orderByDesc('id')
             ->forPage($this->getPage(), 20)
@@ -680,10 +720,11 @@ class TableUsaPurchases extends Component
         $totalPurchased = (clone $summaryQuery)->where('status', 'COMPRADO')->count();
         $totalPending = (clone $summaryQuery)->whereIn('status', ['PARCIAL', 'NO LLEGO'])->count();
         $totalProcessed = (clone $summaryQuery)->where('processed', true)->count();
+        $totalToImport = (clone $summaryQuery)->conSaldoPorImportar()->count();
 
         return view('livewire.purchases.table-usa-purchases', compact(
             'records', 'years', 'stores',
-            'totalRecords', 'totalDelivered', 'totalPurchased', 'totalPending', 'totalProcessed'
+            'totalRecords', 'totalDelivered', 'totalPurchased', 'totalPending', 'totalProcessed', 'totalToImport'
         ));
     }
 }

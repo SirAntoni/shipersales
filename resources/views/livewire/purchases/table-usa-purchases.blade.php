@@ -23,7 +23,8 @@
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 text-green-700 px-3 py-1 font-medium">{{ $totalDelivered }} entregados</span>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-700 px-3 py-1 font-medium">{{ $totalPurchased }} comprados</span>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 text-red-700 px-3 py-1 font-medium">{{ $totalPending }} parcial/no llegó</span>
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 px-3 py-1 font-medium">{{ $totalProcessed }} procesados</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-orange-100 text-orange-700 px-3 py-1 font-medium">{{ $totalToImport }} por importar</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 px-3 py-1 font-medium">{{ $totalProcessed }} importados</span>
             </div>
 
             <div class="mt-3.5">
@@ -186,8 +187,18 @@
                                         <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600 text-xs">
                                             {{ \Illuminate\Support\Str::limit($record->tracking, 20) }}
                                         </x-base.table.td-sale>
-                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center">
-                                            {{ $record->quantity }}
+                                        <x-base.table.td class="border-dashed dark:bg-darkmode-600 text-center whitespace-nowrap">
+                                            @if($record->imported_quantity > 0 && $record->pendingQuantity() > 0)
+                                                {{-- Importación parcial: "importado/pedido" en la misma línea, detalle en el tooltip --}}
+                                                <x-base.tippy
+                                                    as="span"
+                                                    content="{{ $record->imported_quantity }} importado · {{ $record->pendingQuantity() }} pendiente"
+                                                    data-original-title="{{ $record->imported_quantity }} importado · {{ $record->pendingQuantity() }} pendiente"
+                                                    class="cursor-help font-medium text-orange-700 underline decoration-dotted decoration-slate-400 underline-offset-2"
+                                                >{{ $record->imported_quantity }}/{{ $record->quantity }}</x-base.tippy>
+                                            @else
+                                                {{ $record->quantity }}
+                                            @endif
                                         </x-base.table.td>
                                         <x-base.table.td-sale class="border-dashed dark:bg-darkmode-600">
                                             @if(!empty($record->description))
@@ -220,7 +231,9 @@
                                                 {{ $record->status }}
                                             </span>
                                             @if($record->processed)
-                                                <i class="fa-solid fa-check-circle text-primary ml-1" title="Procesado"></i>
+                                                <i class="fa-solid fa-check-circle text-primary ml-1" title="Importado completo al stock"></i>
+                                            @elseif($record->imported_quantity > 0)
+                                                <i class="fa-solid fa-hourglass-half text-orange-700 ml-1" title="Importación parcial: faltan {{ $record->pendingQuantity() }}"></i>
                                             @endif
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
@@ -228,7 +241,7 @@
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                             <div class="flex items-center justify-center gap-1">
-                                                @if(!$record->processed && in_array($record->status, ['ENTREGADO','PARCIAL']) && $record->article_id)
+                                                @if($record->esImportable())
                                                     <x-base.tippy
                                                         as="x-base.button-sm"
                                                         variant="success"
@@ -478,7 +491,7 @@
                 @if($bulkDiscardedCount > 0)
                     <div class="mb-3 px-3 py-2 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-800">
                         <i class="fa-solid fa-triangle-exclamation mr-1"></i>
-                        Se descartaron {{ $bulkDiscardedCount }} registro(s) por estar procesados, no entregados o sin artículo.
+                        Se descartaron {{ $bulkDiscardedCount }} registro(s) por estar ya importados por completo, no entregados o sin artículo.
                     </div>
                 @endif
 
@@ -580,9 +593,14 @@
                                             <td class="px-3 py-2">
                                                 <span class="text-xs text-slate-500">[{{ $item['sku'] ?? '—' }}]</span>
                                                 {{ $item['title'] }}
+                                                @if(($item['imported'] ?? 0) > 0)
+                                                    {{-- Llegada parcial anterior: el saldo va aquí para no alterar la altura de los campos --}}
+                                                    <span class="text-xs text-orange-700 whitespace-nowrap">({{ $item['imported'] }} ya importado, quedan {{ $item['pending'] }})</span>
+                                                @endif
                                             </td>
                                             <td class="px-3 py-2">
-                                                <input type="number" min="1"
+                                                <input type="number" min="1" max="{{ $item['pending'] ?? '' }}"
+                                                    title="Máximo {{ $item['pending'] ?? '' }}"
                                                     class="w-full text-center text-sm font-medium border border-slate-200 rounded-md px-2 py-1"
                                                     wire:model.live="bulkGroups.{{ $gIndex }}.items.{{ $iIndex }}.quantity" />
                                             </td>
