@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Inventory;
 
+use App\Exports\InventoryCountsExport;
 use App\Models\Article;
 use App\Models\InventoryAdjustment;
 use App\Models\InventoryCount;
@@ -11,6 +12,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Maatwebsite\Excel\Facades\Excel;
 
 class Index extends Component
 {
@@ -416,6 +418,38 @@ class Index extends Component
             ]);
             $this->flash = 'Error al actualizar almacén: ' . $e->getMessage();
         }
+    }
+
+    /**
+     * Excel de los conteos guardados. Sin rango elegido se exporta la fecha
+     * que esta en pantalla; el rango llega del segundo litepicker de la vista.
+     */
+    public ?string $exportStart = null;
+    public ?string $exportEnd = null;
+
+    public function exportar()
+    {
+        $desde = $this->exportStart ?: $this->date;
+        $hasta = $this->exportEnd ?: $desde;
+
+        if ($hasta < $desde) {
+            [$desde, $hasta] = [$hasta, $desde];
+        }
+
+        // Un Excel vacio confunde: mejor avisar que ese dia o rango no tiene conteos
+        if (! InventoryCount::whereBetween('counted_date', [$desde, $hasta])->exists()) {
+            $periodo = $desde === $hasta
+                ? 'el ' . Carbon::parse($desde)->format('d/m/Y')
+                : 'entre el ' . Carbon::parse($desde)->format('d/m/Y') . ' y el ' . Carbon::parse($hasta)->format('d/m/Y');
+
+            $this->dispatch('error', ['label' => "No hay conteos guardados {$periodo}. Elige otra fecha o rango."]);
+            return;
+        }
+
+        // Descarga directa desde Livewire: sin pestaña nueva ni bloqueo de emergentes
+        $nombre = $desde === $hasta ? $desde : "{$desde}-al-{$hasta}";
+
+        return Excel::download(new InventoryCountsExport($desde, $hasta), "reporte-inventario-{$nombre}.xlsx");
     }
 
     public function render()

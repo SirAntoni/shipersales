@@ -115,13 +115,38 @@
                         </div>
 
                         <div>
-                            <x-base.form-input
-                                class="rounded-[0.5rem] sm:w-64"
-                                type="text"
-                                wire:model.defer="note"
-                                placeholder="Nota opcional para conteos…"
-                                :disabled="!$editing"
-                            />
+                            <div class="relative mr-2">
+                                <x-base.form-input
+                                    class="rounded-[0.5rem] sm:w-64"
+                                    type="text"
+                                    wire:model.defer="note"
+                                    placeholder="Nota opcional para conteos…"
+                                    :disabled="!$editing"
+                                />
+                            </div>
+                        </div>
+
+                        {{-- Excel de conteos: un dia o un rango; vacio = la fecha en pantalla --}}
+                        <div>
+                            <div class="relative mr-2">
+                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 text-slate-500 fa-solid fa-calendar-days"></i>
+                                <x-base.litepicker
+                                    id="datepicker-export"
+                                    class="rounded-[0.5rem] pl-9 sm:w-64"
+                                    placeholder="Rango a exportar (opcional)"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <x-base.tippy
+                                as="x-base.button"
+                                variant="outline-primary"
+                                content="Descargar en Excel los conteos guardados del rango elegido o, si no eliges rango, de la fecha en pantalla"
+                                wire:click="exportar"
+                            >
+                                <i class="fa-solid fa-file-excel mr-1"></i>
+                                Exportar Excel
+                            </x-base.tippy>
                         </div>
                     </div>
 
@@ -248,6 +273,21 @@
 
         pickerFilter.on('selected', (startDate) => {
             @this.set('date', startDate.format('YYYY-MM-DD'));
+        });
+
+        // Rango del Excel: sin minDate, hay conteos guardados desde marzo
+        const pickerExport = new Litepicker({
+            element: document.getElementById('datepicker-export'),
+            autoApply: false,
+            singleMode: false,
+            numberOfColumns: 2,
+            numberOfMonths: 2,
+            dropdowns: { minYear: 2026, maxYear: null, months: true, years: true },
+        });
+
+        pickerExport.on('selected', (startDate, endDate) => {
+            @this.set('exportStart', startDate.format('YYYY-MM-DD'));
+            @this.set('exportEnd', endDate.format('YYYY-MM-DD'));
         });
 
         // ===== Cronómetro =====

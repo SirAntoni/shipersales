@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\DocumentsExport;
+use App\Exports\InventoryCountsExport;
 use App\Exports\ReportArticlesExport;
 use App\Exports\ReportOnDemandProductsExport;
 use App\Exports\ReportCommissionExport;
@@ -113,5 +114,23 @@ class ReportController extends Controller
             'reporte-comprobantes-'. $periodo .'.xlsx'
         );
 
+    }
+
+    /** Conteos fisicos de /inventory para una fecha (inicio = fin) o un rango. */
+    public function inventory(Request $request){
+
+        $datos = $request->validate([
+            'startDate' => ['required', 'date_format:Y-m-d'],
+            'endDate'   => ['required', 'date_format:Y-m-d', 'after_or_equal:startDate'],
+        ]);
+
+        $periodo = $datos['startDate'] === $datos['endDate']
+            ? $datos['startDate']
+            : $datos['startDate'] . '-al-' . $datos['endDate'];
+
+        return Excel::download(
+            new InventoryCountsExport($datos['startDate'], $datos['endDate']),
+            'reporte-inventario-' . $periodo . '.xlsx'
+        );
     }
 }

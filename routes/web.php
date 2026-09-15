@@ -86,6 +86,7 @@ Route::middleware(['auth'])->group(function () {
     // Bajo el prefijo reports/ a proposito: documents/export chocaria con
     // documents/{document} del resource declarado arriba.
     Route::get('reports/documents/export', [ReportController::class, 'documents'])->name('documents.export')->middleware('can:documents');
+    Route::get('reports/inventory/export', [ReportController::class, 'inventory'])->name('reports.inventory.export')->middleware('can:store');
     Route::get('kardex', [KardexController::class,'index'])->name('kardex')->middleware('can:kardex');
     Route::get('pdf/{id}', [SaleController::class,'pdf'])->name('pdf.view');
     Route::get('pdf-v2/{id}', [SaleController::class,'pdfV2'])->name('pdf.v2');
