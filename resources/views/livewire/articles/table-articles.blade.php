@@ -1,124 +1,104 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            {{-- Encabezado: botones del mismo ancho, 2x2 hasta lg (celular con etiquetas cortas) y en una fila desde lg;
+                 si falta "Nuevo" por permisos, el último botón impar ocupa la fila completa --}}
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Articulos
                 </div>
 
-                    <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
-                        <x-base.button
-                            class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
-                            variant="primary"
-                            wire:click="refresh()"
-                        >
-                            <div class="px-2"><i class="fa-solid fa-arrows-rotate"></i></div>
-                            refrescar
-                        </x-base.button>
-                        @can('articles.create')
-                        <x-base.button
-                            class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
-                            variant="primary"
-                            onclick="window.location.href='{{ route('articles.create') }}'"
-                        >
-                            <div class="px-2"><i class="fa-solid fa-plus"></i></div>
-                            Nuevo articulo
-                        </x-base.button>
-                        @endcan
-                            <x-base.button
-                                class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
-                                variant="primary"
-                                wire:click="reportArticle"
-                            >
-                                <div class="px-2"><i class="fa-solid fa-file-excel"></i></div>
-                                Exportar Excel
-                            </x-base.button>
-                            <x-base.button
-                                class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
-                                variant="primary"
-                                x-on:click="$dispatch('open-import-modal')"
-                            >
-                                <div class="px-2"><i class="fa-solid fa-file-import"></i></div>
-                                Importar Barcodes
-                            </x-base.button>
-                    </div>
-
-
+                <div class="grid grid-cols-2 gap-2 md:ml-auto md:shrink-0 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr lg:gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
+                    <x-base.button
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        wire:click="refresh()"
+                    >
+                        <div class="px-2"><i class="fa-solid fa-arrows-rotate"></i></div>
+                        Refrescar
+                    </x-base.button>
+                    @can('articles.create')
+                    <x-base.button
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        onclick="window.location.href='{{ route('articles.create') }}'"
+                    >
+                        <div class="px-2"><i class="fa-solid fa-plus"></i></div>
+                        <span class="sm:hidden">Nuevo</span>
+                        <span class="hidden sm:inline">Nuevo articulo</span>
+                    </x-base.button>
+                    @endcan
+                    <x-base.button
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        wire:click="reportArticle"
+                    >
+                        <div class="px-2"><i class="fa-solid fa-file-excel"></i></div>
+                        <span class="sm:hidden">Exportar</span>
+                        <span class="hidden sm:inline">Exportar Excel</span>
+                    </x-base.button>
+                    <x-base.button
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        x-on:click="$dispatch('open-import-modal')"
+                    >
+                        <div class="px-2"><i class="fa-solid fa-file-import"></i></div>
+                        <span class="sm:hidden">Importar</span>
+                        <span class="hidden sm:inline">Importar Barcodes</span>
+                    </x-base.button>
+                </div>
             </div>
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
-                    <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
-                        <div>
-                            <div class="relative mr-2">
-
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
-                                <x-base.form-input
-                                    class="rounded-[0.5rem] pl-9 sm:w-64"
-                                    type="text"
-                                    placeholder="Buscar..."
-                                    wire:model.live="search"
-                                />
-                                @if($search)
-                                    <i
-                                        class="absolute inset-y-0 right-0 z-10 my-auto mr-3.5 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-600 fa-solid fa-xmark"
-                                        wire:click="clearSearch"
-                                        title="Borrar búsqueda"
-                                    ></i>
-                                @endif
-                            </div>
-                        </div>
-                        <div>
-                            <div class="relative mr-2">
-
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
-                                <x-base.form-select
-                                    class="rounded-[0.5rem] pl-9 sm:w-64"
-                                    type="text"
-                                    placeholder="Buscar..."
-                                    wire:model.live="sortTitle"
-                                >
-                                    <option value="">Ordenar por Nombre</option>
-                                    <option value="asc">A-Z Articulo</option>
-                                    <option value="desc">Z-A Articulo</option>
-
-                                </x-base.form-select>
-                            </div>
+                    {{-- Filtros: el buscador crece con el ancho disponible y los ordenamientos se reparten el resto;
+                         en tablet el buscador va arriba y los 3 selects debajo en tercios; en celular, apilados --}}
+                    <div class="grid grid-cols-1 gap-3 p-5 md:grid-cols-3 lg:grid-cols-[minmax(16rem,2fr)_repeat(3,minmax(13rem,1fr))]">
+                        <div class="relative md:col-span-3 lg:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
+                            <x-base.form-input
+                                class="rounded-[0.5rem] pl-9 {{ $search ? 'pr-9' : '' }}"
+                                type="text"
+                                placeholder="Buscar nombre, SKU o código..."
+                                wire:model.live="search"
+                            />
+                            @if($search)
+                                <i
+                                    class="absolute inset-y-0 right-0 z-10 my-auto mr-3.5 h-4 w-4 cursor-pointer text-slate-400 hover:text-slate-600 fa-solid fa-xmark"
+                                    wire:click="clearSearch"
+                                    title="Borrar búsqueda"
+                                ></i>
+                            @endif
                         </div>
 
-                        <div>
-                            <div class="relative mr-2">
-
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
-                                <x-base.form-select
-                                    class="rounded-[0.5rem] pl-9 sm:w-64"
-                                    type="text"
-                                    placeholder="Buscar..."
-                                    wire:model.live="sortStock"
-                                >
-                                    <option value="">Ordenar por Stock</option>
-                                    <option value="asc">Ascendente</option>
-                                    <option value="desc">Descendente</option>
-
-                                </x-base.form-select>
-                            </div>
+                        <div class="relative">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-down-a-z"></i>
+                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="sortTitle">
+                                <option value="">Ordenar por Nombre</option>
+                                <option value="asc">A-Z Articulo</option>
+                                <option value="desc">Z-A Articulo</option>
+                            </x-base.form-select>
                         </div>
 
-                        <div>
-                            <div class="relative">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-percent"></i>
-                                <x-base.form-select class="rounded-[0.5rem] pl-9 sm:w-64"
-                                                    wire:model.live="sortMargin">
-                                    <option value="">Ordenar por Margen</option>
-                                    <option value="asc">Menor margen</option>
-                                    <option value="desc">Mayor margen</option>
-                                </x-base.form-select>
-                            </div>
+                        <div class="relative">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
+                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="sortStock">
+                                <option value="">Ordenar por Stock</option>
+                                <option value="asc">Ascendente</option>
+                                <option value="desc">Descendente</option>
+                            </x-base.form-select>
                         </div>
 
-
-
+                        <div class="relative">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-percent"></i>
+                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="sortMargin">
+                                <option value="">Ordenar por Margen</option>
+                                <option value="asc">Menor margen</option>
+                                <option value="desc">Mayor margen</option>
+                            </x-base.form-select>
+                        </div>
                     </div>
-                    <div class="overflow-auto xl:overflow-visible">
+                    {{-- Sin xl:overflow-visible: la tabla es más ancha que la tarjeta en laptops y se salía de la página --}}
+                    <div class="overflow-auto">
                         <x-base.table class="border-b border-slate-200/60">
                             <x-base.table.thead>
                                 <x-base.table.tr>

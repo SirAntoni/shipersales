@@ -1,11 +1,11 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Dashboard de Inventario
                 </div>
-                <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-3 md:ml-auto md:grid-cols-[repeat(3,11rem)]">
                     <div class="relative">
                         <x-base.lucide
                             class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] group-[.mode--light]:!text-slate-200"
@@ -13,7 +13,7 @@
                         />
                         <x-base.form-select
                             wire:model.live="userId"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200"
                         >
                             <option class="text-black" value="">Todos los usuarios</option>
                             @foreach($users as $u)
@@ -30,7 +30,7 @@
                         />
                         <x-base.form-select
                             wire:model.live="month"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200"
                         >
                             <option class="text-black" value="">Mes</option>
                             <option class="text-black" value="01">Enero</option>
@@ -55,7 +55,7 @@
                         />
                         <x-base.form-select
                             wire:model.live="year"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200"
                         >
                             <option class="text-black" value="">Año</option>
                             @foreach(range(date('Y'), 2020) as $y)
@@ -73,7 +73,7 @@
 
         <div class="col-span-12 sm:colspan-12">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium group-[.mode--light]:text-white">Promedio de llenado de inventario (Seg) - Usuarios
                     </div>
 
@@ -89,7 +89,7 @@
         </div>
 
         <div class="col-span-12 sm:colspan-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                 <div class="text-base font-medium">
                     Sesiones de inventario ({{ $month }}/{{ $year }})
                 </div>

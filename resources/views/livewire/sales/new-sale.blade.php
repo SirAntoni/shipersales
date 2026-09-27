@@ -1,11 +1,11 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Nueva Venta
                 </div>
-                <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                <div class="grid grid-cols-2 gap-2 md:ml-auto md:shrink-0 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr lg:gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
                     <x-base.button
                         class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
                         variant="primary"
@@ -15,31 +15,27 @@
 
                         Nuevo cliente
                     </x-base.button>
-                    <span wire:loading>
-                        <x-base.button
-                            class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
-                            variant="primary"
-                            disabled="true">
+                    {{-- Los spans no tienen acción, así que reaccionan a cualquier petición de Livewire (con wire:click en el
+                         mismo elemento, Livewire solo miraría esa acción); el div los agrupa como un solo elemento de la grilla --}}
+                    <div class="grid">
+                        <span wire:loading.grid>
+                            <x-base.button class="w-full group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200" variant="primary" disabled="true">
                                 <i class="fas fa-spinner animate-spin mr-1"></i> Calculando..
-                        </x-base.button>
-                    </span>
-                    <span wire:loading.remove>
-                       <x-base.button
-                           class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
-                           variant="primary"
-                           wire:click="validateNumber"
-                       >
-                            <i class="fa-solid fa-floppy-disk mr-2"></i>
-                            Guardar venta
-                        </x-base.button>
-                     </span>
+                            </x-base.button>
+                        </span>
+                        <span wire:loading.remove class="grid">
+                            <x-base.button class="w-full group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200" variant="primary" wire:click="validateNumber">
+                                <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar venta
+                            </x-base.button>
+                        </span>
+                    </div>
                 </div>
             </div>
 
             <div class="mt-3.5 grid grid-cols-12 gap-x-6 gap-y-10">
 
                 <div class="col-span-12 xl:col-span-12">
-                    <div class="box box--stacked flex flex-col p-5 sm:p-14">
+                    <div class="box box--stacked flex flex-col p-5 lg:p-14">
                         <div class="grid grid-cols-12">
 
                             {{-- Modal de nuevo cliente se encuentra al final del componente --}}
@@ -213,7 +209,7 @@
 
                                     </div>
                                     <div
-                                        class="col-span-12 sm:col-span-3 flex flex-col gap-3.5 px-5 sm:pt-1 pt-10  md:pt-10 pb-4">
+                                        class="col-span-12 sm:col-span-3 flex flex-col gap-3.5 px-5 pt-2 md:pt-10 pb-4">
                                         <div>
 
                                             <x-base.form-switch>
@@ -234,7 +230,7 @@
                                     @auth
                                         @if (auth()->id() === 1)
                                             <div
-                                                class="col-span-12 sm:col-span-3 flex flex-col gap-3.5 px-5 sm:pt-1 pt-10  md:pt-10 pb-4">
+                                                class="col-span-12 sm:col-span-3 flex flex-col gap-3.5 px-5 pt-2 md:pt-10 pb-4">
                                                 <div>
 
                                                     <x-base.form-switch>

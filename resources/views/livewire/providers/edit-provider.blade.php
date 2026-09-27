@@ -1,7 +1,7 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col mt-4 gap-y-3 md:mt-0 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col mt-4 gap-y-3 md:mt-0 md:min-h-10 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Editar Proveedor
                 </div>

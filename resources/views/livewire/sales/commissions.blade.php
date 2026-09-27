@@ -1,18 +1,19 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Comisiones - Total ventas: S/. {{number_format($granTotalMonth,2)}} | Comisión({{$commission}}%): S/. {{number_format($granTotalMonthCommission,2)}}
                 </div>
-                <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                <div class="grid grid-cols-2 gap-2 md:ml-auto md:shrink-0 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr lg:gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
                     <x-base.button
                         class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
                         variant="primary"
                         onclick="window.location.href='{{ route('sales.create') }}'"
                     >
                         <div class="px-2"><i class="fa-solid fa-plus"></i></div>
-                        Nueva venta
+                        <span class="sm:hidden">Venta</span>
+                        <span class="hidden sm:inline">Nueva venta</span>
                     </x-base.button>
                     @can('update')
                         <x-base.button
@@ -21,98 +22,74 @@
                             wire:click="reportCommissions"
                         >
                             <div class="px-2"><i class="fa-solid fa-file-excel"></i></div>
-                            Exportar Excel
+                            <span class="sm:hidden">Exportar</span>
+                            <span class="hidden sm:inline">Exportar Excel</span>
                         </x-base.button>
                     @endcan
                 </div>
             </div>
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
-                    <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
-                        <div>
-                            <div class="relative mr-2">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-user"></i>
-                                <x-base.form-select
-                                    wire:model.live="user"
-                                    class="rounded-[0.5rem] pl-9 sm:w-64"
-                                >
-                                    <option value="">Usuario</option>
-                                    @foreach($users as $user)
-                                        <option value="{{$user->id}}">{{$user->name}}</option>
-                                    @endforeach
-                                </x-base.form-select>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="relative mr-2">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-calendar"></i>
-                                <x-base.form-select
-                                    wire:model.live="month"
-                                    class="rounded-[0.5rem] pl-9 sm:w-32"
-                                >
-                                    <option value="">Mes</option>
-                                    <option value="01">Enero</option>
-                                    <option value="02">Febrero</option>
-                                    <option value="03">Marzo</option>
-                                    <option value="04">Abril</option>
-                                    <option value="05">Mayo</option>
-                                    <option value="06">Junio</option>
-                                    <option value="07">Julio</option>
-                                    <option value="08">Agosto</option>
-                                    <option value="09">Setiembre</option>
-                                    <option value="10">Octubre</option>
-                                    <option value="11">Noviembre</option>
-                                    <option value="12">Diciembre</option>
-                                </x-base.form-select>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="relative mr-2">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-calendar"></i>
-                                <x-base.form-select
-                                    wire:model.live="year"
-                                    class="rounded-[0.5rem] pl-9 sm:w-32"
-                                >
-                                    <option value="">Año</option>
-                                    @foreach(range(date('Y'), 2020) as $y)
-                                        <option value="{{ $y }}">{{ $y }}</option>
-                                    @endforeach
-                                </x-base.form-select>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="relative mr-2">
-
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
-                                <x-base.form-input
-                                    class="rounded-[0.5rem] pl-9 sm:w-64"
-                                    type="text"
-                                    placeholder="Buscar..."
-                                    wire:model.live="search"
-                                />
-                            </div>
+                    {{-- Filtros: desde lg una fila (buscador 2fr, usuario 1fr, mes/año/por página fijos); en md el buscador arriba; en celular, apilados --}}
+                    <div class="grid grid-cols-1 gap-3 p-5 md:grid-cols-12 lg:grid-cols-[minmax(14rem,2fr)_minmax(12rem,1fr)_9rem_8rem_7rem]">
+                        <div class="relative md:col-span-12 lg:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
+                            <x-base.form-input
+                                class="rounded-[0.5rem] pl-9"
+                                type="text"
+                                placeholder="Cliente, orden o producto..."
+                                wire:model.live="search"
+                            />
                         </div>
 
-                        <div>
-                            <div class="relative mr-2">
-
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
-                                <x-base.form-select
-                                    class="rounded-[0.5rem] pl-9 sm:w-35"
-                                    type="text"
-                                    placeholder="Buscar..."
-                                    wire:model.live="limit"
-                                >
-                                    <option value="15">15</option>
-                                    <option value="30">30</option>
-                                    <option value="40">40</option>
-                                    <option value="100">100</option>
-
-                                </x-base.form-select>
-                            </div>
+                        <div class="relative md:col-span-4 lg:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-user"></i>
+                            <x-base.form-select wire:model.live="user" class="rounded-[0.5rem] pl-9">
+                                <option value="">Usuario</option>
+                                @foreach($users as $user)
+                                    <option value="{{$user->id}}">{{$user->name}}</option>
+                                @endforeach
+                            </x-base.form-select>
                         </div>
 
+                        <div class="relative md:col-span-3 lg:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-calendar"></i>
+                            <x-base.form-select wire:model.live="month" class="rounded-[0.5rem] pl-9">
+                                <option value="">Mes</option>
+                                <option value="01">Enero</option>
+                                <option value="02">Febrero</option>
+                                <option value="03">Marzo</option>
+                                <option value="04">Abril</option>
+                                <option value="05">Mayo</option>
+                                <option value="06">Junio</option>
+                                <option value="07">Julio</option>
+                                <option value="08">Agosto</option>
+                                <option value="09">Setiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </x-base.form-select>
+                        </div>
 
+                        <div class="relative md:col-span-3 lg:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-calendar"></i>
+                            <x-base.form-select wire:model.live="year" class="rounded-[0.5rem] pl-9">
+                                <option value="">Año</option>
+                                @foreach(range(date('Y'), 2020) as $y)
+                                    <option value="{{ $y }}">{{ $y }}</option>
+                                @endforeach
+                            </x-base.form-select>
+                        </div>
+
+                        <div class="relative md:col-span-2 lg:col-span-1" title="Registros por página">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-list-ol"></i>
+                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="limit">
+                                <option value="15">15</option>
+                                <option value="30">30</option>
+                                <option value="40">40</option>
+                                <option value="100">100</option>
+                            </x-base.form-select>
+                        </div>
                     </div>
                     <div class="overflow-auto xl:overflow-visible text-sm">
                         <x-base.table class="border-b border-slate-200/60 ">

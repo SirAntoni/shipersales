@@ -1,11 +1,11 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Ventas Anuladas
                 </div>
-                <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                <div class="grid grid-cols-2 gap-2 md:ml-auto md:shrink-0 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr lg:gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
                     <x-base.button
                         class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
                         variant="primary"
@@ -18,21 +18,17 @@
             </div>
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
-                    <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
-                        <div>
-                            <div class="relative">
-
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
-                                <x-base.form-input
-                                    class="rounded-[0.5rem] pl-9 sm:w-64"
-                                    type="text"
-                                    placeholder="Buscar por cliente..."
-                                    wire:model.live="search"
-                                />
-                            </div>
+                    {{-- Buscador a todo el ancho de la tabla --}}
+                    <div class="p-5">
+                        <div class="relative">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
+                            <x-base.form-input
+                                class="rounded-[0.5rem] pl-9"
+                                type="text"
+                                placeholder="Cliente, orden o producto..."
+                                wire:model.live="search"
+                            />
                         </div>
-
-
                     </div>
                     <div class="overflow-auto xl:overflow-visible text-sm">
                         <x-base.table class="border-b border-slate-200/60 ">

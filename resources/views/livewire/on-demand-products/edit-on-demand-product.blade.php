@@ -1,7 +1,7 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col mt-4 gap-y-3 md:mt-0 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col mt-4 gap-y-3 md:mt-0 md:min-h-10 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Editar Producto a pedido
                 </div>
@@ -238,15 +238,15 @@
                                     </div>
                                     <div class="space-y-4">
                                         @foreach ($rows as $i => $row)
-                                            <div class="flex items-center space-x-2">
-                                                <x-base.form-select class="w-30" wire:model.defer="rows.{{ $i }}.contact_id">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <x-base.form-select class="w-full sm:w-40" wire:model.defer="rows.{{ $i }}.contact_id">
                                                     @foreach($contacts as $contact)
                                                         <option value="{{$contact->id}}">{{$contact->name}}</option>
                                                     @endforeach
                                                 </x-base.form-select>
                                                 <x-base.form-input
                                                     wire:model.defer="rows.{{ $i }}.code"
-                                                    class="w-80"
+                                                    class="min-w-0 flex-1 sm:w-80 sm:flex-none"
                                                     type="text"
                                                     placeholder="Código"
                                                 />
@@ -275,8 +275,8 @@
                                     </div>
                                     <div class="space-y-4">
                                         @foreach ($priceRows as $i => $row)
-                                            <div class="flex items-center space-x-2">
-                                                <x-base.form-select class="w-40" wire:model.defer="priceRows.{{ $i }}.contact_id">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <x-base.form-select class="w-full sm:w-40" wire:model.defer="priceRows.{{ $i }}.contact_id">
                                                     <option value="">-- Contacto --</option>
                                                     @foreach($contacts as $contact)
                                                         <option value="{{ $contact->id }}">{{ $contact->name }}</option>
@@ -284,7 +284,7 @@
                                                 </x-base.form-select>
 
                                                 <x-base.form-input
-                                                    class="w-32 text-right"
+                                                    class="min-w-0 flex-1 text-right sm:w-32 sm:flex-none"
                                                     type="number" step="0.01" min="0"
                                                     wire:model.defer="priceRows.{{ $i }}.price"
                                                     placeholder="0.00"

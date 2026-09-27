@@ -1,27 +1,31 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
-                <div class="text-base font-medium group-[.mode--light]:text-white">
-                    Inventario — Ventas del día
+            {{-- Encabezado: título con cronómetro/progreso debajo; botones del mismo ancho en 2x2
+                 (celular con etiquetas cortas) y en una fila desde lg --}}
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
+                <div>
+                    <div class="text-base font-medium group-[.mode--light]:text-white">
+                        Inventario — Ventas del día
+                    </div>
+
+                    {{-- Cronómetro + Progreso --}}
+                    <div class="mt-1 flex items-center gap-4 whitespace-nowrap text-slate-500 group-[.mode--light]:text-white/80">
+                        <span class="text-sm"
+                              x-data="{ t: '00:00:00' }"
+                              x-init="
+                                window.addEventListener('inventory-tick', e => { t = e.detail });
+                                window.addEventListener('inventory-stopped', () => { t = '00:00:00' });
+                              ">
+                            ⏱ <span x-text="t"></span>
+                        </span>
+                        <span class="text-xs">
+                            Completado: {{ $completedRows }} / {{ $totalRows }}
+                        </span>
+                    </div>
                 </div>
 
-                {{-- Cronómetro + Progreso --}}
-                <div class="ml-6 flex items-center gap-3">
-                    <span class="text-sm text-white"
-                          x-data="{ t: '00:00:00' }"
-                          x-init="
-                            window.addEventListener('inventory-tick', e => { t = e.detail });
-                            window.addEventListener('inventory-stopped', () => { t = '00:00:00' });
-                          ">
-                        ⏱ <span x-text="t"></span>
-                    </span>
-                    <span class="text-xs text-white">
-                        Completado: {{ $completedRows }} / {{ $totalRows }}
-                    </span>
-                </div>
-
-                <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                <div class="grid grid-cols-2 gap-2 md:ml-auto md:shrink-0 lg:grid-cols-4 lg:gap-3">
                     {{-- Iniciar inventario --}}
                     <x-base.button
                         variant="success"
@@ -29,7 +33,8 @@
                         :disabled="$editing"
                     >
                         <div class="px-2"><i class="fa-solid fa-play"></i></div>
-                        Iniciar inventario
+                        <span class="sm:hidden">Iniciar</span>
+                        <span class="hidden sm:inline">Iniciar inventario</span>
                     </x-base.button>
 
                     {{-- Refrescar --}}
@@ -50,7 +55,8 @@
                         :disabled="!$editing"
                     >
                         <div class="px-2"><i class="fa-solid fa-floppy-disk"></i></div>
-                        Guardar Stock
+                        <span class="sm:hidden">Guardar</span>
+                        <span class="hidden sm:inline">Guardar Stock</span>
                     </x-base.button>
 
                     {{-- (Opcional) Cancelar --}}
@@ -87,59 +93,56 @@
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
 
-                    <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
-                        <div>
-                            <div class="relative mr-2">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 text-slate-500 fa-solid fa-magnifying-glass"></i>
-                                <x-base.form-input
-                                    class="rounded-[0.5rem] pl-9 sm:w-72"
-                                    type="text"
-                                    wire:model.live="q"
-                                    placeholder="Buscar por SKU o título…"
-                                    :disabled="$editing"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <div class="relative mr-2">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
-                                <x-base.litepicker
-                                    id="datepicker"
-                                    class="rounded-[0.5rem] pl-9 sm:w-60"
-                                    data-single-mode="true"
-                                    wire:model.live="date"
-                                    placeholder="Selecciona una fecha"
-                                    :disabled="$editing"
-                                />
-                            </div>
+                    {{-- Filtros: desde xl una sola fila (buscador y nota crecen); entre md y xl dos filas
+                         (buscador + fecha, y nota + rango + exportar); en celular, apilados --}}
+                    <div class="grid grid-cols-1 gap-3 p-5 md:grid-cols-12 xl:grid-cols-[minmax(14rem,2fr)_11rem_minmax(12rem,1fr)_15rem_auto]">
+                        <div class="relative md:col-span-8 xl:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 text-slate-500 fa-solid fa-magnifying-glass"></i>
+                            <x-base.form-input
+                                class="rounded-[0.5rem] pl-9"
+                                type="text"
+                                wire:model.live="q"
+                                placeholder="Buscar por SKU o título…"
+                                :disabled="$editing"
+                            />
                         </div>
 
-                        <div>
-                            <div class="relative mr-2">
-                                <x-base.form-input
-                                    class="rounded-[0.5rem] sm:w-64"
-                                    type="text"
-                                    wire:model.defer="note"
-                                    placeholder="Nota opcional para conteos…"
-                                    :disabled="!$editing"
-                                />
-                            </div>
+                        <div class="relative md:col-span-4 xl:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 text-slate-500 fa-solid fa-calendar-day"></i>
+                            <x-base.litepicker
+                                id="datepicker"
+                                class="rounded-[0.5rem] pl-9"
+                                data-single-mode="true"
+                                wire:model.live="date"
+                                placeholder="Selecciona una fecha"
+                                :disabled="$editing"
+                            />
+                        </div>
+
+                        <div class="relative md:col-span-5 xl:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 text-slate-500 fa-solid fa-note-sticky"></i>
+                            <x-base.form-input
+                                class="rounded-[0.5rem] pl-9"
+                                type="text"
+                                wire:model.defer="note"
+                                placeholder="Nota del conteo"
+                                :disabled="!$editing"
+                            />
                         </div>
 
                         {{-- Excel de conteos: un dia o un rango; vacio = la fecha en pantalla --}}
-                        <div>
-                            <div class="relative mr-2">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 text-slate-500 fa-solid fa-calendar-days"></i>
-                                <x-base.litepicker
-                                    id="datepicker-export"
-                                    class="rounded-[0.5rem] pl-9 sm:w-64"
-                                    placeholder="Rango a exportar (opcional)"
-                                />
-                            </div>
+                        <div class="relative md:col-span-4 xl:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 text-slate-500 fa-solid fa-calendar-days"></i>
+                            <x-base.litepicker
+                                id="datepicker-export"
+                                class="rounded-[0.5rem] pl-9"
+                                placeholder="Rango a exportar"
+                            />
                         </div>
-                        <div>
+                        <div class="md:col-span-3 xl:col-span-1">
                             <x-base.tippy
                                 as="x-base.button"
+                                class="w-full whitespace-nowrap"
                                 variant="outline-primary"
                                 content="Descargar en Excel los conteos guardados del rango elegido o, si no eliges rango, de la fecha en pantalla"
                                 wire:click="exportar"
@@ -280,8 +283,9 @@
             element: document.getElementById('datepicker-export'),
             autoApply: false,
             singleMode: false,
-            numberOfColumns: 2,
-            numberOfMonths: 2,
+            // 2 meses miden ~560px: en celular no caben, ahí se muestra uno solo
+            numberOfColumns: window.innerWidth < 640 ? 1 : 2,
+            numberOfMonths: window.innerWidth < 640 ? 1 : 2,
             dropdowns: { minYear: 2026, maxYear: null, months: true, years: true },
         });
 

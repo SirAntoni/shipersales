@@ -1,11 +1,11 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Registros de compra
                 </div>
-                <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                <div class="grid grid-cols-2 gap-2 md:ml-auto md:shrink-0 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr lg:gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
                     <x-base.button
                         class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
                         variant="primary"
@@ -30,51 +30,55 @@
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
                     {{-- Filters --}}
-                    <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center sm:flex-wrap gap-x-3">
-                        <div class="relative">
+                    {{-- Sin "Limpiar" visible, los filtros de la última fila se reparten todo el ancho --}}
+                    @php $hayFiltros = $filterType || $filterYear || $filterStatus || $filterStore; @endphp
+                    {{-- Filtros: desde 1400px una fila; en lg buscador + tipo + año arriba y el resto abajo;
+                         en md el buscador arriba y los filtros de a 3; en celular, apilados --}}
+                    <div class="grid grid-cols-1 gap-3 p-5 md:grid-cols-12 min-[1400px]:grid-cols-[minmax(14rem,2fr)_9rem_8rem_10rem_minmax(10rem,1fr)_13rem_auto]">
+                        <div class="relative md:col-span-12 lg:col-span-6 min-[1400px]:col-span-1">
                             <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
                             <x-base.form-input
-                                class="rounded-[0.5rem] pl-9 sm:w-56"
+                                class="rounded-[0.5rem] pl-9"
                                 type="text"
-                                placeholder="Buscar..."
+                                placeholder="Producto, SKU u orden..."
                                 wire:model.live="search"
                             />
                         </div>
-                        <x-base.form-select class="sm:w-36" wire:model.live="filterType">
+                        <x-base.form-select class="md:col-span-4 lg:col-span-3 min-[1400px]:col-span-1" wire:model.live="filterType">
                             <option value="">Tipo: Todos</option>
                             <option value="CARGO">Cargo</option>
                             <option value="VIAJERO">Viajero</option>
                         </x-base.form-select>
-                        <x-base.form-select class="sm:w-28" wire:model.live="filterYear">
+                        <x-base.form-select class="md:col-span-4 lg:col-span-3 min-[1400px]:col-span-1" wire:model.live="filterYear">
                             <option value="">Año: Todos</option>
                             @foreach($years as $y)
                                 <option value="{{ $y }}">{{ $y }}</option>
                             @endforeach
                         </x-base.form-select>
-                        <x-base.form-select class="sm:w-36" wire:model.live="filterStatus">
+                        <x-base.form-select class="md:col-span-4 {{ $hayFiltros ? 'lg:col-span-3' : 'lg:col-span-4' }} min-[1400px]:col-span-1" wire:model.live="filterStatus">
                             <option value="">Estado: Todos</option>
                             <option value="ENTREGADO">Entregado</option>
                             <option value="COMPRADO">Comprado</option>
                             <option value="PARCIAL">Parcial</option>
                             <option value="NO LLEGO">No llegó</option>
                         </x-base.form-select>
-                        <x-base.form-select class="sm:w-40" wire:model.live="filterStore">
+                        <x-base.form-select class="{{ $hayFiltros ? 'md:col-span-4' : 'md:col-span-6' }} {{ $hayFiltros ? 'lg:col-span-3' : 'lg:col-span-4' }} min-[1400px]:col-span-1" wire:model.live="filterStore">
                             <option value="">Tienda: Todos</option>
                             @foreach($stores as $s)
                                 <option value="{{ $s }}">{{ $s }}</option>
                             @endforeach
                         </x-base.form-select>
 
-                        <div class="relative">
+                        <div class="relative {{ $hayFiltros ? 'md:col-span-4' : 'md:col-span-6' }} {{ $hayFiltros ? 'lg:col-span-3' : 'lg:col-span-4' }} min-[1400px]:col-span-1">
                             <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 text-slate-500 fa-solid fa-arrow-down-wide-short"></i>
-                            <x-base.form-select class="rounded-[0.5rem] pl-9 sm:w-64" wire:model.live="sortBy">
+                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="sortBy">
                                 <option value="arrival_date">Fecha de compra</option>
                                 <option value="date">Fecha de registro</option>
                             </x-base.form-select>
                         </div>
 
                         @if($filterType || $filterYear || $filterStatus || $filterStore)
-                            <x-base.button variant="secondary" size="sm" wire:click="clearFilters">
+                            <x-base.button class="w-full whitespace-nowrap md:col-span-4 lg:col-span-3 min-[1400px]:col-span-1" variant="secondary" wire:click="clearFilters">
                                 <i class="fa-solid fa-xmark mr-1"></i> Limpiar
                             </x-base.button>
                         @endif
@@ -110,7 +114,8 @@
                     @endif
 
                     {{-- Table --}}
-                    <div class="overflow-auto xl:overflow-visible text-sm">
+                    {{-- Sin xl:overflow-visible: la tabla es más ancha que la tarjeta en laptops y se salía de la página --}}
+                    <div class="overflow-auto text-sm">
                         <x-base.table class="border-b border-slate-200/60">
                             <x-base.table.thead>
                                 <x-base.table.tr>

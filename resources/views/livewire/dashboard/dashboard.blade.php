@@ -1,20 +1,20 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Dashboard
                 </div>
-                <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 md:ml-auto md:grid-cols-[repeat(3,11rem)] 2xl:grid-cols-[repeat(6,11rem)]">
                     <div class="relative">
                         <x-base.lucide
-                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] group-[.mode--light]:!text-slate-200"
+                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] sm:group-[.mode--light]:!text-slate-200"
                             icon="Users"
                         />
 
                         <x-base.form-select
                             wire:model.live="provider"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 sm:group-[.mode--light]:!border-transparent sm:group-[.mode--light]:!bg-white/[0.12] sm:group-[.mode--light]:bg-chevron-white sm:group-[.mode--light]:!text-slate-200"
                         >
                             <option value="">Proveedor</option>
                             @foreach($providers as $provider)
@@ -24,12 +24,12 @@
                     </div>
                     <div class="relative">
                         <x-base.lucide
-                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] group-[.mode--light]:!text-slate-200"
+                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] sm:group-[.mode--light]:!text-slate-200"
                             icon="List"
                         />
                         <x-base.form-select
                             wire:model.live="category"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 sm:group-[.mode--light]:!border-transparent sm:group-[.mode--light]:!bg-white/[0.12] sm:group-[.mode--light]:bg-chevron-white sm:group-[.mode--light]:!text-slate-200"
                         >
                             <option value="custom-date">Categoría</option>
                             @foreach($categories as $category)
@@ -40,12 +40,12 @@
                     <div class="relative">
                         <x-base.lucide
 
-                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] group-[.mode--light]:!text-slate-200"
+                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] sm:group-[.mode--light]:!text-slate-200"
                             icon="CalendarCheck2"
                         />
                         <x-base.form-select
                             wire:model.live="month"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 sm:group-[.mode--light]:!border-transparent sm:group-[.mode--light]:!bg-white/[0.12] sm:group-[.mode--light]:bg-chevron-white sm:group-[.mode--light]:!text-slate-200"
                         >
                             <option class="text-black" value="">Todos los meses</option>
                             <option class="text-black" value="01">Enero</option>
@@ -65,12 +65,12 @@
                     <div class="relative">
                         <x-base.lucide
 
-                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] group-[.mode--light]:!text-slate-200"
+                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] sm:group-[.mode--light]:!text-slate-200"
                             icon="CalendarCheck2"
                         />
                         <x-base.form-select
                             wire:model.live="year"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 sm:group-[.mode--light]:!border-transparent sm:group-[.mode--light]:!bg-white/[0.12] sm:group-[.mode--light]:bg-chevron-white sm:group-[.mode--light]:!text-slate-200"
                         >
                             <option class="text-black" value="">Año</option>
                             @foreach(range(date('Y'), 2020) as $y)
@@ -80,12 +80,12 @@
                     </div>
                     <div class="relative">
                         <x-base.lucide
-                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] group-[.mode--light]:!text-slate-200"
+                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] sm:group-[.mode--light]:!text-slate-200"
                             icon="Navigation2"
                         />
                         <x-base.form-select
                             wire:model.live="department"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 sm:group-[.mode--light]:!border-transparent sm:group-[.mode--light]:!bg-white/[0.12] sm:group-[.mode--light]:bg-chevron-white sm:group-[.mode--light]:!text-slate-200"
                         >
                             <option value="custom-date">Departamento</option>
                             @foreach($departments as $department)
@@ -95,12 +95,12 @@
                     </div>
                     <div class="relative">
                         <x-base.lucide
-                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] group-[.mode--light]:!text-slate-200"
+                            class="absolute inset-y-0 left-0 z-10 my-auto ml-3 h-4 w-4 stroke-[1.3] sm:group-[.mode--light]:!text-slate-200"
                             icon="Navigation"
                         />
                         <x-base.form-select
                             wire:model.live="district"
-                            class="rounded-[0.5rem] pl-9 group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:bg-chevron-white group-[.mode--light]:!text-slate-200 sm:w-44"
+                            class="rounded-[0.5rem] pl-9 sm:group-[.mode--light]:!border-transparent sm:group-[.mode--light]:!bg-white/[0.12] sm:group-[.mode--light]:bg-chevron-white sm:group-[.mode--light]:!text-slate-200"
                         >
                             <option value="custom-date">Distrito</option>
                             @if($districts != null)
@@ -121,8 +121,8 @@
 
         <div class="col-span-12 sm:colspan-12">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
-                    <div class="text-base font-medium group-[.mode--light]:text-white">Ganancia y cantidad de ventas últimos 7 días
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
+                    <div class="text-base font-medium sm:group-[.mode--light]:text-white">Ganancia y cantidad de ventas últimos 7 días
                     </div>
 
                 </div>
@@ -138,7 +138,7 @@
 
         <div class="col-span-12 sm:colspan-12">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium ">Top 10 productos por Ganancia
                     </div>
 
@@ -155,7 +155,7 @@
 
         <div class="col-span-12 sm:colspan-12">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium ">Ganancias por año
                     </div>
 
@@ -183,7 +183,7 @@
 
         <div class="col-span-12 lg:col-span-6 2xl:col-span-6">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium">Ganancia y margen según proveedor.
                     </div>
 
@@ -200,7 +200,7 @@
 
         <div class="col-span-12 lg:col-span-6 2xl:col-span-6">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium">Ganancia y venta total.
                     </div>
 
@@ -216,7 +216,7 @@
         </div>
         <div class="col-span-12">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium">Top 10 productos más vendidos
                     </div>
 
@@ -311,7 +311,7 @@
 
         <div class="col-span-12 lg:col-span-6 2xl:col-span-6">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium">Ganancia y cantidad según Categoría
                     </div>
 
@@ -328,7 +328,7 @@
 
         <div class="col-span-12 lg:col-span-6 2xl:col-span-6">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium">Ganancia y cantidad según Departamento
                     </div>
 
@@ -345,7 +345,7 @@
 
         <div class="col-span-12">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium group-[.mode--light]:text-white">Ganancia y cantidad según distritos
                     </div>
 
@@ -362,7 +362,7 @@
 
         <div class="col-span-12 sm:colspan-12">
             <div>
-                <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+                <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                     <div class="text-base font-medium group-[.mode--light]:text-white">Ganancia y margen según contacto.
                     </div>
 

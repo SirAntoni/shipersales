@@ -1,7 +1,7 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col mt-4 gap-y-3 md:mt-0 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col mt-4 gap-y-3 md:mt-0 md:min-h-10 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Reportes
                 </div>
@@ -91,7 +91,7 @@
                                         <div class="grid grid-cols-12 gap-2">
 
                                             <x-base.form-select
-                                                class="col-span-4"
+                                                class="col-span-12 sm:col-span-4"
                                                 aria-label=".form-select-lg"
                                                 wire:model="month"
                                             >
@@ -114,7 +114,7 @@
 
 
                                             <x-base.form-select
-                                                class="col-span-4"
+                                                class="col-span-12 sm:col-span-4"
                                                 aria-label=".form-select-lg"
                                                 wire:model="year"
                                             >
@@ -126,7 +126,7 @@
 
                                             </x-base.form-select>
                                             <x-base.form-select
-                                                class="col-span-4"
+                                                class="col-span-12 sm:col-span-4"
                                                 aria-label=".form-select-lg"
                                                 wire:model="provider"
                                             >

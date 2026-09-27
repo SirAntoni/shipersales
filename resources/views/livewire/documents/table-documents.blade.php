@@ -1,126 +1,113 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Documentos Electrónicos
+                </div>
+                <div class="grid grid-cols-2 gap-2 md:ml-auto md:shrink-0 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr lg:gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
+                    <x-base.tippy
+                        as="x-base.button"
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        content="Reenviar a SUNAT todos los documentos pendientes"
+                        wire:click="resendPending"
+                        wire:loading.attr="disabled"
+                        wire:target="resendPending"
+                    >
+                        <span wire:loading.remove wire:target="resendPending">
+                            <i class="fa-solid fa-cloud-arrow-up mr-1"></i>
+                            <span class="sm:hidden">Enviar SUNAT</span>
+                            <span class="hidden sm:inline">Enviar a SUNAT (masivo)</span>
+                        </span>
+                        <span wire:loading wire:target="resendPending">
+                            <i class="fa-solid fa-spinner fa-spin mr-1"></i>
+                            Enviando...
+                        </span>
+                    </x-base.tippy>
+                    <x-base.tippy
+                        as="x-base.button"
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        content="Descargar en Excel los comprobantes del filtro actual"
+                        wire:click="exportar"
+                    >
+                        <i class="fa-solid fa-file-excel mr-1"></i>
+                        <span class="sm:hidden">Exportar</span>
+                        <span class="hidden sm:inline">Exportar Excel</span>
+                    </x-base.tippy>
                 </div>
             </div>
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
-                    <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center justify-end">
-                        <div>
-
-                                <x-base.tippy
-                                    as="x-base.button"
-                                    class="mr-2"
-                                    variant="primary"
-                                    content="Reenviar a SUNAT todos los documentos pendientes"
-                                    wire:click="resendPending"
-                                    wire:loading.attr="disabled"
-                                    wire:target="resendPending"
-                                >
-                <span wire:loading.remove wire:target="resendPending">
-                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i>
-                    Enviar a SUNAT (masivo)
-                </span>
-
-                                    <span wire:loading wire:target="resendPending">
-                    <i class="fa-solid fa-spinner fa-spin mr-1"></i>
-                    Enviando...
-                </span>
-                                </x-base.tippy>
-
+                    {{-- Sin "Limpiar" visible, los filtros de la última fila se reparten todo el ancho --}}
+                    @php $hayFiltros = $search || $statusSunat || $anio || $mes || $tipo; @endphp
+                    {{-- Filtros: desde 1400px una fila; en lg buscador + año + mes arriba y el resto abajo;
+                         en md el buscador arriba y los filtros de a 3; en celular, apilados --}}
+                    <div class="grid grid-cols-1 gap-3 p-5 md:grid-cols-12 min-[1400px]:grid-cols-[minmax(14rem,2fr)_10rem_10rem_minmax(11rem,1fr)_minmax(11rem,1fr)_11rem_auto]">
+                        <div class="relative md:col-span-12 lg:col-span-6 min-[1400px]:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
+                            <x-base.form-input
+                                class="rounded-[0.5rem] pl-9"
+                                type="text"
+                                maxlength="100"
+                                placeholder="Comprobante u orden..."
+                                wire:model.live="search"
+                            />
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-2">
+                        <x-base.form-select class="rounded-[0.5rem] md:col-span-4 lg:col-span-3 min-[1400px]:col-span-1" wire:model.live="anio">
+                            <option value="">Todos los años</option>
+                            @foreach($anios as $unAnio)
+                                <option value="{{ $unAnio }}">{{ $unAnio }}</option>
+                            @endforeach
+                        </x-base.form-select>
+
+                        <x-base.form-select class="rounded-[0.5rem] md:col-span-4 lg:col-span-3 min-[1400px]:col-span-1" wire:model.live="mes">
+                            <option value="">Todos los meses</option>
+                            @foreach($meses as $numero => $nombre)
+                                <option value="{{ $numero }}">{{ $nombre }}</option>
+                            @endforeach
+                        </x-base.form-select>
+
+                        <x-base.form-select class="rounded-[0.5rem] md:col-span-4 {{ $hayFiltros ? 'lg:col-span-3' : 'lg:col-span-4' }} min-[1400px]:col-span-1" wire:model.live="tipo">
+                            <option value="">Todos los tipos</option>
+                            @foreach($tipos as $valor => $etiqueta)
+                                <option value="{{ $valor }}">{{ $etiqueta }}</option>
+                            @endforeach
+                        </x-base.form-select>
+
+                        <x-base.form-select class="rounded-[0.5rem] {{ $hayFiltros ? 'md:col-span-4' : 'md:col-span-6' }} {{ $hayFiltros ? 'lg:col-span-3' : 'lg:col-span-4' }} min-[1400px]:col-span-1" wire:model.live="statusSunat">
+                            <option value="">Todos los estados</option>
+                            <option value="aceptado">Aceptado</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="rechazado">Rechazado</option>
+                            <option value="anulado">Anulado</option>
+                        </x-base.form-select>
+
+                        <div class="relative {{ $hayFiltros ? 'md:col-span-4' : 'md:col-span-6' }} {{ $hayFiltros ? 'lg:col-span-3' : 'lg:col-span-4' }} min-[1400px]:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-list-ol"></i>
+                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="perPage">
+                                @foreach($opcionesPorPagina as $opcion)
+                                    <option value="{{ $opcion }}" @selected((int) $perPage === $opcion)>{{ $opcion }} por página</option>
+                                @endforeach
+                            </x-base.form-select>
+                        </div>
+
+                        @if($search || $statusSunat || $anio || $mes || $tipo)
                             <x-base.tippy
                                 as="x-base.button"
-                                variant="outline-primary"
-                                content="Descargar en Excel los comprobantes del filtro actual"
-                                wire:click="exportar"
+                                class="w-full whitespace-nowrap md:col-span-4 lg:col-span-3 min-[1400px]:col-span-1"
+                                variant="outline-secondary"
+                                content="Quitar todos los filtros"
+                                wire:click="limpiarFiltros"
                             >
-                                <i class="fa-solid fa-file-excel mr-1"></i>
-                                Exportar Excel
+                                <i class="fa-solid fa-filter-circle-xmark mr-1"></i> Limpiar
                             </x-base.tippy>
-
-                            <x-base.form-select
-                                class="rounded-[0.5rem] sm:w-32"
-                                wire:model.live="anio"
-                            >
-                                <option value="">Todos los años</option>
-                                @foreach($anios as $unAnio)
-                                    <option value="{{ $unAnio }}">{{ $unAnio }}</option>
-                                @endforeach
-                            </x-base.form-select>
-
-                            <x-base.form-select
-                                class="rounded-[0.5rem] sm:w-36"
-                                wire:model.live="mes"
-                            >
-                                <option value="">Todos los meses</option>
-                                @foreach($meses as $numero => $nombre)
-                                    <option value="{{ $numero }}">{{ $nombre }}</option>
-                                @endforeach
-                            </x-base.form-select>
-
-                            <x-base.form-select
-                                class="rounded-[0.5rem] sm:w-44"
-                                wire:model.live="tipo"
-                            >
-                                <option value="">Todos los tipos</option>
-                                @foreach($tipos as $valor => $etiqueta)
-                                    <option value="{{ $valor }}">{{ $etiqueta }}</option>
-                                @endforeach
-                            </x-base.form-select>
-
-                            <x-base.form-select
-                                class="rounded-[0.5rem] sm:w-44"
-                                wire:model.live="statusSunat"
-                            >
-                                <option value="">Todos los estados</option>
-                                <option value="aceptado">Aceptado</option>
-                                <option value="pendiente">Pendiente</option>
-                                <option value="rechazado">Rechazado</option>
-                                <option value="anulado">Anulado</option>
-                            </x-base.form-select>
-
-                            <div class="relative">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-arrow-up-1-9"></i>
-                                <x-base.form-select
-                                    class="rounded-[0.5rem] pl-9 sm:w-44"
-                                    wire:model.live="perPage"
-                                >
-                                    @foreach($opcionesPorPagina as $opcion)
-                                        <option value="{{ $opcion }}" @selected((int) $perPage === $opcion)>{{ $opcion }} por página</option>
-                                    @endforeach
-                                </x-base.form-select>
-                            </div>
-
-                            <div class="relative mr-2">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
-                                <x-base.form-input
-                                    class="rounded-[0.5rem] pl-9 sm:w-64"
-                                    type="text"
-                                    maxlength="100"
-                                    placeholder="Buscar comprobante..."
-                                    wire:model.live="search"
-                                />
-                            </div>
-
-                            @if($search || $statusSunat || $anio || $mes || $tipo)
-                                <x-base.tippy
-                                    as="x-base.button"
-                                    variant="outline-secondary"
-                                    content="Quitar todos los filtros"
-                                    wire:click="limpiarFiltros"
-                                >
-                                    <i class="fa-solid fa-filter-circle-xmark"></i>
-                                </x-base.tippy>
-                            @endif
-                        </div>
+                        @endif
                     </div>
-                    <div class="overflow-auto xl:overflow-visible text-sm">
+                    {{-- Sin xl:overflow-visible: la tabla es más ancha que la tarjeta en laptops y se salía de la página --}}
+                    <div class="overflow-auto text-sm">
                         <x-base.table class="border-b border-slate-200/60 ">
                             <x-base.table.thead>
                                 <x-base.table.tr>

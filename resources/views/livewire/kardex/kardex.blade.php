@@ -2,7 +2,7 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-1">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-y-3 md:min-h-10 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Kardex - Entradas y salidas
                 </div>
@@ -19,9 +19,9 @@
                     </div>
                     <div class="grid grid-cols-12 pt-4">
                         <div class="col-span-12 px-5 py-2">
-                            <div class="flex items-center gap-2">
-                                <!-- INPUT ocupa todo -->
-                                <div class="flex-1 min-w-0" wire:ignore>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <!-- INPUT ocupa todo (en celular, su propia fila y los botones debajo) -->
+                                <div class="w-full min-w-0 sm:w-auto sm:flex-1" wire:ignore>
                                     <x-base.tom-select
                                         id="tomArticles"
                                         class="w-full"

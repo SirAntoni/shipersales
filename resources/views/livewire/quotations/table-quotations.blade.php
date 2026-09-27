@@ -1,44 +1,43 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Cotizaciones
+                </div>
+                <div class="grid grid-cols-2 gap-2 md:ml-auto md:shrink-0 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr lg:gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
+                    <x-base.button
+                        class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
+                        variant="primary"
+                        onclick="window.location.href='{{ route('quotations.create') }}'"
+                    >
+                        <div class="px-2"><i class="fa-solid fa-plus"></i></div>
+                        Nueva cotización
+                    </x-base.button>
                 </div>
             </div>
             <div class="mt-3.5">
                 <div class="box box--stacked flex flex-col">
-                    <div class="flex flex-col gap-y-2 p-5 sm:flex-row sm:items-center">
-                        <div>
-                            <x-base.button
-                                variant="primary"
-                                onclick="window.location.href='{{ route('quotations.create') }}'"
-                            >
-                                <i class="fa-solid fa-plus mr-2"></i>
-                                Nueva cotización
-                            </x-base.button>
+                    {{-- Filtros: buscador 2fr + estado 1fr; en celular, apilados --}}
+                    <div class="grid grid-cols-1 gap-3 p-5 md:grid-cols-12 lg:grid-cols-[minmax(14rem,2fr)_minmax(12rem,1fr)]">
+                        <div class="relative md:col-span-8 lg:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
+                            <x-base.form-input
+                                class="rounded-[0.5rem] pl-9"
+                                type="text"
+                                placeholder="Buscar cotización o cliente..."
+                                wire:model.live="search"
+                            />
                         </div>
 
-                        <div class="flex items-center gap-2 sm:ml-auto">
-                            <x-base.form-select
-                                class="rounded-[0.5rem] sm:w-44"
-                                wire:model.live="status"
-                            >
+                        <div class="relative md:col-span-4 lg:col-span-1">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-filter"></i>
+                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="status">
                                 <option value="">Todos los estados</option>
                                 <option value="pendiente">Pendiente</option>
                                 <option value="aceptada">Aceptada</option>
                                 <option value="rechazada">Rechazada</option>
                             </x-base.form-select>
-
-                            <div class="relative mr-2">
-                                <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
-                                <x-base.form-input
-                                    class="rounded-[0.5rem] pl-9 sm:w-64"
-                                    type="text"
-                                    placeholder="Buscar cotización o cliente..."
-                                    wire:model.live="search"
-                                />
-                            </div>
                         </div>
                     </div>
                     <div class="overflow-auto xl:overflow-visible text-sm">

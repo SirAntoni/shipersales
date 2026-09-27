@@ -1,11 +1,11 @@
 <div>
     <div class="grid grid-cols-12 gap-x-6 gap-y-10">
         <div class="col-span-12">
-            <div class="flex flex-col gap-y-3 md:h-10 md:flex-row md:items-center">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <div class="text-base font-medium group-[.mode--light]:text-white">
                     Editar Venta
                 </div>
-                <div class="flex flex-col gap-x-3 gap-y-2 sm:flex-row md:ml-auto">
+                <div class="grid grid-cols-2 gap-2 md:ml-auto md:shrink-0 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-fr lg:gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
                     @if($webhook_imported == 1)
                         <x-base.button
                             class="group-[.mode--light]:!border-transparent group-[.mode--light]:!bg-white/[0.12] group-[.mode--light]:!text-slate-200"
@@ -32,7 +32,7 @@
             <div class="mt-3.5 grid grid-cols-12 gap-x-6 gap-y-10">
 
                 <div class="col-span-12 xl:col-span-12">
-                    <div class="box box--stacked flex flex-col p-5 sm:p-14">
+                    <div class="box box--stacked flex flex-col p-5 lg:p-14">
                         @if($status == \App\Models\Sale::SALE_SQUARE)
                             <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded">
                                 <p class="font-bold">Venta de cuadre</p>
@@ -486,7 +486,7 @@
                                     </div>
 
                                     <div
-                                        class="col-span-12 sm:col-span-2 flex flex-col gap-3.5 px-5 sm:pt-1 pt-10  md:pt-10 pb-4">
+                                        class="col-span-12 sm:col-span-2 flex flex-col gap-3.5 px-5 pt-2 md:pt-10 pb-4">
                                         <div>
 
                                             <x-base.form-switch>
@@ -651,9 +651,9 @@
                                 {{$message}}
                             </div>
                             @enderror
-                            <div class="flex justify-end">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
                                 <x-base.button
-                                    class="w-full rounded-[0.5rem] py-2.5 md:w-56 mr-2"
+                                    class="w-full rounded-[0.5rem] py-2.5 md:w-56"
                                     variant="primary"
                                     wire:click="saveObservation"
                                 >
