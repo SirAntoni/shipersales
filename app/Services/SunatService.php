@@ -22,6 +22,7 @@ use Greenter\See;
 use Greenter\Ws\Services\ConsultCdrService;
 use Greenter\Ws\Services\SoapClient;
 use Greenter\Ws\Services\SunatEndpoints;
+use Greenter\Ws\Services\WsdlProvider;
 use Greenter\XMLSecLibs\Certificate\X509Certificate;
 use Greenter\XMLSecLibs\Certificate\X509ContentType;
 use Illuminate\Support\Facades\Log;
@@ -354,7 +355,8 @@ class SunatService
      */
     public function consultarCdr(string $tipoDoc, string $serie, int $correlativo): \Greenter\Model\Response\StatusCdrResult
     {
-        $client = new SoapClient();
+        // Sin WSDL explícito Greenter usa el del billService, que no tiene getStatusCdr
+        $client = new SoapClient(WsdlProvider::getConsultPath());
         $client->setService(
             (env('APP_ENV') === 'production')
                 ? SunatEndpoints::FE_CONSULTA_CDR

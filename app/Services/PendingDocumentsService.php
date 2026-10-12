@@ -150,7 +150,21 @@ class PendingDocumentsService
             $sunatResponse = $this->sunat->sunatResponse($invoice, $result);
         }
 
-        // === 2) Si SUNAT no lo aceptó, consultar si ya existe antes de rendirnos ===
+        // === 2) Rechazo con CDR (2000-3999): es definitivo; reintentar (y renumerar por 1032) no sirve ===
+        if (($sunatResponse['status'] ?? null) == 2) {
+            $code = (string) ($sunatResponse['code'] ?? '');
+
+            $document->update([
+                'status_sunat' => 'rechazado',
+                'xml_path'     => $xmlPath,
+                'cdr_path'     => $sunatResponse['cdr'] ?? '',
+                'notes'        => $sunatResponse['notes'] ?: ["Rechazado por SUNAT (código {$code})."],
+            ]);
+            Log::warning("Documento ID {$document->id} rechazado por SUNAT ({$code}) al reenviar.");
+            return;
+        }
+
+        // === 3) Si SUNAT no lo aceptó, consultar si ya existe antes de rendirnos ===
         if ($sunatResponse['status'] != 1) {
             $code = (string)($sunatResponse['code'] ?? '');
 
@@ -257,7 +271,7 @@ class PendingDocumentsService
             return;
         }
 
-        // === 3) Caso OK en reenvío: lo marcamos como enviado/aceptado ===
+        // === 4) Caso OK en reenvío: lo marcamos como enviado/aceptado ===
         $pdfPath = $this->sunat->generatePdf($invoice);
 
         $document->update([
