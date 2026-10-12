@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Document;
 use App\Models\Voucher;
+use Greenter\Zip\ZipFly;
 use Illuminate\Support\Facades\Log;
 use Luecano\NumeroALetras\NumeroALetras;
 
@@ -158,17 +159,56 @@ class PendingDocumentsService
                 'notes' => $sunatResponse['notes'] ?? null,
             ]);
 
-            // Si fue error HTTP (SUNAT inalcanzable), no tiene sentido consultar: dejamos pendiente
-            if (stripos($code, 'HTTP') !== false) {
-                $document->update(['notes' => $sunatResponse['notes'] ?? []]);
-                return;
-            }
-
-            // SUNAT respondió (1033, 1079, etc.) → consultar si el comprobante ya existe
+            // SUNAT respondió (1033, 1079, etc.) o falló por HTTP → consultar si el comprobante ya existe.
+            // El servicio de consulta es independiente del de envío: si el envío se cayó por timeout
+            // después de que SUNAT lo procesó, el CDR se recupera de ahí.
             $tipoDocStr = ($data['tipoDoc'] === '01') ? '01' : '03';
             $consulta = $this->sunat->consultarCdr($tipoDocStr, $data['serie'], (int)$data['correlative']);
 
             if ($consulta->isSuccess() && $consulta->getCdrZip()) {
+                // Otro registro con la misma serie-correlativo ya está aceptado → este es un duplicado
+                $duplicado = Document::where('id', '!=', $document->id)
+                    ->where('document_type', $document->document_type)
+                    ->where('serie', $document->serie)
+                    ->where('correlative', $document->correlative)
+                    ->where('status_sunat', 'aceptado')
+                    ->first();
+
+                if ($duplicado) {
+                    $document->update([
+                        'status'       => 'cancelado',
+                        'status_sunat' => 'cancelado',
+                        'notes'        => ["Duplicado del documento ID {$duplicado->id}, ya aceptado por SUNAT."],
+                    ]);
+                    Log::warning("Documento ID {$document->id} es duplicado del ID {$duplicado->id} (ya aceptado). Marcado como cancelado.");
+                    return;
+                }
+
+                $cdr = $consulta->getCdrResponse();
+
+                if ($cdr && !$cdr->isAccepted()) {
+                    $document->update([
+                        'status_sunat' => 'rechazado',
+                        'notes'        => [$cdr->getCode() . ' - ' . $cdr->getDescription()],
+                    ]);
+                    Log::warning("Documento ID {$document->id} existe en SUNAT pero rechazado ({$cdr->getCode()}).");
+                    return;
+                }
+
+                // La consulta es por serie-correlativo: confirmar que el CDR es de ESTE comprobante
+                // (misma fecha de emisión y mismo receptor) y no de otro que usó el mismo número.
+                $otro = $this->cdrDeOtroComprobante($consulta->getCdrZip(), $dateString, (string) $client->document_number);
+
+                if ($otro) {
+                    $numero = "{$document->serie}-{$document->correlative}";
+                    $document->update([
+                        'status_sunat' => 'rechazado',
+                        'notes'        => ["El número {$numero} ya está registrado en SUNAT con otro comprobante ({$otro}). Hay que reemitirlo con un correlativo nuevo."],
+                    ]);
+                    Log::warning("Documento ID {$document->id}: {$numero} ya existe en SUNAT con otro comprobante ({$otro}).");
+                    return;
+                }
+
                 // El comprobante SÍ existe en SUNAT → recuperar CDR, generar PDF y marcar aceptado
                 Log::info("Documento ID {$document->id} encontrado en SUNAT vía consulta CDR. Marcando como aceptado.");
 
@@ -196,7 +236,9 @@ class PendingDocumentsService
 
             // El comprobante NO existe en SUNAT
             Log::warning("Documento ID {$document->id} no encontrado en SUNAT vía consulta CDR.", [
-                'code_original' => $code,
+                'code_original'  => $code,
+                'consulta_code'  => $consulta->getCode(),
+                'consulta_error' => $consulta->getError()?->getMessage(),
             ]);
 
             // 1079/2329: fecha de emisión fuera del plazo para envío individual.
@@ -228,6 +270,43 @@ class PendingDocumentsService
         ]);
 
         Log::info("Documento ID {$document->id} reenviado y marcado como aceptado por SUNAT.");
+    }
+
+    /**
+     * Compara el CDR consultado con el documento. Devuelve la descripción del comprobante
+     * que SUNAT tiene registrado si NO coincide (fecha de emisión o receptor), o null si coincide.
+     */
+    protected function cdrDeOtroComprobante(string $cdrZip, string $fecha, string $numDocCliente): ?string
+    {
+        $files = (new ZipFly())->decompress($cdrZip, fn ($name) => str_ends_with(strtolower($name), '.xml'));
+
+        if (empty($files)) {
+            return null;
+        }
+
+        $dom = new \DOMDocument();
+        if (!@$dom->loadXML($files[0]['content'])) {
+            return null;
+        }
+
+        $xpath = new \DOMXPath($dom);
+        $xpath->registerNamespace('cbc', 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2');
+        $xpath->registerNamespace('cac', 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2');
+
+        // En el CDR, IssueDate es la fecha de emisión del comprobante y RecipientParty es "tipo-numero" del receptor
+        $fechaCdr    = trim((string) $xpath->evaluate('string(/*/cbc:IssueDate)'));
+        $receptorCdr = trim((string) $xpath->evaluate('string(//cac:DocumentResponse/cac:RecipientParty//cbc:ID)'));
+        $numReceptor = str_contains($receptorCdr, '-') ? substr($receptorCdr, strpos($receptorCdr, '-') + 1) : $receptorCdr;
+
+        $fechaDistinta    = $fechaCdr !== '' && $fechaCdr !== $fecha;
+        $receptorDistinto = $numReceptor !== '' && $numReceptor !== '-'
+            && preg_replace('/\s+/', '', $numDocCliente) !== $numReceptor;
+
+        if (!$fechaDistinta && !$receptorDistinto) {
+            return null;
+        }
+
+        return "emitido el {$fechaCdr}" . ($receptorDistinto ? ', a otro receptor' : '');
     }
 
     /**
