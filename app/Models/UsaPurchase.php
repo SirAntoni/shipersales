@@ -66,13 +66,28 @@ class UsaPurchase extends Model
     /**
      * Acumula una importacion al stock. processed significa "importado
      * completo": una llegada parcial deja la fila abierta con su saldo.
+     * Al completarse, una fila en PARCIAL pasa a ENTREGADO: ya llego todo.
      */
     public function registrarImportacion(int $cantidad, int $purchaseId): void
     {
         $this->imported_quantity = (int) $this->imported_quantity + $cantidad;
         $this->processed = $this->imported_quantity >= (int) $this->quantity;
         $this->purchase_id = $purchaseId;
+
+        if ($this->processed && $this->status === self::STATUS_PARTIAL) {
+            $this->status = self::STATUS_DELIVERED;
+        }
+
         $this->save();
+    }
+
+    /** Importadas completas que siguen en PARCIAL (anteriores a la regla de registrarImportacion). */
+    public function scopeParcialesCompletas($query)
+    {
+        return $query->where('status', self::STATUS_PARTIAL)
+            ->where('processed', true)
+            ->where('imported_quantity', '>', 0)
+            ->whereColumn('imported_quantity', '>=', 'quantity');
     }
 
     public function purchase()

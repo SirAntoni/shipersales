@@ -209,6 +209,30 @@ Route::middleware(['auth'])->group(function () {
     })->middleware('can:clients');
     //End Limpiar clientes
 
+    //Start Compras USA importadas completas que siguen en PARCIAL (cPanel, sin terminal)
+    Route::get('/usa-cerrar-parciales', function () {
+        Artisan::call('compras-usa:cerrar-parciales', ['--dry-run' => true]);
+        $out    = e(Artisan::output());
+        $runUrl = url('/usa-cerrar-parciales/run');
+
+        return response(
+            "<h3>Compras USA: vista previa (no se escribió nada)</h3>"
+            . "<pre>{$out}</pre>"
+            . "<form method=\"POST\" action=\"{$runUrl}\" onsubmit=\"return confirm('¿Pasar TODOS los registros listados a ENTREGADO?')\">"
+            . csrf_field()
+            . "<button type=\"submit\">Pasar a ENTREGADO</button></form>",
+            200
+        )->header('Content-Type', 'text/html');
+    })->middleware('can:purchases');
+
+    Route::post('/usa-cerrar-parciales/run', function () {
+        Artisan::call('compras-usa:cerrar-parciales', ['--force' => true, '--user' => auth()->id()]);
+
+        return response('<pre>' . e(Artisan::output()) . '</pre>', 200)
+            ->header('Content-Type', 'text/html');
+    })->middleware('can:purchases');
+    //End Compras USA parciales
+
 });
 
 
