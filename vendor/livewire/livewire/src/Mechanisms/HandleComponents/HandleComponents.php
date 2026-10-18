@@ -85,6 +85,29 @@ class HandleComponents extends Mechanism
 
     public function update($snapshot, $updates, $calls)
     {
+        if (! is_array($snapshot)
+            || ! is_array($snapshot['data'] ?? null)
+            || ! is_array($snapshot['memo'] ?? null)
+            || ! is_string($snapshot['checksum'] ?? null)
+            || ! is_string($snapshot['memo']['id'] ?? null)
+            || ! is_scalar($snapshot['memo']['name'] ?? null)
+        ) {
+            if (config('app.debug')) throw new \InvalidArgumentException('Invalid Livewire snapshot structure: expected [data], [memo], [checksum], [memo.id], and [memo.name].');
+
+            abort(404);
+        }
+
+        foreach ($calls as $call) {
+            if (! is_array($call)
+                || ! is_string($call['method'] ?? null)
+                || ! is_array($call['params'] ?? null)
+            ) {
+                if (config('app.debug')) throw new \InvalidArgumentException('Invalid Livewire call structure: each call must contain [method] (string) and [params] (array).');
+
+                abort(404);
+            }
+        }
+
         $data = $snapshot['data'];
         $memo = $snapshot['memo'];
 
@@ -216,6 +239,30 @@ class HandleComponents extends Mechanism
         });
     }
 
+    protected function hydratePropertyUpdate($valueOrTuple, $context, $path, $raw = null)
+    {
+        if (! Utils::isSyntheticTuple($value = $tuple = $valueOrTuple)) return $value;
+
+        [$value, $meta] = $tuple;
+
+        // Nested properties get set as `__rm__` when they are removed. We don't want to hydrate these.
+        if ($this->isRemoval($value) && str($path)->contains('.')) {
+            return $value;
+        }
+
+        $synth = $this->propertySynth($meta['s'], $context, $path);
+
+        return $synth->hydrate($value, $meta, function ($name, $child) use ($context, $path, $raw) {
+            if ($raw === null || is_object($child)) return $child;
+
+            $childPath = "{$path}.{$name}";
+
+            if (! $childMeta = $this->getMetaForPath($raw, $childPath)) return $child;
+
+            return $this->hydratePropertyUpdate([$child, $childMeta], $context, $childPath, $raw);
+        });
+    }
+
     protected function render($component, $default = null)
     {
         if ($html = store($component)->get('skipRender', false)) {
@@ -339,7 +386,7 @@ class HandleComponents extends Mechanism
 
         // If we have meta data already for this property, let's use that to get a synth...
         if ($meta) {
-            return $this->hydrate([$value, $meta], $context, $path);
+            return $this->hydratePropertyUpdate([$value, $meta], $context, $path, $raw);
         }
 
         // If we don't, let's check to see if it's a typed property and fetch the synth that way...
@@ -480,7 +527,17 @@ class HandleComponents extends Mechanism
         $context->addEffect('returns', $returns);
     }
 
-    protected function propertySynth($keyOrTarget, $context, $path): Synth
+    public function findSynth($keyOrTarget, $component): ?Synth
+    {
+        $context = new ComponentContext($component);
+        try {
+            return $this->propertySynth($keyOrTarget, $context, null);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    public function propertySynth($keyOrTarget, $context, $path): Synth
     {
         return is_string($keyOrTarget)
             ? $this->getSynthesizerByKey($keyOrTarget, $context, $path)
