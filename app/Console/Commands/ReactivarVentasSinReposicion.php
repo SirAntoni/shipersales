@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\InventoryAdjustment;
 use App\Models\Sale;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -126,7 +127,8 @@ class ReactivarVentasSinReposicion extends Command
                     'ejecutado_por'      => $userId,
                 ]);
 
-                DB::table('inventory_adjustments')->whereIn('id', $e['ajustes']->pluck('id'))->delete();
+                // Uno por uno para que cada ajuste retirado quede en la auditoria
+                InventoryAdjustment::whereIn('id', $e['ajustes']->pluck('id'))->get()->each->delete();
 
                 $e['venta']->update([
                     'status'          => $e['nuevo_status'],

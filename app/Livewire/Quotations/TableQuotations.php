@@ -227,7 +227,18 @@ class TableQuotations extends Component
     #[On('destroy')]
     public function destroy($id)
     {
-        Quotation::find($id)?->delete(); // detalles caen por cascade
+        $quotation = Quotation::find($id);
+
+        if (! $quotation) {
+            return;
+        }
+
+        // Los detalles se borran uno por uno antes que el cascade de la BD,
+        // que no deja rastro en la auditoria
+        DB::transaction(function () use ($quotation) {
+            $quotation->quotationDetails()->get()->each->delete();
+            $quotation->delete();
+        });
     }
 
     /** Abre el modal con los productos manuales de la cotización */

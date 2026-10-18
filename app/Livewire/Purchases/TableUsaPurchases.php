@@ -368,9 +368,12 @@ class TableUsaPurchases extends Component
             return;
         }
 
-        $updated = UsaPurchase::whereIn('id', $this->selectedIds)
+        // Fila por fila para que cada cambio quede en la auditoria
+        $records = UsaPurchase::whereIn('id', $this->selectedIds)
             ->where('processed', false)
-            ->update(['status' => $status]);
+            ->get();
+        $records->each->update(['status' => $status]);
+        $updated = $records->count();
 
         $this->clearSelection();
         $this->dispatch('successNotRoute', ['label' => "{$updated} registro(s) actualizado(s)."]);

@@ -3,6 +3,7 @@
 namespace App\Livewire\Articles;
 
 use App\Models\Article;
+use App\Models\ArticleContactPrice;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
@@ -113,7 +114,8 @@ class AddArticle extends Component
         }
 
         DB::transaction(function () {
-            $articleId = DB::table('articles')->insertGetId([
+            // Por Eloquent (no DB::table) para que el alta quede en la auditoria
+            $articleId = Article::create([
                 'title'          => $this->title,
                 'detail'         => $this->detail ?? '',
                 'description'    => $this->description ?? '',
@@ -126,9 +128,7 @@ class AddArticle extends Component
                 'sale_price'     => $this->sale_price ?? 0,
                 'status'         => 'active',
                 'on_demand'      => $this->onDemand ? 1 : 0,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
+            ])->id;
 
             // Insertar precios por contacto (opcional)
             $rowsToInsert = [];
@@ -153,13 +153,11 @@ class AddArticle extends Component
                     'contact_id' => (int)$cid,
                     'price'      => (float)$price,
                     'active'     => !empty($row['active']) ? 1 : 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
                 ];
             }
 
-            if (!empty($rowsToInsert)) {
-                DB::table('article_contact_prices')->insert($rowsToInsert);
+            foreach ($rowsToInsert as $priceRow) {
+                ArticleContactPrice::create($priceRow);
             }
         });
 

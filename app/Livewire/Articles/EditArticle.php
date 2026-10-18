@@ -208,7 +208,7 @@ class EditArticle extends Component
                 'active'     => (bool) $row['active'],
             ];
             if (!empty($row['id'])) {
-                $article->contactPrices()->where('id', $row['id'])->update($payload);
+                $article->contactPrices()->find($row['id'])?->update($payload);
             } else {
                 $article->contactPrices()->create($payload);
             }

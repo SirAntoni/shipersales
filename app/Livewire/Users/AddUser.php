@@ -4,6 +4,7 @@ namespace App\Livewire\Users;
 
 use Livewire\Component;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Spatie\Permission\Models\Permission;
 use Log;
 
@@ -35,7 +36,7 @@ class AddUser extends Component
             'password' => bcrypt($this->password)
         ]);
 
-        $user->permissions()->sync($this->permissionsSelected);
+        AuditLogger::permisos($user, $user->permissions()->sync($this->permissionsSelected));
 
         $this->dispatch('success',['label' => 'Se agrego el usuario con éxito.','btn' => 'Ir a usuarios','route' => route('users.index')]);
     }

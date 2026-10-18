@@ -313,7 +313,8 @@ class ShowSale extends Component
                 // 2) Eliminar detalles actuales
                 //    (si usas SoftDeletes en sale_details y NO quieres que salgan en el Kardex,
                 //     recuerda filtrar deleted_at IS NULL en el componente del Kardex)
-                $sale->saleDetails()->delete();
+                //    Uno por uno para que queden en la auditoria
+                $sale->saleDetails()->get()->each->delete();
 
                 // 3) Validar stock para los nuevos (solo si afecta stock)
                 if ($affectsStock) {

@@ -335,7 +335,7 @@ class Index extends Component
                 }
 
                 // Actualiza la sesión
-                InventorySession::where('id', $this->sessionId)->update([
+                InventorySession::find($this->sessionId)?->update([
                     'finished_at'    => now(),
                     'duration_sec'   => $duration,
                     'completed_rows' => $this->totalRows,

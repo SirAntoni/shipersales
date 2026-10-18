@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\UsaPurchase;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -68,12 +67,11 @@ class CerrarParcialesUsa extends Command
 
         $ids = $registros->pluck('id')->all();
 
-        // Por query builder para no pisar updated_at: es el unico rastro de
-        // cuando se completo la importacion. La constancia del cambio va al log.
-        $actualizados = DB::table('usa_purchases')
-            ->whereIn('id', $ids)
-            ->where('status', UsaPurchase::STATUS_PARTIAL)
-            ->update(['status' => UsaPurchase::STATUS_DELIVERED]);
+        // Sin tocar updated_at: marca cuando se completo la importacion. Por el
+        // modelo para que cada cambio quede tambien en la auditoria.
+        $actualizados = UsaPurchase::withoutTimestamps(fn () => $registros
+            ->filter(fn (UsaPurchase $r) => $r->update(['status' => UsaPurchase::STATUS_DELIVERED]))
+            ->count());
 
         Log::info('Compras USA: registros importados completos pasados de PARCIAL a ENTREGADO', [
             'ids'           => $ids,

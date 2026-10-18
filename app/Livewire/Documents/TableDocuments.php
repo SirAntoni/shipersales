@@ -319,7 +319,8 @@ class TableDocuments extends Component
 
             Document::where('id', $document->affected_document_id)
                 ->where('status', 'nota_credito')
-                ->update(['status' => 'enviado']);
+                ->first()
+                ?->update(['status' => 'enviado']);
 
             $this->dispatch('successNotRoute', ['label' => 'El comprobante fue anulado y la baja fue aceptada por SUNAT.']);
             return;
@@ -484,7 +485,8 @@ class TableDocuments extends Component
         ]);
 
         DB::transaction(function () use ($document) {
-            $document->documentDetails()->delete();
+            // Uno por uno para que los detalles queden en la auditoria
+            $document->documentDetails()->get()->each->delete();
             $document->delete();
         });
 

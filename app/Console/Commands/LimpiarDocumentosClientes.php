@@ -118,10 +118,11 @@ class LimpiarDocumentosClientes extends Command
 
         DB::transaction(function () use ($cambios) {
             foreach ($cambios as $x) {
-                DB::table('clients')->where('id', $x['id'])->update([
+                // Por el modelo para que quede en la auditoria (los mutators
+                // normalizan igual, el valor ya viene limpio)
+                Client::find($x['id'])?->update([
                     'document_number' => $x['numero_ok'],
                     'name'            => $x['nombre_ok'],
-                    'updated_at'      => now(),
                 ]);
             }
         });

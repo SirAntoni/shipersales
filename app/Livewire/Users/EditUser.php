@@ -5,6 +5,7 @@ namespace App\Livewire\Users;
 use Livewire\Component;
 use Spatie\Permission\Models\Permission;
 use App\Models\User;
+use App\Services\AuditLogger;
 use Log;
 
 class EditUser extends Component
@@ -38,7 +39,7 @@ class EditUser extends Component
         ]);
         $user->refresh();
 
-        $user->permissions()->sync($this->permissionsSelected);
+        AuditLogger::permisos($user, $user->permissions()->sync($this->permissionsSelected));
 
         $this->dispatch('success',['label' => 'Se edito el usuario con éxito.','btn' => 'Ir a usuarios','route' => route('users.index')]);
     }
