@@ -136,6 +136,9 @@ class SireSuppliersExport implements
 
                 $fila += 2;
                 $sheet->setCellValue("A{$fila}", 'Fuente: propuesta del Registro de Compras de SIRE (SUNAT). Importes en soles. Las declaraciones de importación no traen proveedor y van juntas como Aduanas.');
+                if ($nota = SirePurchasesExport::notaAnteriores($r)) {
+                    $sheet->setCellValue('A' . ($fila + 1), $nota);
+                }
             },
         ];
     }

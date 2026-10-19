@@ -85,6 +85,12 @@
                                 Faltan las credenciales de SIRE en el sistema: no se puede descargar hasta configurarlas.
                             </div>
                         @endunless
+                        @if($delPeriodo['anteriores'] > 0)
+                            <div class="mt-1 text-xs text-amber-700">
+                                <i class="fa-solid fa-circle-info mr-1"></i>
+                                {{ $delPeriodo['anteriores'] }} de los {{ $delPeriodo['cantidad'] }} comprobantes (S/ {{ number_format($delPeriodo['total_anteriores'], 2) }}) se emitieron en meses anteriores: SIRE los propone en este periodo porque todavía están dentro de los 12 meses en que se pueden anotar.
+                            </div>
+                        @endif
                         <div class="mt-1 text-xs text-slate-400">
                             Es lo que SUNAT tiene registrado como compras del RUC (facturas y notas de proveedores peruanos y declaraciones de importación), con los importes en soles. Cada mes está disponible desde el día 2 del mes siguiente. Haga clic en un comprobante para ver su detalle.
                         </div>
@@ -145,12 +151,31 @@
                                 <button
                                     type="button"
                                     wire:click="$set('vista', '{{ $valor }}')"
-                                    class="rounded-md px-3 py-1.5 {{ ($porProveedores ? 'proveedores' : 'comprobantes') === $valor ? 'bg-white font-medium text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700' }}"
+                                    class="whitespace-nowrap rounded-md px-2 py-1.5 sm:px-3 {{ ($porProveedores ? 'proveedores' : 'comprobantes') === $valor ? 'bg-white font-medium text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700' }}"
                                 >
                                     {{ $etiqueta }}
                                 </button>
                             @endforeach
                         </div>
+                        @if($delPeriodo['anteriores'] > 0 || (string) $emision !== '')
+                            @php $mesPeriodo = $periodos[$periodo] ?? $periodo; @endphp
+                            <div class="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5">
+                                @foreach([
+                                    ''           => ['Todos', 'Todos los comprobantes del periodo'],
+                                    'mes'        => ['Del mes', "Solo los emitidos en {$mesPeriodo}"],
+                                    'anteriores' => ['Meses anteriores', "Solo los emitidos antes de {$mesPeriodo} que SIRE propone en este periodo"],
+                                ] as $valor => [$etiqueta, $ayuda])
+                                    <button
+                                        type="button"
+                                        wire:click="$set('emision', '{{ $valor }}')"
+                                        title="{{ $ayuda }}"
+                                        class="whitespace-nowrap rounded-md px-2 py-1.5 sm:px-3 {{ (string) $emision === (string) $valor ? 'bg-white font-medium text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700' }}"
+                                    >
+                                        {{ $etiqueta }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        @endif
                         @if($nombreProveedor !== null)
                             <span class="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary">
                                 Proveedor: {{ $nombreProveedor }}
@@ -228,7 +253,7 @@
                                     @empty
                                         <x-base.table.tr>
                                             <x-base.table.td colspan="7" class="border-dashed text-center dark:bg-darkmode-600">
-                                                @if($ultima && $ultima->status === \App\Models\SireDownload::STATUS_DONE && ! $search && ! $tipo && (string) $proveedor === '')
+                                                @if($ultima && $ultima->status === \App\Models\SireDownload::STATUS_DONE && ! $search && ! $tipo && (string) $proveedor === '' && (string) $emision === '')
                                                     SUNAT no tiene compras registradas para este periodo.
                                                 @else
                                                     No se encontraron resultados.
@@ -242,6 +267,11 @@
                                         <x-base.table.tr>
                                             <x-base.table.td colspan="2" class="border-t border-slate-200/60 bg-slate-100 text-right font-bold text-slate-700">
                                                 Total ({{ $resumen['proveedores'] }} proveedor{{ $resumen['proveedores'] === 1 ? '' : 'es' }} · {{ $resumen['cantidad'] }} comprobante{{ $resumen['cantidad'] === 1 ? '' : 's' }})
+                                                @if($resumen['anteriores'] > 0 && $resumen['anteriores'] < $resumen['cantidad'])
+                                                    <div class="text-xs font-medium text-slate-500">
+                                                        Del mes: S/ {{ number_format($resumen['total_mes'], 2) }} · Meses anteriores: S/ {{ number_format($resumen['total_anteriores'], 2) }} ({{ $resumen['anteriores'] }})
+                                                    </div>
+                                                @endif
                                             </x-base.table.td>
                                             <x-base.table.td class="whitespace-nowrap border-t border-slate-200/60 bg-slate-100 text-right font-bold text-slate-700">
                                                 {{ number_format($resumen['base'], 2) }}
@@ -302,6 +332,9 @@
                                     >
                                         <x-base.table.td class="whitespace-nowrap border-dashed dark:bg-darkmode-600">
                                             {{ $compra->issue_date?->format('d-m-Y') ?? '—' }}
+                                            @if($compra->issue_date && $compra->issue_date->format('Ym') < $compra->period)
+                                                <div class="text-xs text-amber-700" title="Emitido antes del periodo: SIRE lo propone aquí porque todavía se puede anotar">mes anterior</div>
+                                            @endif
                                         </x-base.table.td>
                                         <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                             <div class="whitespace-nowrap font-medium text-primary">{{ $compra->comprobante() }}</div>
@@ -341,7 +374,7 @@
                                 @empty
                                     <x-base.table.tr>
                                         <x-base.table.td colspan="8" class="border-dashed text-center dark:bg-darkmode-600">
-                                            @if($ultima && $ultima->status === \App\Models\SireDownload::STATUS_DONE && ! $search && ! $tipo && (string) $proveedor === '')
+                                            @if($ultima && $ultima->status === \App\Models\SireDownload::STATUS_DONE && ! $search && ! $tipo && (string) $proveedor === '' && (string) $emision === '')
                                                 SUNAT no tiene compras registradas para este periodo.
                                             @else
                                                 No se encontraron resultados.
@@ -360,6 +393,11 @@
                                             @if($resumen['en_otra_moneda'] > 0)
                                                 <div class="text-xs font-medium text-slate-500">
                                                     {{ $resumen['en_otra_moneda'] }} en moneda extranjera, convertido{{ $resumen['en_otra_moneda'] === 1 ? '' : 's' }} a soles por SUNAT
+                                                </div>
+                                            @endif
+                                            @if($resumen['anteriores'] > 0 && $resumen['anteriores'] < $resumen['cantidad'])
+                                                <div class="text-xs font-medium text-slate-500">
+                                                    Del mes: S/ {{ number_format($resumen['total_mes'], 2) }} · Meses anteriores: S/ {{ number_format($resumen['total_anteriores'], 2) }} ({{ $resumen['anteriores'] }})
                                                 </div>
                                             @endif
                                         </x-base.table.td>
@@ -445,6 +483,11 @@
                         <div>
                             <div class="text-xs text-slate-500">Fecha de emisión</div>
                             <div class="font-medium">{{ $detalle->issue_date?->format('d-m-Y') ?? '—' }}</div>
+                            @if($detalle->issue_date && $detalle->issue_date->format('Ym') < $detalle->period)
+                                <div class="text-xs text-amber-700">
+                                    De un mes anterior: SIRE lo propone en {{ \App\Livewire\Purchases\TableSirePurchases::etiquetaPeriodo($detalle->period) }} porque todavía está dentro de los 12 meses en que se puede anotar.
+                                </div>
+                            @endif
                         </div>
                         @if($detalle->due_date)
                             <div>

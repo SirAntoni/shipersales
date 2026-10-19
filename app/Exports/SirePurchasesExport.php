@@ -70,6 +70,11 @@ class SirePurchasesExport implements
         if ($filtros['tipo']) {
             $titulo .= ' - SOLO ' . mb_strtoupper(SirePurchase::nombreTipo($filtros['tipo']), 'UTF-8');
         }
+        if ($filtros['emision'] === 'mes') {
+            $titulo .= ' - SOLO EMITIDOS EN EL MES';
+        } elseif ($filtros['emision'] === 'anteriores') {
+            $titulo .= ' - SOLO EMITIDOS EN MESES ANTERIORES';
+        }
         if ((string) $filtros['proveedor'] !== '') {
             $titulo .= ' - PROVEEDOR ' . mb_strtoupper(SirePurchase::nombreDeProveedor((string) $filtros['proveedor']), 'UTF-8');
         }
@@ -140,6 +145,17 @@ class SirePurchasesExport implements
         ]);
 
         return $highestRow;
+    }
+
+    /** Aviso para el pie cuando el filtro mezcla comprobantes del mes y de meses anteriores. */
+    public static function notaAnteriores(array $resumen): ?string
+    {
+        if ($resumen['anteriores'] === 0 || $resumen['anteriores'] === $resumen['cantidad']) {
+            return null;
+        }
+
+        return "Incluye {$resumen['anteriores']} comprobante(s) emitidos en meses anteriores por S/ " . number_format($resumen['total_anteriores'], 2)
+            . ' (del mes: S/ ' . number_format($resumen['total_mes'], 2) . '): SIRE los propone en este periodo porque todavía están dentro de los 12 meses en que se pueden anotar.';
     }
 
     public static function logo(): Drawing
@@ -252,6 +268,9 @@ class SirePurchasesExport implements
 
                 $fila += 2;
                 $sheet->setCellValue("A{$fila}", 'Fuente: propuesta del Registro de Compras de SIRE (SUNAT). Importes en soles: SUNAT convierte los comprobantes en otra moneda al tipo de cambio indicado. Las notas de crédito restan.');
+                if ($nota = self::notaAnteriores($resumen)) {
+                    $sheet->setCellValue('A' . ($fila + 1), $nota);
+                }
             },
         ];
     }

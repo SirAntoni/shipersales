@@ -127,11 +127,13 @@ class ReportController extends Controller
             'tipo'      => ['nullable', 'bail', 'string', 'regex:/^\d{2}$/'],
             // RUC exacto ("0" = declaraciones de aduanas).
             'proveedor' => ['nullable', 'bail', 'string', 'regex:/^[0-9A-Za-z]{1,20}$/'],
+            'emision'   => 'nullable|in:mes,anteriores',
         ]);
 
         $nombre = 'compras-sire-' . $datos['periodo']
             . (! empty($datos['tipo']) ? '-tipo-' . $datos['tipo'] : '')
-            . (isset($datos['proveedor']) && $datos['proveedor'] !== '' ? '-' . $datos['proveedor'] : '');
+            . (isset($datos['proveedor']) && $datos['proveedor'] !== '' ? '-' . $datos['proveedor'] : '')
+            . (! empty($datos['emision']) ? ($datos['emision'] === 'mes' ? '-del-mes' : '-meses-anteriores') : '');
 
         return Excel::download(new SirePurchasesWorkbook($datos), $nombre . '.xlsx');
     }

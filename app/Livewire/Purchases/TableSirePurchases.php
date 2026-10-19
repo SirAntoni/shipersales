@@ -39,6 +39,14 @@ class TableSirePurchases extends Component
     #[Url(as: 'proveedor', except: '')]
     public $proveedor = '';
 
+    /**
+     * "mes" (emitidos en el periodo) o "anteriores". SIRE propone en el periodo
+     * abierto los comprobantes que aun no se anotaron y siguen dentro de los 12
+     * meses en que se pueden anotar, asi que un periodo trae fechas de antes.
+     */
+    #[Url(as: 'emision', except: '')]
+    public $emision = '';
+
     /** "comprobantes" o "proveedores" (resumen por RUC). */
     #[Url(as: 'vista', except: 'comprobantes')]
     public $vista = 'comprobantes';
@@ -81,6 +89,11 @@ class TableSirePurchases extends Component
         $this->resetPage();
     }
 
+    public function updatingEmision()
+    {
+        $this->resetPage();
+    }
+
     public function porProveedores(): bool
     {
         return $this->vista === 'proveedores';
@@ -110,6 +123,12 @@ class TableSirePurchases extends Component
         return TableDocuments::etiquetaPeriodo(substr($periodo, 0, 4), substr($periodo, 4, 2));
     }
 
+    /** "202609" -> "2026-09-01": lo emitido antes es de meses anteriores. Null si el periodo no es valido. */
+    public static function inicioPeriodo($periodo): ?string
+    {
+        return self::periodoValido($periodo) ? substr($periodo, 0, 4) . '-' . substr($periodo, 4, 2) . '-01' : null;
+    }
+
     public static function filtrosPorDefecto(array $filtros = []): array
     {
         return array_merge([
@@ -117,6 +136,7 @@ class TableSirePurchases extends Component
             'search'    => null,
             'tipo'      => null,
             'proveedor' => null,
+            'emision'   => null,
         ], $filtros);
     }
 
@@ -124,9 +144,12 @@ class TableSirePurchases extends Component
     public static function filtrar($query, array $filtros)
     {
         $f = self::filtrosPorDefecto($filtros);
+        $inicio = self::inicioPeriodo($f['periodo']);
 
         return $query
             ->where('period', $f['periodo'])
+            ->when($inicio && $f['emision'] === 'mes', fn ($q) => $q->where('issue_date', '>=', $inicio))
+            ->when($inicio && $f['emision'] === 'anteriores', fn ($q) => $q->where('issue_date', '<', $inicio))
             ->when($f['tipo'], fn ($q) => $q->where('document_type', $f['tipo']))
             // Comparacion explicita: el RUC "0" de aduanas es falsy en PHP.
             ->when((string) $f['proveedor'] !== '', fn ($q) => $q->where('issuer_document_number', (string) $f['proveedor']))
@@ -147,21 +170,27 @@ class TableSirePurchases extends Component
      */
     public static function resumen(array $filtros): array
     {
+        $inicio = self::inicioPeriodo(self::filtrosPorDefecto($filtros)['periodo']) ?? '0000-01-01';
+
         $r = self::filtrar(SirePurchase::query(), $filtros)
-            ->selectRaw("COUNT(*) as cantidad, COUNT(DISTINCT issuer_document_number) as proveedores, SUM(currency <> 'PEN') as en_otra_moneda, SUM(taxable_base) as base, SUM(igv) as igv, SUM(non_taxable) as no_gravado, SUM(other_taxes) as otros_tributos, SUM(total) as total")
+            ->selectRaw("COUNT(*) as cantidad, COUNT(DISTINCT issuer_document_number) as proveedores, SUM(currency <> 'PEN') as en_otra_moneda, SUM(taxable_base) as base, SUM(igv) as igv, SUM(non_taxable) as no_gravado, SUM(other_taxes) as otros_tributos, SUM(total) as total, SUM(issue_date < ?) as anteriores, SUM(CASE WHEN issue_date < ? THEN total ELSE 0 END) as total_anteriores", [$inicio, $inicio])
             ->first();
 
         return [
-            'cantidad'       => (int) $r->cantidad,
-            'proveedores'    => (int) $r->proveedores,
-            'en_otra_moneda' => (int) $r->en_otra_moneda,
-            'base'           => round((float) $r->base, 2),
-            'igv'            => round((float) $r->igv, 2),
-            'no_gravado'     => round((float) $r->no_gravado, 2),
-            'otros_tributos' => round((float) $r->otros_tributos, 2),
+            'cantidad'         => (int) $r->cantidad,
+            'proveedores'      => (int) $r->proveedores,
+            'en_otra_moneda'   => (int) $r->en_otra_moneda,
+            'base'             => round((float) $r->base, 2),
+            'igv'              => round((float) $r->igv, 2),
+            'no_gravado'       => round((float) $r->no_gravado, 2),
+            'otros_tributos'   => round((float) $r->otros_tributos, 2),
             // En pantalla van en una sola columna; el Excel los separa.
-            'otros'          => round((float) $r->no_gravado + (float) $r->otros_tributos, 2),
-            'total'          => round((float) $r->total, 2),
+            'otros'            => round((float) $r->no_gravado + (float) $r->otros_tributos, 2),
+            'total'            => round((float) $r->total, 2),
+            // Emitidos antes del periodo, que SIRE igual propone en el.
+            'anteriores'       => (int) $r->anteriores,
+            'total_anteriores' => round((float) $r->total_anteriores, 2),
+            'total_mes'        => round((float) $r->total - (float) $r->total_anteriores, 2),
         ];
     }
 
@@ -218,6 +247,7 @@ class TableSirePurchases extends Component
             'search'    => $this->search,
             'tipo'      => $this->tipo,
             'proveedor' => $this->proveedor,
+            'emision'   => $this->emision,
         ];
     }
 
@@ -331,6 +361,8 @@ class TableSirePurchases extends Component
                     ->orderBy('issue_date')->orderBy('id')
                     ->paginate($this->porPagina()),
             'resumen'           => self::resumen($filtros),
+            // Del periodo entero, sin los demas filtros: decide si se muestra el filtro de emision.
+            'delPeriodo'        => self::resumen(['periodo' => $this->periodo]),
             'porProveedores'    => $this->porProveedores(),
             'detalle'           => $this->detalleId ? SirePurchase::with('download.user:id,name')->find($this->detalleId) : null,
             'nombreProveedor'   => $this->nombreProveedorFiltrado(),
