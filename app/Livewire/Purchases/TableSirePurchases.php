@@ -35,8 +35,19 @@ class TableSirePurchases extends Component
 
     public $tipo = '';
 
+    /** RUC exacto: lo pone el clic en una fila de "Por proveedor" ("0" = aduanas). */
+    #[Url(as: 'proveedor', except: '')]
+    public $proveedor = '';
+
+    /** "comprobantes" o "proveedores" (resumen por RUC). */
+    #[Url(as: 'vista', except: 'comprobantes')]
+    public $vista = 'comprobantes';
+
     #[Url(as: 'porPagina', except: self::POR_PAGINA_DEFECTO)]
     public $perPage = self::POR_PAGINA_DEFECTO;
+
+    /** Comprobante abierto en el modal de detalle. */
+    public $detalleId = null;
 
     public function mount()
     {
@@ -63,6 +74,16 @@ class TableSirePurchases extends Component
     public function updatingPerPage()
     {
         $this->resetPage();
+    }
+
+    public function updatingVista()
+    {
+        $this->resetPage();
+    }
+
+    public function porProveedores(): bool
+    {
+        return $this->vista === 'proveedores';
     }
 
     public function porPagina(): int
@@ -92,9 +113,10 @@ class TableSirePurchases extends Component
     public static function filtrosPorDefecto(array $filtros = []): array
     {
         return array_merge([
-            'periodo' => null,
-            'search'  => null,
-            'tipo'    => null,
+            'periodo'   => null,
+            'search'    => null,
+            'tipo'      => null,
+            'proveedor' => null,
         ], $filtros);
     }
 
@@ -106,6 +128,8 @@ class TableSirePurchases extends Component
         return $query
             ->where('period', $f['periodo'])
             ->when($f['tipo'], fn ($q) => $q->where('document_type', $f['tipo']))
+            // Comparacion explicita: el RUC "0" de aduanas es falsy en PHP.
+            ->when((string) $f['proveedor'] !== '', fn ($q) => $q->where('issuer_document_number', (string) $f['proveedor']))
             ->when($f['search'], function ($q) use ($f) {
                 $search = trim($f['search']);
                 $q->where(function ($q) use ($search) {
@@ -124,11 +148,12 @@ class TableSirePurchases extends Component
     public static function resumen(array $filtros): array
     {
         $r = self::filtrar(SirePurchase::query(), $filtros)
-            ->selectRaw("COUNT(*) as cantidad, SUM(currency <> 'PEN') as en_otra_moneda, SUM(taxable_base) as base, SUM(igv) as igv, SUM(non_taxable) as no_gravado, SUM(other_taxes) as otros_tributos, SUM(total) as total")
+            ->selectRaw("COUNT(*) as cantidad, COUNT(DISTINCT issuer_document_number) as proveedores, SUM(currency <> 'PEN') as en_otra_moneda, SUM(taxable_base) as base, SUM(igv) as igv, SUM(non_taxable) as no_gravado, SUM(other_taxes) as otros_tributos, SUM(total) as total")
             ->first();
 
         return [
             'cantidad'       => (int) $r->cantidad,
+            'proveedores'    => (int) $r->proveedores,
             'en_otra_moneda' => (int) $r->en_otra_moneda,
             'base'           => round((float) $r->base, 2),
             'igv'            => round((float) $r->igv, 2),
@@ -138,6 +163,20 @@ class TableSirePurchases extends Component
             'otros'          => round((float) $r->no_gravado + (float) $r->otros_tributos, 2),
             'total'          => round((float) $r->total, 2),
         ];
+    }
+
+    /**
+     * Totales por RUC del emisor, del que mas compro al que menos. Todas las
+     * declaraciones de aduanas comparten el RUC "0" y quedan en una sola fila;
+     * MAX(document_type) solo sirve para que proveedor() las llame "Aduanas".
+     */
+    public static function porProveedor(array $filtros)
+    {
+        return self::filtrar(SirePurchase::query(), $filtros)
+            ->selectRaw("issuer_document_number, MAX(issuer_name) as issuer_name, MAX(document_type) as document_type, COUNT(*) as cantidad, SUM(document_type = '07') as notas_credito, SUM(taxable_base) as taxable_base, SUM(igv) as igv, SUM(non_taxable + other_taxes) as otros, SUM(total) as total")
+            ->groupBy('issuer_document_number')
+            ->orderByDesc('total')
+            ->orderBy('issuer_document_number');
     }
 
     /**
@@ -175,10 +214,38 @@ class TableSirePurchases extends Component
     private function filtrosActivos(): array
     {
         return [
-            'periodo' => $this->periodo,
-            'search'  => $this->search,
-            'tipo'    => $this->tipo,
+            'periodo'   => $this->periodo,
+            'search'    => $this->search,
+            'tipo'      => $this->tipo,
+            'proveedor' => $this->proveedor,
         ];
+    }
+
+    public function verDetalle($id)
+    {
+        $this->detalleId = (int) $id;
+        $this->dispatch('open-sire-detalle-modal');
+    }
+
+    /** Desde "Por proveedor" o el detalle: sus comprobantes, con los demas filtros. */
+    public function verProveedor($ruc)
+    {
+        $this->proveedor = (string) $ruc;
+        $this->vista = 'comprobantes';
+        $this->resetPage();
+        $this->dispatch('close-sire-detalle-modal');
+    }
+
+    public function quitarProveedor()
+    {
+        $this->proveedor = '';
+        $this->resetPage();
+    }
+
+    /** Nombre del proveedor filtrado, para la etiqueta que permite quitar el filtro. */
+    private function nombreProveedorFiltrado(): ?string
+    {
+        return (string) $this->proveedor === '' ? null : SirePurchase::nombreDeProveedor((string) $this->proveedor);
     }
 
     /** Pide el periodo a SUNAT. La respuesta llega por ticket: la consulta revisarDescarga(). */
@@ -258,10 +325,15 @@ class TableSirePurchases extends Component
         $filtros = $this->filtrosActivos();
 
         return view('livewire.purchases.table-sire-purchases', [
-            'compras'           => self::filtrar(SirePurchase::query(), $filtros)
-                ->orderBy('issue_date')->orderBy('id')
-                ->paginate($this->porPagina()),
+            'compras'           => $this->porProveedores()
+                ? self::porProveedor($filtros)->paginate($this->porPagina())
+                : self::filtrar(SirePurchase::query(), $filtros)
+                    ->orderBy('issue_date')->orderBy('id')
+                    ->paginate($this->porPagina()),
             'resumen'           => self::resumen($filtros),
+            'porProveedores'    => $this->porProveedores(),
+            'detalle'           => $this->detalleId ? SirePurchase::with('download.user:id,name')->find($this->detalleId) : null,
+            'nombreProveedor'   => $this->nombreProveedorFiltrado(),
             'periodos'          => $this->periodos,
             'tipos'             => $this->tiposDelPeriodo(),
             'pendiente'         => $this->descargaPendiente(),

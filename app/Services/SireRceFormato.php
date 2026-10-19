@@ -23,6 +23,7 @@ class SireRceFormato
         'document_type'          => ['tipocpdoc', 'tipocp', 'tipodecp', 'tipocomprobante'],
         'serie'                  => ['seriedelcdp', 'seriecdp', 'seriecp', 'serie'],
         'number'                 => ['nrocpodocnroinicialrango', 'nrocpodoc', 'nrocp', 'numerocp'],
+        'dam_year'               => ['ano', 'anodam'],
         'issuer_document_type'   => ['tipodocidentidad'],
         'issuer_document_number' => ['nrodocidentidad'],
         'base_dg'                => ['bigravadodg'],
@@ -38,9 +39,12 @@ class SireRceFormato
         'total'                  => ['totalcp'],
         'currency'               => ['moneda'],
         'exchange_rate'          => ['tipodecambio', 'tipocambio'],
+        'mod_fecha'              => ['fechaemisiondocmodificado', 'fechadocmodificado'],
         'mod_tipo'               => ['tipocpmodificado'],
         'mod_serie'              => ['seriecpmodificado'],
         'mod_numero'             => ['nrocpmodificado'],
+        'detraction'             => ['detraccion'],
+        'note_type'              => ['tipodenota', 'tiponota'],
     ];
 
     /** Posicion (desde 0) de cada campo en el Anexo 8, para archivos sin encabezados. */
@@ -51,6 +55,7 @@ class SireRceFormato
         'due_date'               => 5,
         'document_type'          => 6,
         'serie'                  => 7,
+        'dam_year'               => 8,
         'number'                 => 9,
         'issuer_document_type'   => 11,
         'issuer_document_number' => 12,
@@ -68,9 +73,19 @@ class SireRceFormato
         'total'                  => 24,
         'currency'               => 25,
         'exchange_rate'          => 26,
+        'mod_fecha'              => 27,
         'mod_tipo'               => 28,
         'mod_serie'              => 29,
         'mod_numero'             => 31,
+        'detraction'             => 37,
+        'note_type'              => 38,
+    ];
+
+    /** Importes que cambian de signo si una nota de credito llega en positivo. */
+    private const IMPORTES = [
+        'taxable_base', 'igv', 'non_taxable', 'other_taxes', 'total',
+        'taxable_base_dg', 'igv_dg', 'taxable_base_dgng', 'igv_dgng', 'taxable_base_dng', 'igv_dng',
+        'isc', 'icbper', 'other_charges',
     ];
 
     /** Sin estas no se guarda nada: son las que identifican el comprobante y su importe. */
@@ -161,6 +176,7 @@ class SireRceFormato
             'document_type'          => str_pad($v('document_type'), 2, '0', STR_PAD_LEFT),
             'serie'                  => $v('serie'),
             'number'                 => $v('number'),
+            'dam_year'               => preg_match('/^\d{4}$/', $v('dam_year')) ? $v('dam_year') : null,
             'issuer_document_type'   => $v('issuer_document_type') ?: null,
             'issuer_document_number' => $v('issuer_document_number'),
             'issuer_name'            => mb_substr($v('issuer_name'), 0, 255) ?: null,
@@ -172,6 +188,19 @@ class SireRceFormato
             'currency'               => strtoupper($v('currency')) ?: 'PEN',
             'exchange_rate'          => $v('exchange_rate') !== '' ? (self::monto($v('exchange_rate')) ?: null) : null,
             'affected_document'      => self::documentoModificado($v('mod_tipo'), $v('mod_serie'), $v('mod_numero')),
+            'taxable_base_dg'        => round($monto('base_dg'), 2),
+            'igv_dg'                 => round($monto('igv_dg'), 2),
+            'taxable_base_dgng'      => round($monto('base_dgng'), 2),
+            'igv_dgng'               => round($monto('igv_dgng'), 2),
+            'taxable_base_dng'       => round($monto('base_dng'), 2),
+            'igv_dng'                => round($monto('igv_dng'), 2),
+            'isc'                    => round($monto('isc'), 2),
+            'icbper'                 => round($monto('icbper'), 2),
+            'other_charges'          => round($monto('otros'), 2),
+            'affected_issue_date'    => self::fecha($v('mod_fecha')),
+            'note_type'              => $v('note_type') !== '' ? mb_substr(str_pad($v('note_type'), 2, '0', STR_PAD_LEFT), 0, 2) : null,
+            // SUNAT marca con "D" los comprobantes sujetos a detraccion.
+            'detraction'             => ! in_array($v('detraction'), ['', '0'], true),
         ];
 
         if (! $fila['issue_date'] || $fila['serie'] === '' || $fila['number'] === '' || $fila['issuer_document_number'] === '') {
@@ -181,7 +210,7 @@ class SireRceFormato
         // Las notas de credito restan: SUNAT ya las manda en negativo. Si
         // alguna llegara en positivo se invierte para que el total no la sume.
         if ($fila['document_type'] === '07' && $fila['total'] > 0) {
-            foreach (['taxable_base', 'igv', 'non_taxable', 'other_taxes', 'total'] as $campo) {
+            foreach (self::IMPORTES as $campo) {
                 $fila[$campo] = $fila[$campo] == 0 ? 0.0 : -$fila[$campo];
             }
         }

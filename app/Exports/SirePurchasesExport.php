@@ -13,6 +13,7 @@ use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -20,7 +21,9 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
+/** Hoja "Comprobantes" del Excel de /sire-purchases (ver SirePurchasesWorkbook). */
 class SirePurchasesExport implements
     FromQuery,
     WithHeadings,
@@ -30,7 +33,8 @@ class SirePurchasesExport implements
     ShouldAutoSize,
     WithMapping,
     WithColumnFormatting,
-    WithStrictNullComparison
+    WithStrictNullComparison,
+    WithTitle
 {
     /** Ultima columna con datos: se usa en el merge, el autosize y la cabecera. */
     private const ULTIMA_COL = 'N';
@@ -43,11 +47,111 @@ class SirePurchasesExport implements
         $this->filtros = TableSirePurchases::filtrosPorDefecto($filtros);
     }
 
+    public function title(): string
+    {
+        return 'Comprobantes';
+    }
+
     public function query()
     {
         return TableSirePurchases::filtrar(SirePurchase::query(), $this->filtros)
             ->orderBy('issue_date')
             ->orderBy('id');
+    }
+
+    /**
+     * El titulo declara todo el alcance: sin esto un export filtrado por tipo,
+     * proveedor o busqueda parece el registro completo del mes.
+     */
+    public static function titulo(string $base, array $filtros): string
+    {
+        $titulo = $base . ' - ' . mb_strtoupper(TableSirePurchases::etiquetaPeriodo($filtros['periodo']), 'UTF-8');
+
+        if ($filtros['tipo']) {
+            $titulo .= ' - SOLO ' . mb_strtoupper(SirePurchase::nombreTipo($filtros['tipo']), 'UTF-8');
+        }
+        if ((string) $filtros['proveedor'] !== '') {
+            $titulo .= ' - PROVEEDOR ' . mb_strtoupper(SirePurchase::nombreDeProveedor((string) $filtros['proveedor']), 'UTF-8');
+        }
+        if ($filtros['search']) {
+            $titulo .= ' - BUSQUEDA "' . mb_strtoupper($filtros['search'], 'UTF-8') . '"';
+        }
+
+        return $titulo;
+    }
+
+    /** Titulo, cabecera y bordes comunes a las dos hojas. Devuelve la ultima fila con datos. */
+    public static function darFormato(Worksheet $sheet, string $ultima, string $titulo): int
+    {
+        $sheet->setCellValue('B2', $titulo);
+        $sheet->mergeCells("B2:{$ultima}2");
+        $sheet->getStyle('B2')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 24,
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        $sheet->getRowDimension(2)->setRowHeight(80);
+        $sheet->getRowDimension(4)->setRowHeight(40);
+
+        foreach (range('B', $ultima) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $highestRow = $sheet->getHighestRow();
+
+        $sheet->getStyle("A4:{$ultima}{$highestRow}")->applyFromArray([
+            'borders' => [
+                'outline' => [
+                    'borderStyle' => Border::BORDER_MEDIUM,
+                    'color'       => ['rgb' => '000000'],
+                ],
+                'inside' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color'       => ['rgb' => '000000'],
+                ],
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        $sheet->getStyle("A4:{$ultima}4")->applyFromArray([
+            'font' => [
+                'color' => [
+                    'rgb' => 'FFFFFF'
+                ],
+                'bold' => true,
+                'size' => 14
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '374080'],
+            ]
+        ]);
+
+        return $highestRow;
+    }
+
+    public static function logo(): Drawing
+    {
+        $drawing = new Drawing();
+        $drawing->setName('Logo');
+        $drawing->setDescription('ShiperSale');
+        $drawing->setPath(public_path('/images/logo.png'));
+        $drawing->setHeight(90);
+        $drawing->setCoordinates('A2');
+
+        return $drawing;
     }
 
     public function headings(): array
@@ -99,14 +203,7 @@ class SirePurchasesExport implements
 
     public function drawings()
     {
-        $drawing = new Drawing();
-        $drawing->setName('Logo');
-        $drawing->setDescription('ShiperSale');
-        $drawing->setPath(public_path('/images/logo.png'));
-        $drawing->setHeight(90);
-        $drawing->setCoordinates('A2');
-
-        return $drawing;
+        return self::logo();
     }
 
     public function columnFormats(): array
@@ -128,73 +225,7 @@ class SirePurchasesExport implements
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $ultima = self::ULTIMA_COL;
-
-                // El titulo declara todo el alcance: sin esto un export filtrado
-                // por tipo o busqueda parece el registro completo del mes.
-                $titulo = 'REGISTRO DE COMPRAS SIRE - ' . mb_strtoupper(TableSirePurchases::etiquetaPeriodo($this->filtros['periodo']), 'UTF-8');
-                if ($this->filtros['tipo']) {
-                    $titulo .= ' - SOLO ' . mb_strtoupper(SirePurchase::nombreTipo($this->filtros['tipo']), 'UTF-8');
-                }
-                if ($this->filtros['search']) {
-                    $titulo .= ' - BUSQUEDA "' . mb_strtoupper($this->filtros['search'], 'UTF-8') . '"';
-                }
-
-                $sheet->setCellValue('B2', $titulo);
-                $sheet->mergeCells("B2:{$ultima}2");
-                $sheet->getStyle('B2')->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'size' => 24,
-                    ],
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                ]);
-
-                $sheet->getRowDimension(2)->setRowHeight(80);
-                $sheet->getRowDimension(4)->setRowHeight(40);
-
-                foreach (range('B', $ultima) as $col) {
-                    $sheet->getColumnDimension($col)->setAutoSize(true);
-                }
-
-                $highestRow = $sheet->getHighestRow();
-
-                $sheet->getStyle("A4:{$ultima}{$highestRow}")->applyFromArray([
-                    'borders' => [
-                        'outline' => [
-                            'borderStyle' => Border::BORDER_MEDIUM,
-                            'color'       => ['rgb' => '000000'],
-                        ],
-                        'inside' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color'       => ['rgb' => '000000'],
-                        ],
-                    ],
-                    'alignment' => [
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                ]);
-
-                $sheet->getStyle("A4:{$ultima}4")->applyFromArray([
-                    'font' => [
-                        'color' => [
-                            'rgb' => 'FFFFFF'
-                        ],
-                        'bold' => true,
-                        'size' => 14
-                    ],
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER
-                    ],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => '374080'],
-                    ]
-                ]);
+                $highestRow = self::darFormato($sheet, self::ULTIMA_COL, self::titulo('REGISTRO DE COMPRAS SIRE', $this->filtros));
 
                 // Pie con el mismo total que la pantalla. Importes literales y no
                 // formulas: con pre_calculate_formulas desactivado el xlsx

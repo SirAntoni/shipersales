@@ -10,7 +10,7 @@ use App\Exports\ReportCommissionExport;
 use App\Exports\ReportDayliExport;
 use App\Exports\ReportCustomExport;
 use App\Exports\ReportMonthExport;
-use App\Exports\SirePurchasesExport;
+use App\Exports\SirePurchasesWorkbook;
 use App\Livewire\Documents\TableDocuments;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -124,12 +124,16 @@ class ReportController extends Controller
             'periodo' => ['required', 'bail', 'string', 'regex:/^\d{4}(0[1-9]|1[0-2])$/'],
             'search'  => 'nullable|string|max:100',
             // Cualquier codigo de la tabla 10: SUNAT puede mandar tipos que no estan en TIPOS.
-            'tipo'    => ['nullable', 'bail', 'string', 'regex:/^\d{2}$/'],
+            'tipo'      => ['nullable', 'bail', 'string', 'regex:/^\d{2}$/'],
+            // RUC exacto ("0" = declaraciones de aduanas).
+            'proveedor' => ['nullable', 'bail', 'string', 'regex:/^[0-9A-Za-z]{1,20}$/'],
         ]);
 
-        $nombre = 'compras-sire-' . $datos['periodo'] . (! empty($datos['tipo']) ? '-tipo-' . $datos['tipo'] : '');
+        $nombre = 'compras-sire-' . $datos['periodo']
+            . (! empty($datos['tipo']) ? '-tipo-' . $datos['tipo'] : '')
+            . (isset($datos['proveedor']) && $datos['proveedor'] !== '' ? '-' . $datos['proveedor'] : '');
 
-        return Excel::download(new SirePurchasesExport($datos), $nombre . '.xlsx');
+        return Excel::download(new SirePurchasesWorkbook($datos), $nombre . '.xlsx');
     }
 
     /** Conteos fisicos de /inventory para una fecha (inicio = fin) o un rango. */
