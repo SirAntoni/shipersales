@@ -56,6 +56,10 @@
             ['title' => 'Compras','route' => 'purchases.index'],
             ['title' => 'Anuladas', 'active' => true]
         ],
+        'sire_purchases' => [
+            ['title' => 'Compras','route' => 'purchases.index'],
+            ['title' => 'SIRE', 'active' => true]
+        ],
         'sales.index' => [
             ['title' => 'Ventas','route' => 'sales.index'],
             ['title' => 'Listar', 'active' => true]

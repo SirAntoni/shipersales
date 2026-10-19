@@ -23,4 +23,9 @@ class PurchaseController extends Controller
     {
         return view('purchases.usa');
     }
+
+    public function sire()
+    {
+        return view('purchases.sire');
+    }
 }

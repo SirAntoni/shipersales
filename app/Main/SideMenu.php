@@ -107,6 +107,13 @@ class SideMenu
                         'permission' => 'purchases',
                     ],
                     [
+                        'icon' => "FileText",
+                        'route_name' => "sire_purchases",
+                        'params' => [],
+                        'title' => "Compras SIRE",
+                        'permission' => 'purchases',
+                    ],
+                    [
                         'icon' => "FileMinus",
                         'route_name' => "canceled_purchases",
                         'params' => [],

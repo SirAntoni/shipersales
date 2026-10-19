@@ -66,6 +66,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('payment-methods', PaymentMethodController::class)->middleware('can:settings');
     Route::resource('purchases', PurchaseController::class)->middleware('can:purchases.index');
     Route::get('usa-purchases', [PurchaseController::class, 'usa'])->name('usa_purchases')->middleware('can:purchases');
+    Route::get('sire-purchases', [PurchaseController::class, 'sire'])->name('sire_purchases')->middleware('can:purchases');
     Route::get('canceled_purchases', [CanceledController::class,'purchases'])->name('canceled_purchases')->middleware('can:purchases','can:canceled_purchases');
     Route::resource('sales', SaleController::class)->middleware('can:sales');
     Route::get('sales/{id}/label', [SaleController::class,'label'])->name('sales.label')->middleware('can:sales');
@@ -87,6 +88,7 @@ Route::middleware(['auth'])->group(function () {
     // documents/{document} del resource declarado arriba.
     Route::get('reports/documents/export', [ReportController::class, 'documents'])->name('documents.export')->middleware('can:documents');
     Route::get('reports/inventory/export', [ReportController::class, 'inventory'])->name('reports.inventory.export')->middleware('can:store');
+    Route::get('reports/sire-purchases/export', [ReportController::class, 'sirePurchases'])->name('sire_purchases.export')->middleware('can:purchases');
     Route::get('kardex', [KardexController::class,'index'])->name('kardex')->middleware('can:kardex');
     Route::get('pdf/{id}', [SaleController::class,'pdf'])->name('pdf.view');
     Route::get('pdf-v2/{id}', [SaleController::class,'pdfV2'])->name('pdf.v2');
