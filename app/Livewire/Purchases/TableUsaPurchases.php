@@ -486,7 +486,7 @@ class TableUsaPurchases extends Component
                     return;
                 }
             } else {
-                if (empty($this->bulkConfirmExisting[$group['key']])) {
+                if (empty($this->bulkConfirmExisting[$i])) {
                     $this->dispatch('errorNotRoute', ['label' => "Confirma la edición de la compra existente para {$label}."]);
                     return;
                 }

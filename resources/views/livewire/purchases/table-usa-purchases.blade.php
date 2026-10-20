@@ -538,7 +538,8 @@
                                     <i class="fa-solid fa-circle-exclamation mr-1"></i>
                                     Este número de pedido ya existe. Se agregarán los artículos a la compra existente.
                                     <label class="flex items-center gap-2 mt-1 cursor-pointer">
-                                        <input type="checkbox" wire:model.live="bulkConfirmExisting.{{ $group['key'] }}" class="form-checkbox" />
+                                        {{-- Por indice: el numero de pedido trae puntos ("Pedido n.º ...") y Livewire los toma como niveles --}}
+                                        <input type="checkbox" wire:model.live="bulkConfirmExisting.{{ $gIndex }}" class="form-checkbox" />
                                         <span>Confirmo agregar artículos a esta compra</span>
                                     </label>
                                 </div>
