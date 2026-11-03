@@ -11,6 +11,13 @@ export default defineConfig({
     optimizeDeps: {
         include: ["tailwind-config"],
     },
+    server: {
+        // Herd sirve la app en https://shipersales.test y a veces levanta `yarn run dev` solo.
+        // Vite 4.5.6+ solo acepta orígenes localhost por CORS: sin esto los JS se bloquean y la página queda en blanco.
+        cors: {
+            origin: /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|[\w.-]+\.test)(:\d+)?$/,
+        },
+    },
     plugins: [
         laravel({
             input: [
