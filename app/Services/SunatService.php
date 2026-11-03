@@ -33,6 +33,39 @@ use App\Models\Client as ClientModel;
 
 class SunatService
 {
+    /**
+     * Reintentos seguidos ante el 1032 ("el comprobante ya está informado y se
+     * encuentra con estado anulado o rechazado"). Un intento rechazado gasta el
+     * número en SUNAT aunque no quede en la BD, así que puede haber varios
+     * números seguidos ya usados (pasó con F001-96).
+     */
+    const REINTENTOS_1032 = 5;
+
+    public static function es1032(array $sunatResponse): bool
+    {
+        return ($sunatResponse['status'] ?? null) != 1 && (string) ($sunatResponse['code'] ?? '') === '1032';
+    }
+
+    /** Aviso para el usuario cuando el comprobante salió con otro número por 1032. */
+    public static function avisoNumerosUsados(array $numeros): string
+    {
+        if (empty($numeros)) {
+            return '';
+        }
+
+        $lista = implode(', ', $numeros);
+
+        return count($numeros) === 1
+            ? " Se usó otro número porque {$lista} ya figuraba en SUNAT como anulado o rechazado."
+            : " Se usó otro número porque {$lista} ya figuraban en SUNAT como anulados o rechazados.";
+    }
+
+    /** Error para el usuario cuando se agotaron los reintentos por 1032. */
+    public static function errorNumerosAgotados(array $numeros): string
+    {
+        return 'No se pudo emitir: los números ' . implode(', ', $numeros) . ' ya figuran en SUNAT como anulados o rechazados. Contacte al administrador para revisar la numeración.';
+    }
+
     public function getSee()
     {
         $see = new See();

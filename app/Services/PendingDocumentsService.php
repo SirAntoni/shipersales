@@ -26,9 +26,11 @@ class PendingDocumentsService
 
         Log::info("Reenvío SUNAT: encontrados {$pending->count()} documentos pendientes.");
 
-        $stats = ['total' => $pending->count(), 'aceptados' => 0, 'rechazados' => 0, 'pendientes' => 0];
+        $stats = ['total' => $pending->count(), 'aceptados' => 0, 'rechazados' => 0, 'pendientes' => 0, 'renumerados' => []];
 
         foreach ($pending as $document) {
+            $numeroAntes = "{$document->serie}-{$document->correlative}";
+
             try {
                 $this->resendSingle($document);
             } catch (\Throwable $e) {
@@ -38,6 +40,11 @@ class PendingDocumentsService
             }
 
             $document->refresh();
+
+            // Renumerado por 1032: se informa para que el usuario sepa el número final
+            if ("{$document->serie}-{$document->correlative}" !== $numeroAntes) {
+                $stats['renumerados'][] = "{$numeroAntes} → {$document->serie}-{$document->correlative}";
+            }
 
             match ($document->status_sunat) {
                 'aceptado'  => $stats['aceptados']++,
@@ -130,11 +137,16 @@ class PendingDocumentsService
         $sunatResponse = $this->sunat->sunatResponse($invoice, $result);
 
         // === 1) Manejo de 1032 también en reenvío ===
-        if ($sunatResponse['status'] != 1 && (string)($sunatResponse['code'] ?? '') === '1032') {
-            Log::warning("SUNAT 1032 en reenvío documento ID {$document->id}. Reintentando con nuevo correlativo.");
+        // Siempre por encima del número fallido y hasta REINTENTOS_1032 veces:
+        // puede haber varios números seguidos gastados en SUNAT (ver NewDocument).
+        $reintentos1032 = 0;
+
+        while (SunatService::es1032($sunatResponse) && $reintentos1032 < SunatService::REINTENTOS_1032) {
+            $reintentos1032++;
+            Log::warning("SUNAT 1032 en reenvío documento ID {$document->id}: {$document->serie}-{$document->correlative} ya está informado. Reintentando con el siguiente correlativo.");
 
             // Nuevo correlativo y actualización en BD
-            $newCorrelative        = Voucher::nextCorrelativeById($document->document_type);
+            $newCorrelative        = max(Voucher::nextCorrelativeById($document->document_type), (int) $document->correlative + 1);
             $document->correlative = $newCorrelative;
             $document->save();
 

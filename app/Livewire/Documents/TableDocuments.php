@@ -563,6 +563,8 @@ class TableDocuments extends Component
             return;
         }
 
+        $numeroAntes = $document->serie . '-' . $document->correlative;
+
         $document->update([
             'date'         => $date,
             'status_sunat' => 'pendiente',
@@ -583,9 +585,10 @@ class TableDocuments extends Component
         $document->refresh();
 
         $numero = $document->serie . '-' . $document->correlative;
+        $aviso  = $numero !== $numeroAntes ? \App\Services\SunatService::avisoNumerosUsados([$numeroAntes]) : '';
 
         match ($document->status_sunat) {
-            'aceptado'  => $this->dispatch('successNotRoute', ['label' => "Fecha actualizada y comprobante {$numero} aceptado por SUNAT."]),
+            'aceptado'  => $this->dispatch('successNotRoute', ['label' => "Fecha actualizada y comprobante {$numero} aceptado por SUNAT.{$aviso}"]),
             'rechazado' => $this->dispatch('error', ['label' => "SUNAT rechazó el comprobante {$numero}: " . (($document->notes[0] ?? null) ?: 'revise los datos e intente nuevamente.')]),
             default     => $this->dispatch('error', ['label' => "La fecha se actualizó, pero no se pudo confirmar el envío del comprobante {$numero} (quedó pendiente). Se reintentará automáticamente."]),
         };
@@ -611,7 +614,10 @@ class TableDocuments extends Component
             $label = "Reenvío ejecutado: {$stats['total']} procesados — {$stats['aceptados']} aceptados"
                 . ($stats['rechazados'] > 0 ? ", {$stats['rechazados']} rechazados" : '')
                 . ($stats['pendientes'] > 0 ? ", {$stats['pendientes']} siguen pendientes" : '')
-                . '.';
+                . '.'
+                . (! empty($stats['renumerados'])
+                    ? ' Con otro número porque el original ya figuraba en SUNAT como anulado o rechazado: ' . implode(', ', $stats['renumerados']) . '.'
+                    : '');
 
             $this->dispatch('success', ['label' => $label, 'btn' => 'Entendido', 'route' => route('documents.index')]);
         } catch (\Throwable $e) {

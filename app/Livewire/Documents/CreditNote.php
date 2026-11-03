@@ -276,7 +276,7 @@ class CreditNote extends Component
         ];
 
         try {
-            $sunat = new SunatService();
+            $sunat = app(SunatService::class);
 
             $see = $sunat->getSee();
 
@@ -290,11 +290,15 @@ class CreditNote extends Component
 
             $sunatResponse = $sunat->sunatResponse($invoice,$result);
 
-            // Correlativo ya usado en SUNAT: reintentar una vez con el siguiente
-            if ($sunatResponse['status'] != 1 && (string)($sunatResponse['code'] ?? '') === '1032') {
-                Log::warning("SUNAT 1032 en nota de crédito: correlativo ya existe. Reintentando.");
+            // Número ya usado en SUNAT (1032): avanzar siempre por encima del
+            // número fallido, hasta REINTENTOS_1032 veces (ver NewDocument)
+            $numerosUsados = [];
 
-                $this->correlative = $this->nextCorrelativeForSerie($this->serie);
+            while (SunatService::es1032($sunatResponse) && count($numerosUsados) < SunatService::REINTENTOS_1032) {
+                $numerosUsados[] = "{$this->serie}-{$this->correlative}";
+                Log::warning("SUNAT 1032 en nota de crédito: {$this->serie}-{$this->correlative} ya está informado. Reintentando con el siguiente.");
+
+                $this->correlative = max($this->nextCorrelativeForSerie($this->serie), (int) $this->correlative + 1);
                 $data['correlative'] = $this->correlative;
 
                 $invoice = $sunat->getNote($data);
@@ -324,6 +328,9 @@ class CreditNote extends Component
 
             if ((string) ($sunatResponse['code'] ?? '') === '2108') {
                 $label = 'SUNAT rechazó la nota de crédito por fecha fuera de plazo (error 2108). ' . Document::mensajeFechaMinima(! $this->esBoleta);
+            } elseif (SunatService::es1032($sunatResponse)) {
+                $numerosUsados[] = "{$this->serie}-{$this->correlative}";
+                $label = SunatService::errorNumerosAgotados($numerosUsados);
             }
 
             $this->dispatch('error', ['label' => $label]);
@@ -438,6 +445,8 @@ class CreditNote extends Component
         } else {
             $label = "La nota de crédito {$this->serie}-{$this->correlative} fue emitida con éxito sin reponer stock. La venta se mantiene activa: puede emitir un comprobante nuevo.";
         }
+
+        $label .= SunatService::avisoNumerosUsados($numerosUsados);
 
         $this->dispatch('success', ['label' => $label, 'btn' => 'Ir a documentos', 'route' => route('documents.index')]);
 

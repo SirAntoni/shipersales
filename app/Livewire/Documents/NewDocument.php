@@ -235,7 +235,7 @@ class NewDocument extends Component
         Log::info("data: " . json_encode($data));
 
         try {
-            $sunat = new SunatService();
+            $sunat = app(SunatService::class);
 
             $see     = $sunat->getSee();
             $invoice = $sunat->getInvoice($data);
@@ -247,12 +247,17 @@ class NewDocument extends Component
 
             $sunatResponse = $sunat->sunatResponse($invoice, $result);
 
-            // === 1) Manejo de error 1032: correlativo ya usado ===
-            if ($sunatResponse['status'] != 1 && (string)($sunatResponse['code'] ?? '') === '1032') {
-                Log::warning("SUNAT 1032: Correlativo ya existe. Reintentando con nuevo correlativo.");
+            // === 1) Manejo de error 1032: el número ya está usado en SUNAT ===
+            // Un intento rechazado gasta el número en SUNAT pero no queda en la BD,
+            // así que el siguiente de la BD puede ser el mismo que falló: se avanza
+            // siempre por encima del número fallido, hasta REINTENTOS_1032 veces.
+            $numerosUsados = [];
 
-                // Nuevo correlativo
-                $this->correlative   = Voucher::nextCorrelativeById($this->documentType);
+            while (SunatService::es1032($sunatResponse) && count($numerosUsados) < SunatService::REINTENTOS_1032) {
+                $numerosUsados[] = "{$this->serie}-{$this->correlative}";
+                Log::warning("SUNAT 1032: {$this->serie}-{$this->correlative} ya está informado en SUNAT. Reintentando con el siguiente correlativo.");
+
+                $this->correlative   = max(Voucher::nextCorrelativeById($this->documentType), (int) $this->correlative + 1);
                 $data['correlative'] = $this->correlative;
 
                 // Regenerar invoice con nuevo correlativo
@@ -312,7 +317,7 @@ class NewDocument extends Component
 
                 // Mismo flujo visual que el caso OK: mensaje + botón + redirect
                 $this->dispatch('success', [
-                    'label' => 'El comprobante se guardó como PENDIENTE por un error con SUNAT. Podrá reenviarse luego desde Documentos.',
+                    'label' => "El comprobante {$this->serie}-{$this->correlative} se guardó como PENDIENTE por un error con SUNAT. Podrá reenviarse luego desde Documentos." . SunatService::avisoNumerosUsados($numerosUsados),
                     'btn'   => 'Ir a documentos',
                     'route' => route('documents.index'),
                 ]);
@@ -339,7 +344,10 @@ class NewDocument extends Component
             // Limpiar el "Detalle: ..." técnico que agrega SUNAT al final del mensaje
             $rawNote = preg_replace('/ - Detalle:.*$/s', '', $rawNote);
 
-            if (isset($mensajesSunat[$code])) {
+            if ($code === '1032') {
+                $numerosUsados[] = "{$this->serie}-{$this->correlative}";
+                $label = SunatService::errorNumerosAgotados($numerosUsados);
+            } elseif (isset($mensajesSunat[$code])) {
                 $label = $mensajesSunat[$code] . " (Error SUNAT {$code})";
             } elseif (!empty($rawNote)) {
                 $label = $rawNote;
@@ -400,7 +408,7 @@ class NewDocument extends Component
         }
 
         $this->dispatch('success', [
-            'label' => "El comprobante {$this->serie}-{$this->correlative} fue emitido y aceptado por SUNAT.",
+            'label' => "El comprobante {$this->serie}-{$this->correlative} fue emitido y aceptado por SUNAT." . SunatService::avisoNumerosUsados($numerosUsados),
             'btn'   => 'Ir a documentos',
             'route' => route('documents.index'),
         ]);
