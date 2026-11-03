@@ -57,6 +57,32 @@ class Document extends Model
     }
 
     /**
+     * Días hacia atrás que se admiten en la fecha de emisión. Facturas y sus
+     * notas de crédito: 3, porque con 4 o más SUNAT rechaza con 2108
+     * "Presentación fuera de fecha" (pasó con F001-92, 93 y 95). Boletas y sus
+     * notas de crédito: 5, que SUNAT sí acepta.
+     */
+    const DIAS_ATRAS_FACTURA = 3;
+    const DIAS_ATRAS_BOLETA = 5;
+
+    /** Fecha de emisión más antigua permitida, en Y-m-d. */
+    public static function fechaMinimaEmision(bool $esFactura): string
+    {
+        return now()->subDays($esFactura ? self::DIAS_ATRAS_FACTURA : self::DIAS_ATRAS_BOLETA)->format('Y-m-d');
+    }
+
+    /** Mensaje para una fecha de emisión anterior a fechaMinimaEmision(). */
+    public static function mensajeFechaMinima(bool $esFactura): string
+    {
+        $dias = $esFactura ? self::DIAS_ATRAS_FACTURA : self::DIAS_ATRAS_BOLETA;
+        $desde = now()->subDays($dias)->format('d/m/Y');
+
+        return $esFactura
+            ? "SUNAT solo acepta facturas y sus notas de crédito con fecha de hasta {$dias} días atrás: elija una fecha desde el {$desde}."
+            : "La fecha de emisión no puede tener más de {$dias} días de antigüedad: elija una fecha desde el {$desde}.";
+    }
+
+    /**
      * Etiquetas del tipo de comprobante, en singular. Las claves son las mismas
      * que usa el filtro de /documents (TableDocuments::TIPOS) para que columna y
      * filtro no puedan discrepar.

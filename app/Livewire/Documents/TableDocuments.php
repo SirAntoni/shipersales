@@ -533,8 +533,8 @@ class TableDocuments extends Component
             'id'     => $document->id,
             'number' => $document->serie . '-' . $document->correlative,
             'date'   => $document->date ? Carbon::parse($document->date)->format('Y-m-d') : now()->format('Y-m-d'),
-            // Misma ventana que NewDocument::rules(): SUNAT rechaza fechas más antiguas (2329)
-            'min'    => Carbon::now()->subDays(5)->format('Y-m-d'),
+            // Misma ventana que NewDocument::rules(): facturas 3 días (2108), boletas 5
+            'min'    => Document::fechaMinimaEmision(! $document->esBoleta()),
             'max'    => now()->format('Y-m-d'),
         ]);
     }
@@ -547,13 +547,19 @@ class TableDocuments extends Component
             return;
         }
 
-        $min = Carbon::now()->subDays(5)->format('Y-m-d');
+        $esFactura = ! $document->esBoleta();
+        $min = Document::fechaMinimaEmision($esFactura);
         $max = now()->format('Y-m-d');
         $date = trim((string) $date);
 
         $esFechaValida = \DateTime::createFromFormat('Y-m-d', $date) !== false;
-        if (!$esFechaValida || $date < $min || $date > $max) {
+        if (!$esFechaValida || $date > $max) {
             $this->dispatch('error', ['label' => "La fecha debe estar entre {$min} y {$max} (plazo que SUNAT acepta para envío individual)."]);
+            return;
+        }
+
+        if ($date < $min) {
+            $this->dispatch('error', ['label' => Document::mensajeFechaMinima($esFactura)]);
             return;
         }
 

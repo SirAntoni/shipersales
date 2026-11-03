@@ -333,9 +333,15 @@
             element: document.getElementById('datepicker'),
             autoApply: true,
             singleMode: true,
-            // SUNAT solo acepta emisión dentro de esta ventana (futuras dan 2329)
-            minDate: '{{ \Carbon\Carbon::now()->subDays(5)->format('Y-m-d') }}',
+            // SUNAT solo acepta emisión dentro de esta ventana (futuras dan 2329,
+            // facturas de más de 3 días dan 2108)
+            minDate: '{{ \App\Models\Document::fechaMinimaEmision((string) $documentType === '1') }}',
             maxDate: '{{ now()->format('Y-m-d') }}'
+        });
+
+        // NewDocument::updatedDocumentType avisa la fecha mínima del tipo elegido
+        window.addEventListener('fecha-minima-emision', (event) => {
+            picker.setOptions({ minDate: event.detail.min });
         });
 
         new TomSelect('#tomClients', {

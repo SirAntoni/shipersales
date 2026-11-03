@@ -62,7 +62,8 @@ class NewDocument extends Component
 
     public function rules()
     {
-        $minDate = Carbon::now()->subDays(5)->format('Y-m-d');
+        // Facturas: hasta 3 días atrás (con más, SUNAT rechaza con 2108); boletas: 5
+        $minDate = Document::fechaMinimaEmision($this->esFactura());
         $maxDate = Carbon::now()->format('Y-m-d');
 
         // before_or_equal: SUNAT rechaza fechas futuras (error 2329); una fecha
@@ -73,6 +74,18 @@ class NewDocument extends Component
             'articlesSelected' => ['required', 'array', 'min:1'],
             'client'           => ['required'],
         ];
+    }
+
+    public function messages()
+    {
+        return [
+            'date.after_or_equal' => Document::mensajeFechaMinima($this->esFactura()),
+        ];
+    }
+
+    private function esFactura(): bool
+    {
+        return (string) $this->documentType === '1';
     }
 
     public function mount()
@@ -312,6 +325,7 @@ class NewDocument extends Component
             $mensajesSunat = [
                 '1033' => 'Este comprobante ya fue registrado en SUNAT con datos distintos.',
                 '1079' => 'Este comprobante es demasiado antiguo para enviarse individualmente a SUNAT.',
+                '2108' => 'La fecha de emisión está fuera de plazo: SUNAT solo acepta facturas hasta ' . Document::DIAS_ATRAS_FACTURA . ' días después de su fecha. Emítala con una fecha más reciente.',
                 '2329' => 'La fecha de emisión está fuera del plazo que SUNAT permite para envío individual.',
                 '2800' => 'El número de RUC del cliente no está activo en SUNAT.',
                 '2801' => 'El número de RUC del cliente no existe en SUNAT.',
@@ -410,6 +424,9 @@ class NewDocument extends Component
     {
         $this->serie       = Voucher::serie($this->documentType);
         $this->correlative = Voucher::nextCorrelativeById($this->documentType);
+
+        // El calendario ajusta su fecha mínima: las facturas admiten menos días atrás
+        $this->dispatch('fecha-minima-emision', min: Document::fechaMinimaEmision($this->esFactura()));
     }
 
     public function searchArticles($query)

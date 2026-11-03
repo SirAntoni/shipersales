@@ -363,8 +363,9 @@
             element: document.getElementById('datepicker'),
             autoApply: true,
             singleMode: true,
-            // SUNAT solo acepta emisión dentro de esta ventana (futuras dan 2329)
-            minDate: '{{ \Carbon\Carbon::now()->subDays(5)->format('Y-m-d') }}',
+            // SUNAT solo acepta emisión dentro de esta ventana (futuras dan 2329,
+            // NC de factura con más de 3 días dan 2108)
+            minDate: '{{ \App\Models\Document::fechaMinimaEmision(! $esBoleta) }}',
             maxDate: '{{ now()->format('Y-m-d') }}'
         });
 

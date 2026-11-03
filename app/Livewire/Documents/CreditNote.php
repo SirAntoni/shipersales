@@ -122,8 +122,8 @@ class CreditNote extends Component
 
     public function rules()
     {
-        // Calculamos la fecha mínima permitida (hoy menos 5 días).
-        $minDate = Carbon::now()->subDays(5)->format('Y-m-d');
+        // NC de factura (FC01): hasta 3 días atrás, como la factura; de boleta (BC01): 5
+        $minDate = Document::fechaMinimaEmision(! $this->esBoleta);
         $maxDate = Carbon::now()->format('Y-m-d');
 
         // before_or_equal: SUNAT rechaza fechas futuras (error 2329)
@@ -132,6 +132,13 @@ class CreditNote extends Component
             'documentType'     => ['required'],
             'articlesSelected' => ['required', 'array', 'min:1'],
             'client'           => ['required'],
+        ];
+    }
+
+    public function messages()
+    {
+        return [
+            'date.after_or_equal' => Document::mensajeFechaMinima(! $this->esBoleta),
         ];
     }
 
@@ -314,6 +321,10 @@ class CreditNote extends Component
             $label   = $rawNote !== ''
                 ? "SUNAT rechazó la nota de crédito: {$rawNote}"
                 : 'No se puede emitir la nota de crédito en estos momentos por fallos con SUNAT. Inténtelo más tarde.';
+
+            if ((string) ($sunatResponse['code'] ?? '') === '2108') {
+                $label = 'SUNAT rechazó la nota de crédito por fecha fuera de plazo (error 2108). ' . Document::mensajeFechaMinima(! $this->esBoleta);
+            }
 
             $this->dispatch('error', ['label' => $label]);
             return;
