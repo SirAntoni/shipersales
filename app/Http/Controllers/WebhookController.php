@@ -23,6 +23,11 @@ class WebhookController extends Controller
 
     public function handle(Request $request)
     {
+        // Integración desactivada: se responde 200 para que MercadoLibre no
+        // reintente la notificación, sin consultar su API (config/mercadolibre.php)
+        if (! config('mercadolibre.enabled')) {
+            return response()->json(['message' => 'Integración con MercadoLibre desactivada']);
+        }
 
         if(!$request->input('resource'))  return response()->json('campos inválidos');
 
