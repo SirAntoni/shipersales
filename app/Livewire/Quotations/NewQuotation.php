@@ -6,7 +6,7 @@ use App\Models\Article;
 use App\Models\Brand;
 use App\Models\Client;
 use App\Models\Quotation;
-use App\Services\MigoApiService;
+use App\Services\FactilizaService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -26,7 +26,6 @@ class NewQuotation extends Component
     public $address;
     public $phone = '990062896';
     public $email = 'info@shipersales.pe';
-    public $token;
 
     public $departments;
     public $provinces = [];
@@ -34,11 +33,6 @@ class NewQuotation extends Component
     public $departmentSelect;
     public $districtSelect;
     public $provinceSelect;
-
-    protected array $docConfig = [
-        'DNI' => ['size' => 8, 'field' => 'dni', 'responseKey' => 'nombre'],
-        'RUC' => ['size' => 11, 'field' => 'ruc', 'responseKey' => 'nombre_o_razon_social'],
-    ];
 
     public $granSubtotal = 0;
     public $granTax = 0;
@@ -89,7 +83,6 @@ class NewQuotation extends Component
     {
         $this->date         = Carbon::now()->format('Y-m-d');
         $this->deliveryTime = Quotation::DEFAULT_DELIVERY_TIME;
-        $this->token        = env('MIGO_API_TOKEN');
         $this->departments = DB::table('departments')->get();
         $this->loadBrands();
         $this->categoriesList = DB::table('categories')->select('id', 'name')->orderBy('name')->get();
@@ -159,38 +152,19 @@ class NewQuotation extends Component
         $this->dispatch('successNotRoute', ['label' => 'Se agrego el cliente con éxito.']);
     }
 
-    public function searchDocument(MigoApiService $api)
+    public function searchDocument(FactilizaService $factiliza)
     {
         $this->validate([
             'document_number' => 'required|numeric|min:3|unique:clients,document_number',
         ]);
 
-        if (!isset($this->docConfig[$this->document_type])) {
-            return $this->throwError('Selecciona un tipo de documento válido.');
+        $consulta = $factiliza->nombre($this->document_type, $this->document_number);
+
+        if (! $consulta['ok']) {
+            return $this->throwError($consulta['error']);
         }
 
-        if ($this->document_type === 'CE') {
-            return $this->throwError('Servicio no disponible para este tipo de documento.');
-        }
-
-        $config = $this->docConfig[$this->document_type];
-
-        if (strlen($this->document_number) !== $config['size']) {
-            return $this->throwError("El {$this->document_type} debe tener exactamente {$config['size']} dígitos.");
-        }
-
-        $payload = [
-            $config['field'] => $this->document_number,
-            'token'          => $this->token,
-        ];
-
-        $response = $api->post(strtolower($this->document_type), $payload);
-
-        if(!isset($response['success']) || $response['success'] === false ){
-            return $this->throwError("Recurso no encontrado");
-        }
-
-        $this->name = $response[$config['responseKey']] ?? '';
+        $this->name = $consulta['nombre'];
     }
 
     public function save()

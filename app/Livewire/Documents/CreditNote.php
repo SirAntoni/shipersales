@@ -6,7 +6,7 @@ use App\Models\Article;
 use App\Models\Client;
 use App\Models\Document;
 use App\Models\Sale;
-use App\Services\MigoApiService;
+use App\Services\FactilizaService;
 use App\Services\SunatService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -33,13 +33,11 @@ class CreditNote extends Component
 
     public $clientSelected;
 
-
     public $serie;
     public $correlative;
     public $documentType;
 
     public $legends;
-    public $token;
 
     public $affected_document;
 
@@ -49,22 +47,8 @@ class CreditNote extends Component
     /** Respuesta a "¿reponer stock?" (solo boletas): null = aún sin responder. */
     public $reponerStock = null;
 
-    protected array $docConfig = [
-        'DNI' => [
-            'size'        => 8,
-            'field'       => 'dni',
-            'responseKey' => 'nombre',
-        ],
-        'RUC' => [
-            'size'        => 11,
-            'field'       => 'ruc',
-            'responseKey' => 'nombre_o_razon_social',
-        ],
-    ];
-
     public function mount(){
         $document = Document::findOrFail($this->id);
-        $this->token = env('MIGO_API_TOKEN');
         // Por SERIE del afectado, no por document_type: hay históricos con
         // serie de boleta y document_type de factura (ver Document.php)
         $this->esBoleta = $document->esBoleta();
@@ -142,7 +126,7 @@ class CreditNote extends Component
         ];
     }
 
-    public function save(MigoApiService $api)
+    public function save(FactilizaService $factiliza)
     {
 
         Log::info("inicio de emisión de nota de crédito");
@@ -227,22 +211,8 @@ class CreditNote extends Component
         $textoDoc = $client->document_type;
         $tipoDoc  = $inverseTipos[$textoDoc] ?? null;
 
-        // Solo DNI/RUC se validan contra MIGO (igual que NewDocument);
-        // CE, pasaporte, etc. usan el nombre registrado del cliente.
-        // Si MIGO falla, se usa el nombre registrado en lugar de abortar.
-        $responseMigoApi = null;
-        $config = $this->docConfig[$textoDoc] ?? null;
-
-        if ($config !== null) {
-            try {
-                $responseMigoApi = $api->post(strtolower($client->document_type), [
-                    $config['field'] => $client->document_number,
-                    'token'          => $this->token,
-                ]);
-            } catch (\Throwable $e) {
-                Log::warning("MIGO no disponible al emitir nota de crédito, se usa el nombre registrado del cliente: {$e->getMessage()}");
-            }
-        }
+        // Nombre oficial según Factiliza (solo DNI/RUC, igual que NewDocument); si no responde, el registrado.
+        $clientName = $factiliza->nombreParaComprobante($client);
 
         // La NC de una factura también lleva receptor con RUC: mismo error 2017 si no es válido
         if (! $esBoleta && ($motivo = $client->motivoNoFacturable()) !== null) {
@@ -266,9 +236,7 @@ class CreditNote extends Component
             "client" => [
                 "tipoDoc" => $tipoDoc,
                 "numDoc" => $client->document_number,
-                "name" => ($responseMigoApi === null)
-                    ? $client->name
-                    : ($responseMigoApi[$config['responseKey']] ?? $client->name),
+                "name" => $clientName,
                 "address" => $client->address,
             ],
             "items"=> $items,
@@ -460,7 +428,7 @@ class CreditNote extends Component
     public function emitCreditNote(bool $reponerStock)
     {
         $this->reponerStock = $reponerStock;
-        $this->save(app(MigoApiService::class));
+        $this->save(app(FactilizaService::class));
     }
 
     public function searchClients($query)

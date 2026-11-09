@@ -80,17 +80,17 @@ class MercadoLibreService
             }
 
             if ($response->clientError()) {
-                throw new \RuntimeException("Error de cliente en Migo ({$response->status()})");
+                throw new \RuntimeException("Error de cliente en MercadoLibre ({$response->status()})");
             }
 
             if ($response->serverError()) {
-                throw new \RuntimeException("Error de servidor en Migo ({$response->status()})");
+                throw new \RuntimeException("Error de servidor en MercadoLibre ({$response->status()})");
             }
 
             $contentType = $response->header('Content-Type', '');
             if (! Str::contains($contentType, 'application/json')) {
                 throw new \RuntimeException(
-                    "Respuesta inesperada de Migo (status {$response->status()}): "
+                    "Respuesta inesperada de MercadoLibre (status {$response->status()}): "
                     . substr($response->body(), 0, 200)
                 );
             }

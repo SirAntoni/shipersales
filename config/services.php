@@ -31,9 +31,10 @@ return [
         ],
     ],
 
-    'migo_api' => [
-        'base_uri' => env('MIGO_API_BASE_URL'),
-        'token'    => env('MIGO_API_TOKEN'),
+    // Consulta de DNI/RUC/CE (reemplaza a MIGO desde nov-2026). Token propio: solo en el .env, nunca en el repo.
+    'factiliza' => [
+        'token' => env('FACTILIZA_TOKEN'),
+        'base'  => env('FACTILIZA_BASE', 'https://api.factiliza.com/v1'),
     ],
 
 ];

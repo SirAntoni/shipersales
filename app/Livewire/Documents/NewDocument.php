@@ -8,7 +8,7 @@ use App\Models\Document;
 use App\Models\Sale;
 use App\Models\SaleDetail;
 use App\Models\Voucher;
-use App\Services\MigoApiService;
+use App\Services\FactilizaService;
 use App\Services\SunatService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -38,20 +38,6 @@ class NewDocument extends Component
     public $documentType;
 
     public $legends;
-    public $token;
-
-    protected array $docConfig = [
-        'DNI' => [
-            'size'        => 8,
-            'field'       => 'dni',
-            'responseKey' => 'nombre',
-        ],
-        'RUC' => [
-            'size'        => 11,
-            'field'       => 'ruc',
-            'responseKey' => 'nombre_o_razon_social',
-        ],
-    ];
 
     protected $rules = [
         'date'             => 'required',
@@ -91,7 +77,6 @@ class NewDocument extends Component
     public function mount()
     {
         $sale              = Sale::findOrFail($this->id);
-        $this->token       = env('MIGO_API_TOKEN');
         $this->serie       = '-';
         $this->correlative = '-';
 
@@ -127,7 +112,7 @@ class NewDocument extends Component
         }
     }
 
-    public function save(MigoApiService $api)
+    public function save(FactilizaService $factiliza)
     {
         Log::info("inicio de emisión de comprobante");
 
@@ -196,23 +181,8 @@ class NewDocument extends Component
         $textoDoc = $client->document_type;
         $tipoDoc  = $inverseTipos[$textoDoc] ?? '0';
 
-        // Validar identidad contra MIGO solo para DNI/RUC; si MIGO falla,
-        // se usa el nombre registrado del cliente en lugar de abortar la emisión.
-        $clientName = $client->name;
-        $config     = $this->docConfig[$textoDoc] ?? null;
-
-        if ($config !== null) {
-            try {
-                $responseMigoApi = $api->post(strtolower($textoDoc), [
-                    $config['field'] => $client->document_number,
-                    'token'          => $this->token,
-                ]);
-
-                $clientName = $responseMigoApi[$config['responseKey']] ?? $client->name;
-            } catch (\Throwable $e) {
-                Log::warning("MIGO no disponible al emitir comprobante, se usa el nombre registrado del cliente: {$e->getMessage()}");
-            }
-        }
+        // Nombre oficial según Factiliza (solo DNI/RUC); si no responde, el registrado en el cliente.
+        $clientName = $factiliza->nombreParaComprobante($client);
 
         $data = [
             "serie"       => $this->serie,

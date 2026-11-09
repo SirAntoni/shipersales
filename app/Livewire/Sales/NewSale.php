@@ -3,7 +3,7 @@
 namespace App\Livewire\Sales;
 
 use App\Models\Article;
-use App\Services\MigoApiService;
+use App\Services\FactilizaService;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
@@ -43,7 +43,6 @@ class NewSale extends Component
     public $address;
     public $phone = '990062896';
     public $email = 'info@shipersales.pe';
-    public $token;
 
     public $departments;
     public $provinces = [];
@@ -51,11 +50,6 @@ class NewSale extends Component
     public $departmentSelect;
     public $districtSelect;
     public $provinceSelect;
-
-    protected array $docConfig = [
-        'DNI' => ['size' => 8, 'field' => 'dni', 'responseKey' => 'nombre'],
-        'RUC' => ['size' => 11, 'field' => 'ruc', 'responseKey' => 'nombre_o_razon_social'],
-    ];
 
     private function throwError(string $message)
     {
@@ -180,7 +174,6 @@ class NewSale extends Component
 
     public function mount()
     {
-        $this->token        = env('MIGO_API_TOKEN');
         $this->contacts     = Contact::select('id','name')->get();
         $this->paymentMethods = PaymentMethod::select('id','name')->get();
         $this->date         = Carbon::now()->format('Y-m-d');
@@ -305,38 +298,19 @@ class NewSale extends Component
             ->toArray();
     }
 
-    public function searchDocument(MigoApiService $api)
+    public function searchDocument(FactilizaService $factiliza)
     {
         $this->validate([
             'document_number' => 'required|numeric|min:3|unique:clients,document_number',
         ]);
 
-        if (!isset($this->docConfig[$this->document_type])) {
-            return $this->throwError('Selecciona un tipo de documento válido.');
+        $consulta = $factiliza->nombre($this->document_type, $this->document_number);
+
+        if (! $consulta['ok']) {
+            return $this->throwError($consulta['error']);
         }
 
-        if ($this->document_type === 'CE') {
-            return $this->throwError('Servicio no disponible para este tipo de documento.');
-        }
-
-        $config = $this->docConfig[$this->document_type];
-
-        if (strlen($this->document_number) !== $config['size']) {
-            return $this->throwError("El {$this->document_type} debe tener exactamente {$config['size']} dígitos.");
-        }
-
-        $payload = [
-            $config['field'] => $this->document_number,
-            'token'          => $this->token,
-        ];
-
-        $response = $api->post(strtolower($this->document_type), $payload);
-
-        if(!isset($response['success']) || $response['success'] === false ){
-            return $this->throwError("Recurso no encontrado");
-        }
-
-        $this->name = $response[$config['responseKey']] ?? '';
+        $this->name = $consulta['nombre'];
     }
 
     public function searchArticles($query)
