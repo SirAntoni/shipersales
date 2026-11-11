@@ -268,6 +268,9 @@ class DocumentsExport implements
                 if ($resumen['excluidos'] > 0) {
                     $fila += 2;
                     $sheet->setCellValue("A{$fila}", "Nota: {$resumen['excluidos']} documento(s) sin estado ACEPTADO figuran en el detalle con la columna COMPUTADO vacia y no suman al total.");
+                    // Combinada hasta la ultima columna: sola en A, el ancho automatico estiraba
+                    // esa columna al largo de la nota. Excel no mide las celdas combinadas.
+                    $sheet->mergeCells("A{$fila}:{$ultima}{$fila}");
                 }
             },
         ];

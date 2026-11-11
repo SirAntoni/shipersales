@@ -147,6 +147,17 @@ class SirePurchasesExport implements
         return $highestRow;
     }
 
+    /**
+     * Nota al pie, en una celda combinada de A hasta la ultima columna. Si quedara sola en A, el
+     * ancho automatico de esa columna (fecha de emision o RUC) se estiraba al largo de la nota:
+     * unos 235 caracteres. Excel no mide las celdas combinadas al ajustar el ancho.
+     */
+    public static function notaAlPie(Worksheet $sheet, int $fila, string $ultima, string $texto): void
+    {
+        $sheet->setCellValue("A{$fila}", $texto);
+        $sheet->mergeCells("A{$fila}:{$ultima}{$fila}");
+    }
+
     /** Aviso para el pie cuando el filtro mezcla comprobantes del mes y de meses anteriores. */
     public static function notaAnteriores(array $resumen): ?string
     {
@@ -267,9 +278,9 @@ class SirePurchasesExport implements
                     ->setFormatCode(NumberFormat::FORMAT_NUMBER_00);
 
                 $fila += 2;
-                $sheet->setCellValue("A{$fila}", 'Fuente: propuesta del Registro de Compras de SIRE (SUNAT). Importes en soles: SUNAT convierte los comprobantes en otra moneda al tipo de cambio indicado. Las notas de crédito restan.');
+                self::notaAlPie($sheet, $fila, self::ULTIMA_COL, 'Fuente: propuesta del Registro de Compras de SIRE (SUNAT). Importes en soles: SUNAT convierte los comprobantes en otra moneda al tipo de cambio indicado. Las notas de crédito restan.');
                 if ($nota = self::notaAnteriores($resumen)) {
-                    $sheet->setCellValue('A' . ($fila + 1), $nota);
+                    self::notaAlPie($sheet, $fila + 1, self::ULTIMA_COL, $nota);
                 }
             },
         ];
