@@ -80,6 +80,17 @@
                                 {{ $periodos[$periodo] ?? $periodo }} todavía no se descargó de SUNAT.
                             </div>
                         @endif
+                        @if($enCurso)
+                            <div class="mt-1 text-xs text-amber-700">
+                                <i class="fa-solid fa-hourglass-half mr-1"></i>
+                                {{ $periodos[$periodo] ?? $periodo }} todavía no termina: SUNAT entrega solo lo que los proveedores informaron hasta hoy. Vuelva a descargarlo cuando termine el mes para tenerlo completo.
+                            </div>
+                        @elseif($parcial)
+                            <div class="mt-1 text-xs text-amber-700">
+                                <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                                Se descargó el {{ ($ultima->finished_at ?? $ultima->created_at)->format('d-m-Y') }}, cuando el mes aún no terminaba: pueden faltar comprobantes. Vuelva a descargarlo de SUNAT para completarlo.
+                            </div>
+                        @endif
                         @unless($configurado)
                             <div class="mt-1 text-xs text-amber-700">
                                 Faltan las credenciales de SIRE en el sistema: no se puede descargar hasta configurarlas.
@@ -92,7 +103,7 @@
                             </div>
                         @endif
                         <div class="mt-1 text-xs text-slate-400">
-                            Es lo que SUNAT tiene registrado como compras del RUC (facturas y notas de proveedores peruanos y declaraciones de importación), con los importes en soles. Cada mes está disponible desde el día 2 del mes siguiente. Haga clic en un comprobante para ver su detalle.
+                            Es lo que SUNAT tiene registrado como compras del RUC (facturas y notas de proveedores peruanos y declaraciones de importación), con los importes en soles. El mes en curso también se puede descargar, pero trae solo lo informado hasta hoy. Haga clic en un comprobante para ver su detalle.
                         </div>
                     </div>
 

@@ -69,8 +69,9 @@ class TableSirePurchases extends Component
         // sin esto, periodoValido() lo rechazaba y al recargar siempre se volvía al último mes.
         $this->periodo = is_int($this->periodo) ? (string) $this->periodo : $this->periodo;
 
+        // Por defecto el ultimo mes completo; el mes en curso se elige a mano (trae datos parciales).
         if (! self::periodoValido($this->periodo)) {
-            $this->periodo = SireService::ultimoPeriodoDisponible();
+            $this->periodo = SireService::ultimoPeriodoCerrado();
         }
 
         $this->separarPeriodo();
@@ -281,8 +282,8 @@ class TableSirePurchases extends Component
     }
 
     /**
-     * Los 12 meses del año elegido. Los que SUNAT aún no publica (el mes en curso y los
-     * siguientes; el anterior, hasta el día 2) salen deshabilitados.
+     * Los 12 meses del año elegido. Los que todavía no empiezan salen deshabilitados; el mes en
+     * curso se puede elegir y la pantalla avisa que sus datos son parciales.
      */
     public function getMesesProperty(): array
     {
@@ -362,7 +363,7 @@ class TableSirePurchases extends Component
         }
 
         if ($this->periodo > SireService::ultimoPeriodoDisponible()) {
-            $this->dispatch('error', ['label' => 'SUNAT publica las compras de un mes recién a partir del día 2 del mes siguiente.']);
+            $this->dispatch('error', ['label' => 'Ese mes todavía no empieza: SUNAT no tiene compras que mostrar.']);
 
             return;
         }
@@ -423,6 +424,7 @@ class TableSirePurchases extends Component
     public function render()
     {
         $filtros = $this->filtrosActivos();
+        $ultima = SireDownload::with('user:id,name')->where('period', $this->periodo)->latest('id')->first();
 
         return view('livewire.purchases.table-sire-purchases', [
             'compras'           => $this->porProveedores()
@@ -441,7 +443,13 @@ class TableSirePurchases extends Component
             'meses'             => $this->meses,
             'tipos'             => $this->tiposDelPeriodo(),
             'pendiente'         => $this->descargaPendiente(),
-            'ultima'            => SireDownload::with('user:id,name')->where('period', $this->periodo)->latest('id')->first(),
+            'ultima'            => $ultima,
+            'enCurso'           => SireService::esPeriodoEnCurso($this->periodo),
+            // Descargado mientras su mes seguia abierto y ese mes ya termino: hay que volver a bajarlo.
+            'parcial'           => $ultima
+                && $ultima->status === SireDownload::STATUS_DONE
+                && ! SireService::esPeriodoEnCurso($this->periodo)
+                && SireService::descargaParcial($ultima),
             'configurado'       => SireService::configurado(),
             'opcionesPorPagina' => self::OPCIONES_POR_PAGINA,
         ]);

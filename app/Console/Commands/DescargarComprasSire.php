@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 class DescargarComprasSire extends Command
 {
     protected $signature = 'sire:compras
-                            {periodo? : yyyymm; por defecto el ultimo disponible}
+                            {periodo? : yyyymm; por defecto el ultimo mes completo (el mes en curso trae datos parciales)}
                             {--archivo= : ZIP o txt de la propuesta exportado desde SIRE web}
                             {--dry-run : Solo mostrar lo que se leyo, sin guardar}
                             {--user= : ID del usuario que ejecuta}';
@@ -30,7 +30,7 @@ class DescargarComprasSire extends Command
 
     public function handle(SireService $sire): int
     {
-        $periodo = $this->argument('periodo') ?: SireService::ultimoPeriodoDisponible();
+        $periodo = $this->argument('periodo') ?: SireService::ultimoPeriodoCerrado();
 
         if (! TableSirePurchases::periodoValido($periodo)) {
             $this->error("Periodo inválido: {$periodo}. Use yyyymm, por ejemplo 202609.");

@@ -74,12 +74,33 @@ class SireService
             && filled(config('sire.clave_sol'));
     }
 
-    /** La propuesta de un mes se publica desde el dia 2 del mes siguiente. */
+    /**
+     * El ultimo mes que se puede pedir: el mes en curso. SUNAT entrega su propuesta parcial, con lo
+     * que los proveedores ya informaron (probado el 10-11-2026: 18 facturas del 3 al 10 de noviembre,
+     * listas en 5 s). Antes se esperaba al dia 2 del mes siguiente, una regla mas estricta que SUNAT.
+     */
     public static function ultimoPeriodoDisponible(?Carbon $hoy = null): string
     {
-        $hoy = ($hoy ?? now())->copy()->startOfDay();
+        return ($hoy ?? now())->format('Ym');
+    }
 
-        return $hoy->copy()->startOfMonth()->subMonthsNoOverflow($hoy->day >= 2 ? 1 : 2)->format('Ym');
+    /** El ultimo mes completo (el anterior al mes en curso): es el que se abre por defecto. */
+    public static function ultimoPeriodoCerrado(?Carbon $hoy = null): string
+    {
+        return ($hoy ?? now())->copy()->startOfMonth()->subMonthNoOverflow()->format('Ym');
+    }
+
+    public static function esPeriodoEnCurso($periodo, ?Carbon $hoy = null): bool
+    {
+        return (string) $periodo === self::ultimoPeriodoDisponible($hoy);
+    }
+
+    /** Descarga hecha antes de que terminara su mes: le pueden faltar los comprobantes informados despues. */
+    public static function descargaParcial(SireDownload $descarga): bool
+    {
+        $finDelMes = Carbon::createFromFormat('Ym d', $descarga->period . ' 01')->addMonthNoOverflow()->startOfMonth();
+
+        return ($descarga->finished_at ?? $descarga->created_at)->lt($finDelMes);
     }
 
     /**
