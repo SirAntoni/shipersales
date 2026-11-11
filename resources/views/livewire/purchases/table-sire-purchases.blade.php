@@ -96,7 +96,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-3 p-5 md:grid-cols-12 lg:grid-cols-[minmax(14rem,2fr)_minmax(14rem,1fr)_minmax(12rem,1fr)_7rem]">
+                    <div class="grid grid-cols-1 gap-3 p-5 md:grid-cols-12 lg:grid-cols-[minmax(14rem,2fr)_minmax(12rem,1fr)_9rem_8rem_7rem]">
                         <div class="relative md:col-span-12 lg:col-span-1">
                             <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-magnifying-glass"></i>
                             <x-base.form-input
@@ -115,21 +115,31 @@
                             @endif
                         </div>
 
-                        <div class="relative md:col-span-5 lg:col-span-1">
-                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-calendar-days"></i>
-                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="periodo">
-                                @foreach($periodos as $valor => $etiqueta)
-                                    <option value="{{ $valor }}">{{ $etiqueta }}</option>
-                                @endforeach
-                            </x-base.form-select>
-                        </div>
-
-                        <div class="relative md:col-span-5 lg:col-span-1">
+                        <div class="relative md:col-span-4 lg:col-span-1">
                             <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-filter"></i>
                             <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="tipo">
                                 <option value="">Todos los tipos</option>
                                 @foreach($tipos as $valor => $etiqueta)
                                     <option value="{{ $valor }}">{{ $etiqueta }}</option>
+                                @endforeach
+                            </x-base.form-select>
+                        </div>
+
+                        {{-- Periodo del RCE en dos selectores; juntos forman $periodo --}}
+                        <div class="relative md:col-span-3 lg:col-span-1" title="Mes del periodo">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-calendar"></i>
+                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="mes">
+                                @foreach($meses as $numero => $unMes)
+                                    <option value="{{ $numero }}" @disabled(! $unMes['disponible'])>{{ $unMes['nombre'] }}</option>
+                                @endforeach
+                            </x-base.form-select>
+                        </div>
+
+                        <div class="relative md:col-span-3 lg:col-span-1" title="Año del periodo">
+                            <i class="absolute inset-y-0 left-0 z-10 my-auto ml-3.5 h-4 w-4 stroke-[1.3] text-slate-500 fa-solid fa-calendar-days"></i>
+                            <x-base.form-select class="rounded-[0.5rem] pl-9" wire:model.live="anio">
+                                @foreach($anios as $unAnio)
+                                    <option value="{{ $unAnio }}">{{ $unAnio }}</option>
                                 @endforeach
                             </x-base.form-select>
                         </div>

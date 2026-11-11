@@ -28,8 +28,14 @@ class TableSirePurchases extends Component
     /** Periodos que ofrece el selector, ademas de los ya descargados. */
     private const MESES_EN_SELECTOR = 18;
 
+    /** yyyymm. Es el que filtra y va en la URL; en pantalla se elige con $anio y $mes por separado. */
     #[Url(as: 'periodo')]
     public $periodo = '';
+
+    /** Selectores de la pantalla ("2026" y "09"): unirPeriodo() los junta en $periodo. */
+    public $anio = '';
+
+    public $mes = '';
 
     public $search = '';
 
@@ -59,14 +65,50 @@ class TableSirePurchases extends Component
 
     public function mount()
     {
+        // #[Url] pasa el valor por json_decode: "?periodo=202608" llega como el entero 202608 y,
+        // sin esto, periodoValido() lo rechazaba y al recargar siempre se volvía al último mes.
+        $this->periodo = is_int($this->periodo) ? (string) $this->periodo : $this->periodo;
+
         if (! self::periodoValido($this->periodo)) {
             $this->periodo = SireService::ultimoPeriodoDisponible();
         }
+
+        $this->separarPeriodo();
     }
 
-    public function updatingPeriodo()
+    public function updatedAnio()
     {
+        $this->unirPeriodo();
+    }
+
+    public function updatedMes()
+    {
+        $this->unirPeriodo();
+    }
+
+    /**
+     * Junta el año y el mes elegidos en $periodo. Si el mes todavía no está publicado en SUNAT
+     * (p. ej. se cambia a un año en curso con diciembre elegido) pasa al último mes disponible.
+     */
+    private function unirPeriodo(): void
+    {
+        $periodo = $this->anio . $this->mes;
+
+        if (! in_array((string) $this->anio, $this->anios, true) || ! self::periodoValido($periodo)) {
+            $this->separarPeriodo();
+
+            return;
+        }
+
+        $this->periodo = min($periodo, SireService::ultimoPeriodoDisponible());
+        $this->separarPeriodo();
         $this->resetPage();
+    }
+
+    private function separarPeriodo(): void
+    {
+        $this->anio = substr($this->periodo, 0, 4);
+        $this->mes  = substr($this->periodo, 4, 2);
     }
 
     public function updatingSearch()
@@ -228,6 +270,34 @@ class TableSirePurchases extends Component
         return $periodos->mapWithKeys(fn ($p) => [$p => self::etiquetaPeriodo($p)])->all();
     }
 
+    /** Años del selector: los de getPeriodosProperty(), del más reciente al más antiguo. */
+    public function getAniosProperty(): array
+    {
+        return collect(array_keys($this->periodos))
+            ->map(fn ($p) => substr((string) $p, 0, 4))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Los 12 meses del año elegido. Los que SUNAT aún no publica (el mes en curso y los
+     * siguientes; el anterior, hasta el día 2) salen deshabilitados.
+     */
+    public function getMesesProperty(): array
+    {
+        $ultimo = SireService::ultimoPeriodoDisponible();
+
+        return collect(TableDocuments::MESES)
+            ->mapWithKeys(fn ($nombre, $numero) => [
+                sprintf('%02d', $numero) => [
+                    'nombre'     => $nombre,
+                    'disponible' => $this->anio . sprintf('%02d', $numero) <= $ultimo,
+                ],
+            ])
+            ->all();
+    }
+
     /** Los tipos que trae el periodo (mas el elegido, aunque ya no tenga filas). */
     private function tiposDelPeriodo(): array
     {
@@ -367,6 +437,8 @@ class TableSirePurchases extends Component
             'detalle'           => $this->detalleId ? SirePurchase::with('download.user:id,name')->find($this->detalleId) : null,
             'nombreProveedor'   => $this->nombreProveedorFiltrado(),
             'periodos'          => $this->periodos,
+            'anios'             => $this->anios,
+            'meses'             => $this->meses,
             'tipos'             => $this->tiposDelPeriodo(),
             'pendiente'         => $this->descargaPendiente(),
             'ultima'            => SireDownload::with('user:id,name')->where('period', $this->periodo)->latest('id')->first(),
