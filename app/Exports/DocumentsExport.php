@@ -67,7 +67,9 @@ class DocumentsExport implements
 
     public function map($row): array
     {
-        $esNotaCredito = self::esNotaCredito($row->serie);
+        // Del modelo y no solo por serie: las NC del portal SUNAT (EB01) se
+        // reconocen por su comprobante afectado.
+        $esNotaCredito = $row->esNotaCredito();
 
         // COMPUTADO es lo que aporta la fila al total: negativo si es nota de
         // credito y vacio si SUNAT no lo acepto (PhpSpreadsheet omite los 0,
@@ -85,6 +87,9 @@ class DocumentsExport implements
         $estado = strtoupper($row->status_sunat ?? 'SIN ESTADO');
         if ($baja) {
             $estado .= ' (' . $baja['numero'] . ')';
+        }
+        if ($row->esDelPortal()) {
+            $estado .= ' (PORTAL SUNAT)';
         }
 
         return [

@@ -24,6 +24,18 @@ class Document extends Model
     const SERIES_NOTA_CREDITO = ['FC', 'BC'];
 
     /**
+     * Comprobantes emitidos a mano en el portal SOL de SUNAT (SEE-SOL), fuera
+     * del sistema: SUNAT reserva para ese emisor las series que empiezan con E
+     * (E001 facturas, EB01 boletas), asi que la serie basta para reconocerlos.
+     * Se registran desde el Excel de SIRE con el comando sire:registrar-portal,
+     * sin XML ni CDR. Su nota de credito usa la MISMA serie que el comprobante
+     * (EB01-3 anula EB01-755): por eso una NC del portal se reconoce por
+     * affected_document_id y no por la serie.
+     */
+    const PREFIJO_PORTAL = 'E';
+    const PREFIJO_BOLETA_PORTAL = 'EB';
+
+    /**
      * Comprobantes de venta que siguen vigentes: no son notas de credito y no
      * fueron dados de baja, rechazados por SUNAT ni cubiertos por una nota de
      * credito. Es el criterio unico para decidir si una venta "ya tiene
@@ -41,19 +53,39 @@ class Document extends Model
             });
     }
 
+    /**
+     * Por serie (FC/BC) o, en las del portal SUNAT, por tener comprobante
+     * afectado. En los del sistema ambos criterios coinciden en todas las filas.
+     */
     public function esNotaCredito(): bool
     {
-        return self::serieEsNotaCredito($this->serie);
+        return self::serieEsNotaCredito($this->serie) || $this->affected_document_id !== null;
+    }
+
+    /** Emitido en el portal SOL de SUNAT, no por el sistema (ver PREFIJO_PORTAL). */
+    public function esDelPortal(): bool
+    {
+        return str_starts_with((string) $this->serie, self::PREFIJO_PORTAL);
     }
 
     /**
-     * Boleta de venta (serie B001, B002...). Se decide por SERIE y no por
-     * document_type (que miente en historicos); las notas de credito BC
-     * tambien empiezan con B, por eso se excluyen primero.
+     * Boleta de venta (serie B001, B002... o EB01 del portal). Se decide por
+     * SERIE y no por document_type (que miente en historicos); las notas de
+     * credito BC tambien empiezan con B, por eso se excluyen primero.
      */
     public function esBoleta(): bool
     {
-        return ! $this->esNotaCredito() && str_starts_with((string) $this->serie, 'B');
+        $serie = (string) $this->serie;
+
+        return ! $this->esNotaCredito()
+            && (str_starts_with($serie, 'B') || str_starts_with($serie, self::PREFIJO_BOLETA_PORTAL));
+    }
+
+    /** Mensaje para cualquier accion que el sistema no puede hacer sobre un comprobante del portal. */
+    public function mensajeDelPortal(): string
+    {
+        return "El comprobante {$this->serie}-{$this->correlative} se emitió en el portal SUNAT, no en el sistema: "
+            . 'anúlelo o emita su nota de crédito allí, y luego vuelva a importar el registro de ventas de SIRE.';
     }
 
     /**
@@ -108,7 +140,10 @@ class Document extends Model
             return 'boleta';
         }
 
-        return str_starts_with((string) $this->serie, 'F') ? 'factura' : null;
+        // F001 del sistema o E001 del portal (las EB ya salieron como boleta).
+        $serie = (string) $this->serie;
+
+        return str_starts_with($serie, 'F') || str_starts_with($serie, self::PREFIJO_PORTAL) ? 'factura' : null;
     }
 
     /** Etiqueta lista para mostrar; guion si la serie no corresponde a ningun tipo conocido. */

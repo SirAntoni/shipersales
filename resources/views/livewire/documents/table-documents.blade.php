@@ -194,6 +194,9 @@
                                             // La otra via de anulacion: baja comunicada a SUNAT (RA/RC).
                                             $baja = $document->bajaSunat();
                                             $anuladoSinConstancia = $document->status === 'anulado' && ! $baja;
+                                            // Emitido en el portal SOL de SUNAT (serie E...): sin XML/CDR
+                                            // en el sistema y sin acciones, todo se hace en SOL.
+                                            $esPortal = $document->esDelPortal();
                                         @endphp
                                         <x-base.table.tr class="[&_td]:last:border-b-0 {{ $esNotaCredito ? '[&_td]:bg-red-50' : '' }}">
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600 text">
@@ -253,6 +256,12 @@
                                                         </div>
                                                     @endif
                                                 @endif
+                                                @if($esPortal)
+                                                    <div class="mt-1 whitespace-nowrap text-xs text-slate-500"
+                                                         title="Emitido a mano en el portal SOL de SUNAT y registrado desde el Excel de SIRE">
+                                                        emitido en el portal SUNAT
+                                                    </div>
+                                                @endif
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                                 @php
@@ -307,6 +316,8 @@
                                                         <a href="{{ route('documents.download', ['path' => ltrim($document->pdf_path, '/')]) }}" title="PDF del comprobante">
                                                             <img src="{{ asset('images/pdf.svg') }}" width="35px" alt="Descargar PDF">
                                                         </a>
+                                                    @elseif($esPortal)
+                                                        <span class="text-xs text-slate-400" title="Emitido en el portal SUNAT: el PDF se descarga desde SOL">SOL</span>
                                                     @else
                                                         {{-- Sin PDF (pendiente o no generado) --}}
                                                         <img src="{{ asset('images/reload.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="PDF no disponible">
@@ -326,6 +337,8 @@
                                                         <a href="{{ route('documents.download', ['path' => ltrim($document->xml_path, '/')]) }}" title="XML del comprobante">
                                                             <img src="{{ asset('images/xml.svg') }}" width="35px" alt="Descargar XML">
                                                         </a>
+                                                    @elseif($esPortal)
+                                                        <span class="text-xs text-slate-400" title="Emitido en el portal SUNAT: el XML se descarga desde SOL">SOL</span>
                                                     @else
                                                         {{-- Muy raro, pero por si hay registros viejos sin XML --}}
                                                         <img src="{{ asset('images/reload.svg') }}" width="35px" class="opacity-40 cursor-not-allowed" alt="XML no disponible">
@@ -345,6 +358,8 @@
                                                         <a href="{{ route('documents.download', ['path' => ltrim($document->cdr_path, '/')]) }}" title="CDR del comprobante">
                                                             <img src="{{ asset('images/cdr.png') }}" width="35px" alt="Descargar CDR">
                                                         </a>
+                                                    @elseif($esPortal)
+                                                        <span class="text-xs text-slate-400" title="Emitido en el portal SUNAT: no hay CDR en el sistema">SOL</span>
                                                     @else
                                                         {{-- Sin CDR: aún pendiente o error --}}
                                                         <img src="{{ asset('images/reload.svg') }}" width="35px" alt="CDR pendiente">
@@ -427,6 +442,11 @@
 {{--                                                            size="sm"--}}
 {{--                                                            class="mr-2"--}}
 {{--                                                            content="Enviar comprobante por email."--}}
+                                                    @elseif($esPortal)
+                                                        {{-- Ni NC ni anulación desde aquí: se hacen en SOL (los guards
+                                                             de TableDocuments y CreditNote cubren llamadas directas). --}}
+                                                        <span class="bg-slate-100 text-slate-700 text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap"
+                                                              title="Anúlelo o emita su nota de crédito en el portal SUNAT">Portal SUNAT</span>
 {{--                                                            wire:click="creditNote({{$document->id}})">--}}
 {{--                                                            <i class="text-white fa-solid fa-envelope"></i>--}}
 {{--                                                        </x-base.tippy>--}}

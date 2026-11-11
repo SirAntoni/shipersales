@@ -235,6 +235,67 @@ Route::middleware(['auth'])->group(function () {
     })->middleware('can:purchases');
     //End Compras USA parciales
 
+    //Start Comprobantes del portal SUNAT desde el Excel de SIRE (cPanel, sin terminal)
+    // Subir el Excel -> vista previa (--dry-run) -> registrar. El archivo queda
+    // en storage/app/sire-ventas con un nombre aleatorio hasta que se registra.
+    Route::get('/sire-ventas-portal', function () {
+        $url = url('/sire-ventas-portal');
+
+        return response(
+            "<h3>Registro de ventas SIRE: comprobantes del portal SUNAT</h3>"
+            . "<p>Suba el Excel del registro de ventas de SIRE (el que manda el contador). Primero se muestra una vista previa; no se escribe nada hasta confirmar.</p>"
+            . "<form method=\"POST\" action=\"{$url}\" enctype=\"multipart/form-data\">"
+            . csrf_field()
+            . "<input type=\"file\" name=\"archivo\" accept=\".xlsx,.xls\" required> "
+            . "<button type=\"submit\">Ver vista previa</button></form>",
+            200
+        )->header('Content-Type', 'text/html');
+    })->middleware('can:documents');
+
+    Route::post('/sire-ventas-portal', function (\Illuminate\Http\Request $request) {
+        $request->validate(['archivo' => ['required', 'file', 'mimes:xlsx,xls', 'max:5120']]);
+
+        $nombre = \Illuminate\Support\Str::uuid() . '.' . $request->file('archivo')->getClientOriginalExtension();
+        $request->file('archivo')->storeAs('sire-ventas', $nombre, 'local');
+
+        Artisan::call('sire:registrar-portal', [
+            'archivo'   => \Illuminate\Support\Facades\Storage::disk('local')->path("sire-ventas/{$nombre}"),
+            '--dry-run' => true,
+        ]);
+        $out    = e(Artisan::output());
+        $runUrl = url('/sire-ventas-portal/run');
+
+        return response(
+            "<h3>Comprobantes del portal SUNAT: vista previa (no se escribió nada)</h3>"
+            . "<pre>{$out}</pre>"
+            . "<form method=\"POST\" action=\"{$runUrl}\" onsubmit=\"return confirm('¿Registrar los comprobantes marcados REGISTRAR?')\">"
+            . csrf_field()
+            . "<input type=\"hidden\" name=\"archivo\" value=\"" . e($nombre) . "\">"
+            . "<button type=\"submit\">Registrar comprobantes</button></form>",
+            200
+        )->header('Content-Type', 'text/html');
+    })->middleware('can:documents');
+
+    Route::post('/sire-ventas-portal/run', function (\Illuminate\Http\Request $request) {
+        // Solo el nombre que generó la vista previa: nunca una ruta arbitraria
+        $datos = $request->validate(['archivo' => ['required', 'string', 'regex:/^[0-9a-f-]{36}\.xlsx?$/']]);
+        $disco = \Illuminate\Support\Facades\Storage::disk('local');
+        $ruta  = "sire-ventas/{$datos['archivo']}";
+
+        abort_unless($disco->exists($ruta), 404, 'El archivo ya no está: vuelva a subirlo.');
+
+        Artisan::call('sire:registrar-portal', [
+            'archivo' => $disco->path($ruta),
+            '--force' => true,
+            '--user'  => auth()->id(),
+        ]);
+        $disco->delete($ruta);
+
+        return response('<pre>' . e(Artisan::output()) . '</pre>', 200)
+            ->header('Content-Type', 'text/html');
+    })->middleware('can:documents');
+    //End Comprobantes del portal SUNAT
+
 });
 
 

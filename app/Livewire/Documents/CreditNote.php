@@ -145,6 +145,12 @@ class CreditNote extends Component
             return;
         }
 
+        // Del portal SUNAT: su nota de crédito se emite allí (ver Document::PREFIJO_PORTAL).
+        if ($affectedDoc->esDelPortal()) {
+            $this->dispatch('error', ['label' => $affectedDoc->mensajeDelPortal()]);
+            return;
+        }
+
         if ($affectedDoc->status == 'nota_credito') {
             $this->dispatch('error', ['label' => "El comprobante {$affectedDoc->serie}-{$affectedDoc->correlative} ya tiene una nota de crédito emitida."]);
             return;

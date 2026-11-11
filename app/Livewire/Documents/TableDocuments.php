@@ -111,6 +111,12 @@ class TableDocuments extends Component
             return;
         }
 
+        // Emitido en el portal SUNAT: el sistema no tiene su XML ni puede darlo de baja.
+        if ($document->esDelPortal()) {
+            $this->dispatch('error', ['label' => $document->mensajeDelPortal()]);
+            return;
+        }
+
         // Las notas de crédito NO se anulan (decisión 2026-07-07): es un caso muy
         // atípico y dejaba estado inconsistente (stock re-descontado + venta anulada
         // + comprobante afectado vigente). El botón está oculto en la vista; este
@@ -414,6 +420,11 @@ class TableDocuments extends Component
             return;
         }
 
+        if ($document->esDelPortal()) {
+            $this->dispatch('error', ['label' => $document->mensajeDelPortal()]);
+            return;
+        }
+
         // Solo boletas cuya baja repondría stock (venta asociada aún activa)
         // reciben la pregunta "¿reponer stock?"; facturas y ventas ya anuladas
         // siguen el flujo de siempre. Tampoco se pregunta si document_destroy
@@ -500,6 +511,10 @@ class TableDocuments extends Component
      */
     private function motivoFechaNoEditable(Document $document): ?string
     {
+        if ($document->esDelPortal()) {
+            return $document->mensajeDelPortal();
+        }
+
         if (str_starts_with($document->serie, 'FC') || str_starts_with($document->serie, 'BC')) {
             return 'Las notas de crédito no admiten cambio de fecha desde el sistema.';
         }
@@ -597,6 +612,13 @@ class TableDocuments extends Component
     public
     function creditNote($id)
     {
+        $document = Document::find($id);
+
+        if ($document && $document->esDelPortal()) {
+            $this->dispatch('error', ['label' => $document->mensajeDelPortal()]);
+            return;
+        }
+
         return redirect()->route('documents.credit-note.blade.php', $id);
     }
 
@@ -632,11 +654,16 @@ class TableDocuments extends Component
         }
     }
 
-    /** Condicion SQL que identifica una nota de credito por su serie. */
+    /**
+     * Condicion SQL que identifica una nota de credito: por su serie (FC/BC) o
+     * por tener comprobante afectado, que es lo unico que distingue a las del
+     * portal SUNAT (EB01-3 anula EB01-755). Igual que Document::esNotaCredito().
+     */
     private static function sqlNotaCredito(): string
     {
         return collect(self::SERIES_NOTA_CREDITO)
             ->map(fn($serie) => "serie LIKE '{$serie}%'")
+            ->push('affected_document_id IS NOT NULL')
             ->implode(' OR ');
     }
 
@@ -677,9 +704,10 @@ class TableDocuments extends Component
             ->when($f['anio'], fn($q) => $q->whereYear('date', $f['anio']))
             ->when($f['mes'], fn($q) => $q->whereMonth('date', $f['mes']))
             // Por prefijo de serie, no por document_type: ver el comentario de TIPOS.
+            // Las del portal SUNAT: EB01 son boletas y el resto de las E, facturas.
             ->when($f['tipo'] === 'nota_credito', fn($q) => $q->whereRaw("({$nc})"))
-            ->when($f['tipo'] === 'boleta', fn($q) => $q->where('serie', 'LIKE', 'B%')->whereRaw("NOT ({$nc})"))
-            ->when($f['tipo'] === 'factura', fn($q) => $q->where('serie', 'LIKE', 'F%')->whereRaw("NOT ({$nc})"));
+            ->when($f['tipo'] === 'boleta', fn($q) => $q->whereRaw("(serie LIKE 'B%' OR serie LIKE 'EB%')")->whereRaw("NOT ({$nc})"))
+            ->when($f['tipo'] === 'factura', fn($q) => $q->whereRaw("(serie LIKE 'F%' OR (serie LIKE 'E%' AND serie NOT LIKE 'EB%'))")->whereRaw("NOT ({$nc})"));
     }
 
     /**
