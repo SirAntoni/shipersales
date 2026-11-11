@@ -226,11 +226,19 @@ class InventoryCountsExport implements
 
                 $fila = $highestRow + 2;
 
+                // Cada linea del pie va combinada hasta la ultima columna: sola en A, el ancho
+                // automatico estiraba la columna FECHA al largo del texto. Excel no mide las
+                // celdas combinadas.
+                $notaAlPie = function (int $f, string $texto) use ($sheet, $ultima) {
+                    $sheet->setCellValue("A{$f}", $texto);
+                    $sheet->mergeCells("A{$f}:{$ultima}{$f}");
+                };
+
                 if ($total === 0) {
-                    $sheet->setCellValue("A{$fila}", 'No hay conteos guardados en el periodo.');
+                    $notaAlPie($fila, 'No hay conteos guardados en el periodo.');
                 } else {
-                    $sheet->setCellValue("A{$fila}", "CONTEOS: {$total} en {$dias} día(s)");
-                    $sheet->setCellValue('A' . ($fila + 1), "CON DIFERENCIA FÍSICO VS ALMACÉN: {$conDiferencia}");
+                    $notaAlPie($fila, "CONTEOS: {$total} en {$dias} día(s)");
+                    $notaAlPie($fila + 1, "CON DIFERENCIA FÍSICO VS ALMACÉN: {$conDiferencia}");
                     $sheet->getStyle("A{$fila}:A" . ($fila + 1))->getFont()->setBold(true);
                 }
             },
