@@ -423,6 +423,11 @@
                                                          ademas tenia nota de credito. --}}
                                                     @if($anuladoPorNc)
                                                         <span class="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-amber-900 dark:text-amber-300">Con NC</span>
+                                                    @elseif($esPortal)
+                                                        {{-- Ni NC ni anulación desde aquí: se hacen en SOL (los guards
+                                                             de TableDocuments y CreditNote cubren llamadas directas). --}}
+                                                        <span class="bg-slate-100 text-slate-700 text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap"
+                                                              title="Anúlelo o emita su nota de crédito en el portal SUNAT">Portal SUNAT</span>
                                                     @elseif($document->status != "anulado" && $document->status_sunat != "pendiente")
                                                         @if($document->status_sunat == "aceptado" && !$esNotaCredito)
                                                         <x-base.tippy
@@ -442,11 +447,6 @@
 {{--                                                            size="sm"--}}
 {{--                                                            class="mr-2"--}}
 {{--                                                            content="Enviar comprobante por email."--}}
-                                                    @elseif($esPortal)
-                                                        {{-- Ni NC ni anulación desde aquí: se hacen en SOL (los guards
-                                                             de TableDocuments y CreditNote cubren llamadas directas). --}}
-                                                        <span class="bg-slate-100 text-slate-700 text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap"
-                                                              title="Anúlelo o emita su nota de crédito en el portal SUNAT">Portal SUNAT</span>
 {{--                                                            wire:click="creditNote({{$document->id}})">--}}
 {{--                                                            <i class="text-white fa-solid fa-envelope"></i>--}}
 {{--                                                        </x-base.tippy>--}}
