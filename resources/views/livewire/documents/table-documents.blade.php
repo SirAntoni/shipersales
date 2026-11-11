@@ -374,15 +374,34 @@
                                             </x-base.table.td>
 
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
-                                                @if($document->status_sunat == "aceptado")
-                                                    <span
-                                                        class="bg-green-100 text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
-                                                        {{ucfirst(strtolower($document->status_sunat))}}</span>
-                                                @else
-                                                    <span
-                                                        class="bg-red-100 text-white-100 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-white-100">
-                                                        {{ucfirst(strtolower($document->status_sunat))}}</span>
-                                                @endif
+                                                {{-- Tooltip con lo que respondió SUNAT (documents.notes). Tippy lo pinta con
+                                                     allowHTML y lo lee de data-original-title ya decodificado: cada nota se
+                                                     escapa aquí y {{ }} vuelve a escapar el HTML completo, para que un texto
+                                                     de SUNAT nunca se interprete como HTML. --}}
+                                                @php
+                                                    $notasSunat = collect($document->notes ?? [])
+                                                        ->flatten()
+                                                        ->filter(fn ($nota) => is_string($nota) && trim($nota) !== '');
+
+                                                    $respuestaSunat = $notasSunat->isNotEmpty()
+                                                        ? $notasSunat->map(fn ($nota) => e($nota))->implode('<br><br>')
+                                                        : e(match ($document->status_sunat) {
+                                                            'aceptado'  => 'Aceptado por SUNAT, sin observaciones.',
+                                                            'pendiente' => 'Sin respuesta de SUNAT todavía.',
+                                                            default     => 'SUNAT no devolvió detalle.',
+                                                        });
+
+                                                    $respuestaSunat .= '<br><br><small>Actualizado: '
+                                                        . e(optional($document->updated_at)->format('d/m/Y H:i')) . '</small>';
+                                                @endphp
+                                                <x-base.tippy as="span"
+                                                    content="{{ $respuestaSunat }}"
+                                                    data-original-title="{{ $respuestaSunat }}"
+                                                    class="{{ $document->status_sunat == 'aceptado'
+                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                                                        : 'bg-red-100 text-white-100 dark:bg-red-900 dark:text-white-100' }} text-xs font-medium me-2 px-2.5 py-0.5 rounded-full">
+                                                    {{ucfirst(strtolower($document->status_sunat))}}
+                                                </x-base.tippy>
                                             </x-base.table.td>
                                             <x-base.table.td class="border-dashed dark:bg-darkmode-600">
                                                 {{-- $esNotaCredito ya viene calculado arriba, al inicio de la fila. --}}
